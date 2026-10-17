@@ -1102,15 +1102,15 @@ export const PackageList = [
   },
   {
     location: 'packages/backend/native',
-    name: '@affine/server-native',
+    name: '@aevum/server-native',
     workspaceDependencies: [],
   },
   {
     location: 'packages/backend/server',
-    name: '@affine/server',
+    name: '@aevum/server',
     workspaceDependencies: [
-      'packages/common/s3-compat',
       'packages/backend/native',
+      'packages/common/s3-compat',
       'tools/cli',
       'tools/utils',
       'packages/common/graphql',
@@ -1421,7 +1421,7 @@ export const PackageList = [
   },
   {
     location: 'tools/cli',
-    name: '@affine-tools/cli',
+    name: '@aevum-tools/cli',
     workspaceDependencies: ['tools/utils', 'packages/common/s3-compat'],
   },
   {
@@ -1532,8 +1532,8 @@ export type PackageName =
   | '@blocksuite/integration-test'
   | '@blocksuite/playground'
   | '@affine/docs'
-  | '@affine/server-native'
-  | '@affine/server'
+  | '@aevum/server-native'
+  | '@aevum/server'
   | '@affine/auth'
   | '@affine/debug'
   | '@affine/env'
@@ -1572,7 +1572,7 @@ export type PackageName =
   | '@types/build-config'
   | '@types/affine__env'
   | '@affine/changelog'
-  | '@affine-tools/cli'
+  | '@aevum-tools/cli'
   | '@affine/commitlint-config'
   | '@affine/copilot-result'
   | '@affine/doc-diff'

@@ -1,5 +1,5 @@
 {
-  "name": "@affine/server-native",
+  "name": "@aevum/server-native",
   "version": "0.27.5",
   "engines": {
     "node": ">= 10.16.0 < 11 || >= 11.8.0"

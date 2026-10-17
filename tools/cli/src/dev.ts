@@ -7,7 +7,9 @@ export class DevCommand extends PackageSelectorCommand {
 
   protected override availablePackages: PackageName[] = [
     '@affine/web',
+    '@aevum/web' as any,
     '@affine/server',
+    '@aevum/server' as any,
     '@affine/electron',
     '@affine/electron-renderer',
     '@affine/mobile',

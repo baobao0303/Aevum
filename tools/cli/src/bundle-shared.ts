@@ -3,11 +3,13 @@ import type { Configuration as RspackDevServerConfiguration } from '@rspack/dev-
 export const RSPACK_SUPPORTED_PACKAGES = [
   '@affine/admin',
   '@affine/web',
+  '@aevum/web',
   '@affine/mobile',
   '@affine/ios',
   '@affine/android',
   '@affine/electron-renderer',
   '@affine/server',
+  '@aevum/server',
   '@affine/reader',
 ] as const;
 
@@ -30,7 +32,7 @@ export function assertRspackSupportedPackageName(name: string) {
 export const DEFAULT_DEV_SERVER_CONFIG: RspackDevServerConfiguration = {
   host: '0.0.0.0',
   allowedHosts: 'all',
-  hot: false,
+  hot: true,
   liveReload: true,
   compress: !process.env.CI,
   setupExitSignals: true,
@@ -38,9 +40,12 @@ export const DEFAULT_DEV_SERVER_CONFIG: RspackDevServerConfiguration = {
     overlay: process.env.DISABLE_DEV_OVERLAY === 'true' ? false : undefined,
     logging: process.env.CI ? 'none' : 'error',
     // see: https://webpack.js.org/configuration/dev-server/#websocketurl
-    // must be an explicit ws/wss URL because custom protocols (e.g. assets://)
-    // cannot be used to construct WebSocket endpoints in Electron
-    webSocketURL: 'ws://0.0.0.0:8080/ws',
+    // In Electron, custom protocols (e.g. assets://) need explicit ws endpoint.
+    // In Web browser mode, omit webSocketURL so client connects to current window.location.port.
+    webSocketURL:
+      process.env.BUILD_TYPE === 'electron'
+        ? 'ws://0.0.0.0:8080/ws'
+        : undefined,
   },
   historyApiFallback: {
     rewrites: [
@@ -58,15 +63,30 @@ export const DEFAULT_DEV_SERVER_CONFIG: RspackDevServerConfiguration = {
     {
       context: '/api',
       target: 'http://localhost:3010',
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+      },
     },
     {
       context: '/socket.io',
       target: 'http://localhost:3010',
       ws: true,
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+      },
     },
     {
       context: '/graphql',
       target: 'http://localhost:3010',
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+      },
     },
   ],
 };

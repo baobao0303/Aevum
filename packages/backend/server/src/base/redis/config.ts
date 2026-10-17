@@ -1,4 +1,4 @@
-import serverNativeModule from '@affine/server-native';
+import serverNativeModule from '@aevum/server-native';
 import { RedisOptions } from 'ioredis';
 
 import { defineNativeModuleConfig } from '../config';

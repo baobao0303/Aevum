@@ -11,9 +11,9 @@ import { InitCommand } from './init';
 import { RunCommand } from './run';
 
 const cli = new Cli<CliContext>({
-  binaryName: 'affine',
+  binaryName: 'aevum',
   binaryVersion: '0.0.0',
-  binaryLabel: 'AFFiNE Monorepo Tools',
+  binaryLabel: 'Aevum Monorepo Tools',
   enableColors: true,
   enableCapture: true,
 });

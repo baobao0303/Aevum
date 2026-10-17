@@ -15,7 +15,7 @@ export class AppController {
   info() {
     return {
       compatibility: env.version,
-      message: `AFFiNE ${env.version} Server`,
+      message: `Aevum ${env.version} Server`,
       type:
         this.serverConfig.deploymentType === 'selfhosted'
           ? DeploymentType.Selfhosted
