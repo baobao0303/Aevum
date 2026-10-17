@@ -118,7 +118,7 @@ yarn affine @affine/native build
 Only needed if you plan to run the local server (cloud features) or the cloud E2E suites:
 
 ```sh
-yarn affine @affine/server-native build
+yarn aevum @aevum/server-native build
 ```
 
 ## Start Development Server
@@ -127,15 +127,15 @@ yarn affine @affine/server-native build
 yarn dev
 ```
 
-You will be prompted to choose which package to run — pick **`@affine/web`** for the web app, then open **<http://localhost:8080>**.
+You will be prompted to choose which package to run — pick **`@aevum/web`** for the web app, then open **<http://localhost:8080>**.
 
 You can skip the prompt with the `-p` (`--package`) flag:
 
 ```sh
-yarn dev -p @affine/web
+yarn dev -p @aevum/web
 ```
 
-Other dev targets include `@affine/server`, `@affine/electron`, `@affine/mobile`, `@affine/admin`, `@affine/ios` and `@affine/android`.
+Other dev targets include `@aevum/server`, `@affine/electron`, `@affine/mobile`, `@affine/admin`, `@affine/ios` and `@affine/android`.
 
 Running `@affine/web` alone is enough for most editor and UI work — workspaces are stored locally in the browser. To work on **cloud** features (accounts, sync, collaboration, AI), run the local server as well: follow [developing-server.md](./developing-server.md).
 

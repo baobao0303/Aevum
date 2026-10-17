@@ -46,7 +46,7 @@ const config: PlaywrightTestConfig = {
       url: 'http://localhost:8080',
     },
     {
-      command: 'yarn run -T affine dev -p @affine/server',
+      command: 'yarn run -T aevum dev -p @aevum/server',
       timeout: 120 * 1000,
       reuseExistingServer: !process.env.CI,
       env: {
