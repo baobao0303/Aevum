@@ -56,7 +56,7 @@ describe('testing for client update', () => {
       expectReleaseList.map(({ version }) => {
         return [
           http.get(
-            `https://github.com/toeverything/AFFiNE/releases/download/v${version}/latest.yml`,
+            `https://github.com/baobao0303/Aevum/releases/download/v${version}/latest.yml`,
             async req => {
               const buffer = await fs.readFile(
                 path.join(

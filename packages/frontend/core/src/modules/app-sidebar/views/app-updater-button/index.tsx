@@ -200,7 +200,7 @@ export function AppUpdaterButton({
         }
       } else {
         urlService.openPopupWindow(
-          `https://github.com/toeverything/AFFiNE/releases/tag/v${updateAvailable.version}`
+          `https://github.com/baobao0303/Aevum/releases/tag/v${updateAvailable.version}`
         );
       }
     } else if (changelogUnread) {

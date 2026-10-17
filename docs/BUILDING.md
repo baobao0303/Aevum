@@ -76,7 +76,7 @@ Install the Rust toolchain via [rustup](https://rustup.rs/). The required versio
 #### Linux & macOS
 
 ```sh
-git clone https://github.com/toeverything/AFFiNE
+git clone https://github.com/baobao0303/Aevum
 cd AFFiNE
 ```
 
@@ -92,7 +92,7 @@ Once Developer Mode is enabled, execute the following command with administrator
 # Enable symbolic links
 git config --global core.symlinks true
 # Clone the repository
-git clone https://github.com/toeverything/AFFiNE
+git clone https://github.com/baobao0303/Aevum
 ```
 
 ### Install dependencies
@@ -111,7 +111,7 @@ Run the following script. It will build the native module at [`packages/frontend
 yarn affine @affine/native build
 ```
 
-> Note: use `strip` from system instead of `binutils` if you are running macOS. [See problem here](https://github.com/toeverything/AFFiNE/discussions/2840)
+> Note: use `strip` from system instead of `binutils` if you are running macOS. [See problem here](https://github.com/baobao0303/Aevum/discussions/2840)
 
 ### Build Server Dependencies
 
@@ -215,7 +215,7 @@ yarn typecheck
 ## Troubleshooting
 
 - **`yarn install` fails or complains about the Node/Yarn version** — check that `node -v` matches [`.nvmrc`](../.nvmrc) (`fnm use` / `nvm use`) and that Corepack is enabled (`yarn -v` should print `4.x`, not `1.x`).
-- **Native module fails to build on macOS** — make sure `strip` is the system one, not the one from `binutils` ([details](https://github.com/toeverything/AFFiNE/discussions/2840)).
+- **Native module fails to build on macOS** — make sure `strip` is the system one, not the one from `binutils` ([details](https://github.com/baobao0303/Aevum/discussions/2840)).
 - **`EPERM: operation not permitted, symlink` on Windows** — enable Developer Mode and symlinks before cloning; see [Windows](#windows).
 - **App fails to start after pulling the latest `canary`** — dependencies or Rust bindings may have changed: re-run `yarn install` and `yarn affine @affine/native build`.
 - **Playwright can't find browsers** — run `npx playwright install`.

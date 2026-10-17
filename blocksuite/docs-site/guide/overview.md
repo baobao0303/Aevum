@@ -18,7 +18,7 @@ You can consider BlockSuite as a [UI component library](../components/overview) 
 
 ## Motivation
 
-BlockSuite originated from the [AFFiNE](https://github.com/toeverything/AFFiNE) knowledge base, with design goals including:
+BlockSuite originated from the [AFFiNE](https://github.com/baobao0303/Aevum) knowledge base, with design goals including:
 
 - **Support for Multimodal Editable Content**: When considering knowledge as a single source of truth, building its various view modes (e.g., text, slides, mind maps, tables) still requires multiple incompatible frameworks. Ideally, no matter how the presentation of content changes, there should be a consistent framework that helps.
 - **Organizing and Visualizing Complex Knowledge**: Existing editors generally focus on editing single documents, but often fall short in dealing with complex structures involving intertwined references. This requires the framework to natively manage state across multiple documents.

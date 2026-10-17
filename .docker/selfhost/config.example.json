@@ -1,5 +1,5 @@
 {
-  "$schema": "https://github.com/toeverything/affine/releases/latest/download/config.schema.json",
+  "$schema": "https://github.com/baobao0303/Aevum/releases/latest/download/config.schema.json",
   "deployment": {
     "type": "selfhosted"
   },

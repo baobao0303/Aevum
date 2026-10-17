@@ -23,7 +23,7 @@ export const embed: InitFn = (collection: Workspace, id: string) => {
     store.addBlock(
       'affine:embed-github',
       {
-        url: 'https://github.com/toeverything/AFFiNE/pull/5453',
+        url: 'https://github.com/baobao0303/Aevum/pull/5453',
       },
       noteId
     );
