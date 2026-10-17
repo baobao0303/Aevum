@@ -138,7 +138,7 @@ jobs:
         uses: ./.github/actions/setup-node
         with:
           electron-install: false
-          extra-flags: workspaces focus @affine/server-native
+          extra-flags: workspaces focus @aevum/server-native
       - name: Build Rust
         uses: ./.github/actions/build-rust
         env:
@@ -146,7 +146,7 @@ jobs:
           AFFINE_PRO_LICENSE_AES_KEY: ${{ secrets.AFFINE_PRO_LICENSE_AES_KEY }}
         with:
           target: ${{ matrix.targets.name }}
-          package: '@affine/server-native'
+          package: '@aevum/server-native'
       - name: Rename ${{ matrix.targets.file }}
         run: |
           mv ./packages/backend/native/server-native.node ./packages/backend/native/${{ matrix.targets.file }}
@@ -172,7 +172,7 @@ jobs:
         uses: ./.github/actions/setup-node
         with:
           electron-install: false
-          extra-flags: workspaces focus @affine/server @types/affine__env
+          extra-flags: workspaces focus @aevum/server @types/affine__env
       - name: Download server-native
         uses: actions/download-artifact@v4
         with:
@@ -182,7 +182,7 @@ jobs:
       - name: List server-native files
         run: ls -alh ./packages/backend/native
       - name: Build Server
-        run: yarn workspace @affine/server build
+        run: yarn workspace @aevum/server build
       - name: Upload server dist
         uses: actions/upload-artifact@v4
         with:
@@ -247,10 +247,10 @@ jobs:
         run: |
           yarn config set --json supportedArchitectures.cpu '["x64", "arm64", "arm"]'
           yarn config set --json supportedArchitectures.libc '["glibc"]'
-          yarn workspaces focus @affine/server --production
+          yarn workspaces focus @aevum/server --production
 
       - name: Generate Prisma client
-        run: yarn workspace @affine/server prisma generate
+        run: yarn workspace @aevum/server prisma generate
 
       - name: Mv node_modules
         run: mv ./node_modules ./packages/backend/server

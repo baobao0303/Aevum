@@ -12,6 +12,119 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@aevum-tools/cli@workspace:*, @aevum-tools/cli@workspace:tools/cli":
+  version: 0.0.0-use.local
+  resolution: "@aevum-tools/cli@workspace:tools/cli"
+  dependencies:
+    "@affine-tools/utils": "workspace:*"
+    "@affine/s3-compat": "workspace:*"
+    "@napi-rs/simple-git": "npm:^1.0.0"
+    "@rspack/core": "npm:^2.0.8"
+    "@rspack/dev-server": "npm:^2.1.0"
+    "@sentry/webpack-plugin": "npm:^5.3.0"
+    "@swc/core": "npm:^1.10.1"
+    "@tailwindcss/postcss": "npm:^4.3.0"
+    "@types/lodash-es": "npm:^4.17.12"
+    "@types/mime-types": "npm:^3.0.0"
+    "@types/node": "npm:^22.0.0"
+    "@vanilla-extract/webpack-plugin": "npm:^2.3.15"
+    autoprefixer: "npm:^10.4.20"
+    clipanion: "npm:^3.2.1"
+    css-loader: "npm:^7.1.4"
+    cssnano: "npm:^7.0.6"
+    inquirer: "npm:^12.3.0"
+    jsonc-parser: "npm:^3.3.1"
+    lodash-es: "npm:^4.17.23"
+    mime-types: "npm:^3.0.0"
+    oxfmt: "npm:0.63.0"
+    postcss: "npm:^8.5.18"
+    postcss-loader: "npm:^8.2.1"
+    postcss-selector-parser: "npm:^7.1.3"
+    source-map-loader: "npm:^5.0.0"
+    style-loader: "npm:^4.0.0"
+    swc-loader: "npm:^0.2.6"
+    tailwindcss: "npm:^4.1.17"
+    tsx: "npm:^4.21.0"
+    typanion: "npm:^3.14.0"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+  bin:
+    aevum: ./bin/cli.js
+    affine: ./bin/cli.js
+    r: ./bin/runner.js
+  languageName: unknown
+  linkType: soft
+
+"@aevum/monorepo@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "@aevum/monorepo@workspace:."
+  dependencies:
+    "@aevum-tools/cli": "workspace:*"
+    "@capacitor/cli": "npm:^8.4.2"
+    "@faker-js/faker": "npm:^10.5.0"
+    "@istanbuljs/schema": "npm:^0.1.3"
+    "@playwright/test": "npm:=1.58.2"
+    "@taplo/cli": "npm:^0.7.0"
+    "@toeverything/infra": "workspace:*"
+    "@types/node": "npm:^22.0.0"
+    "@typescript/native": "npm:typescript@7.0.2"
+    "@vanilla-extract/vite-plugin": "npm:~5.1.5"
+    "@vitest/browser": "npm:^4.1.11"
+    "@vitest/coverage-istanbul": "npm:^4.1.11"
+    "@vitest/ui": "npm:^4.1.11"
+    electron: "npm:^41.10.7"
+    eslint: "npm:10.12.0"
+    eslint-plugin-import-x: "npm:^4.16.1"
+    eslint-plugin-lit: "npm:^2.2.1"
+    eslint-plugin-react: "npm:^7.37.5"
+    eslint-plugin-react-hooks: "npm:^7.0.1"
+    eslint-plugin-simple-import-sort: "npm:^12.1.1"
+    eslint-plugin-sonarjs: "npm:^4.0.2"
+    happy-dom: "npm:^20.0.0"
+    husky: "npm:^9.1.7"
+    lint-staged: "npm:^16.0.0"
+    msw: "npm:^2.13.2"
+    oxfmt: "npm:0.63.0"
+    oxlint: "npm:1.78.0"
+    oxlint-tsgolint: "npm:7.0.2001"
+    semver: "npm:^7.7.3"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+    unplugin-swc: "npm:^1.5.9"
+    vite: "npm:^7.3.6"
+    vitest: "npm:^4.1.11"
+  dependenciesMeta:
+    "@apollo/protobufjs":
+      built: false
+    "@prisma/client":
+      built: true
+    "@prisma/engines":
+      built: true
+    "@scarf/scarf":
+      built: false
+    "@sentry/cli":
+      built: true
+    "@swc/core":
+      built: false
+    core-js:
+      built: false
+    electron:
+      built: true
+    electron-winstaller:
+      built: true
+    esbuild:
+      built: true
+    msgpackr-extract:
+      built: false
+    msw:
+      built: false
+    prisma:
+      built: false
+    protobufjs:
+      built: false
+    unrs-resolver:
+      built: false
+  languageName: unknown
+  linkType: soft
+
 "@aevum/server-native@workspace:*, @aevum/server-native@workspace:packages/backend/native":
   version: 0.0.0-use.local
   resolution: "@aevum/server-native@workspace:packages/backend/native"
@@ -25,8 +138,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@aevum/server@workspace:packages/backend/server"
   dependencies:
+    "@aevum-tools/cli": "workspace:*"
     "@aevum/server-native": "workspace:*"
-    "@affine-tools/cli": "workspace:*"
     "@affine-tools/utils": "workspace:*"
     "@affine/graphql": "workspace:*"
     "@affine/realtime": "workspace:*"
@@ -233,47 +346,6 @@ __metadata:
     "@playwright/test": "*"
     express: "*"
     http-proxy-middleware: "*"
-  languageName: unknown
-  linkType: soft
-
-"@affine-tools/cli@workspace:*, @affine-tools/cli@workspace:tools/cli":
-  version: 0.0.0-use.local
-  resolution: "@affine-tools/cli@workspace:tools/cli"
-  dependencies:
-    "@affine-tools/utils": "workspace:*"
-    "@affine/s3-compat": "workspace:*"
-    "@napi-rs/simple-git": "npm:^1.0.0"
-    "@rspack/core": "npm:^2.0.8"
-    "@rspack/dev-server": "npm:^2.1.0"
-    "@sentry/webpack-plugin": "npm:^5.3.0"
-    "@swc/core": "npm:^1.10.1"
-    "@tailwindcss/postcss": "npm:^4.3.0"
-    "@types/lodash-es": "npm:^4.17.12"
-    "@types/mime-types": "npm:^3.0.0"
-    "@types/node": "npm:^22.0.0"
-    "@vanilla-extract/webpack-plugin": "npm:^2.3.15"
-    autoprefixer: "npm:^10.4.20"
-    clipanion: "npm:^3.2.1"
-    css-loader: "npm:^7.1.4"
-    cssnano: "npm:^7.0.6"
-    inquirer: "npm:^12.3.0"
-    jsonc-parser: "npm:^3.3.1"
-    lodash-es: "npm:^4.17.23"
-    mime-types: "npm:^3.0.0"
-    oxfmt: "npm:0.63.0"
-    postcss: "npm:^8.5.18"
-    postcss-loader: "npm:^8.2.1"
-    postcss-selector-parser: "npm:^7.1.3"
-    source-map-loader: "npm:^5.0.0"
-    style-loader: "npm:^4.0.0"
-    swc-loader: "npm:^0.2.6"
-    tailwindcss: "npm:^4.1.17"
-    tsx: "npm:^4.21.0"
-    typanion: "npm:^3.14.0"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-  bin:
-    affine: ./bin/cli.js
-    r: ./bin/runner.js
   languageName: unknown
   linkType: soft
 
@@ -625,7 +697,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@affine/doc-diff@workspace:tools/doc-diff"
   dependencies:
-    "@affine-tools/cli": "workspace:*"
+    "@aevum-tools/cli": "workspace:*"
     "@types/node": "npm:^22.0.0"
     typescript: "npm:@typescript/typescript6@6.0.2"
     yjs: "npm:^13.6.27"
@@ -776,7 +848,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@affine/i18n@workspace:packages/frontend/i18n"
   dependencies:
-    "@affine-tools/cli": "workspace:*"
+    "@aevum-tools/cli": "workspace:*"
     "@affine-tools/utils": "workspace:*"
     "@affine/debug": "workspace:*"
     "@magic-works/i18n-codegen": "npm:^0.6.1"
@@ -794,7 +866,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@affine/ios@workspace:packages/frontend/apps/ios"
   dependencies:
-    "@affine-tools/cli": "workspace:*"
+    "@aevum-tools/cli": "workspace:*"
     "@affine-tools/utils": "workspace:*"
     "@affine/component": "workspace:*"
     "@affine/core": "workspace:*"
@@ -858,77 +930,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@affine/monorepo@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "@affine/monorepo@workspace:."
-  dependencies:
-    "@affine-tools/cli": "workspace:*"
-    "@capacitor/cli": "npm:^8.4.2"
-    "@faker-js/faker": "npm:^10.5.0"
-    "@istanbuljs/schema": "npm:^0.1.3"
-    "@playwright/test": "npm:=1.58.2"
-    "@taplo/cli": "npm:^0.7.0"
-    "@toeverything/infra": "workspace:*"
-    "@types/node": "npm:^22.0.0"
-    "@typescript/native": "npm:typescript@7.0.2"
-    "@vanilla-extract/vite-plugin": "npm:~5.1.5"
-    "@vitest/browser": "npm:^4.1.11"
-    "@vitest/coverage-istanbul": "npm:^4.1.11"
-    "@vitest/ui": "npm:^4.1.11"
-    electron: "npm:^41.10.7"
-    eslint: "npm:10.12.0"
-    eslint-plugin-import-x: "npm:^4.16.1"
-    eslint-plugin-lit: "npm:^2.2.1"
-    eslint-plugin-react: "npm:^7.37.5"
-    eslint-plugin-react-hooks: "npm:^7.0.1"
-    eslint-plugin-simple-import-sort: "npm:^12.1.1"
-    eslint-plugin-sonarjs: "npm:^4.0.2"
-    happy-dom: "npm:^20.0.0"
-    husky: "npm:^9.1.7"
-    lint-staged: "npm:^16.0.0"
-    msw: "npm:^2.13.2"
-    oxfmt: "npm:0.63.0"
-    oxlint: "npm:1.78.0"
-    oxlint-tsgolint: "npm:7.0.2001"
-    semver: "npm:^7.7.3"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-    unplugin-swc: "npm:^1.5.9"
-    vite: "npm:^7.3.6"
-    vitest: "npm:^4.1.11"
-  dependenciesMeta:
-    "@apollo/protobufjs":
-      built: false
-    "@prisma/client":
-      built: true
-    "@prisma/engines":
-      built: true
-    "@scarf/scarf":
-      built: false
-    "@sentry/cli":
-      built: true
-    "@swc/core":
-      built: false
-    core-js:
-      built: false
-    electron:
-      built: true
-    electron-winstaller:
-      built: true
-    esbuild:
-      built: true
-    msgpackr-extract:
-      built: false
-    msw:
-      built: false
-    prisma:
-      built: false
-    protobufjs:
-      built: false
-    unrs-resolver:
-      built: false
-  languageName: unknown
-  linkType: soft
-
 "@affine/native@workspace:*, @affine/native@workspace:packages/frontend/native":
   version: 0.0.0-use.local
   resolution: "@affine/native@workspace:packages/frontend/native"
@@ -979,7 +980,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@affine/playstore-auto-bump@workspace:tools/playstore-auto-bump"
   dependencies:
-    "@affine-tools/cli": "workspace:*"
+    "@aevum-tools/cli": "workspace:*"
     "@affine-tools/utils": "workspace:*"
     "@googleapis/androidpublisher": "npm:^36.0.0"
     "@types/node": "npm:^22.0.0"
@@ -1012,7 +1013,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@affine/revert-update@workspace:tools/revert-update"
   dependencies:
-    "@affine-tools/cli": "workspace:*"
+    "@aevum-tools/cli": "workspace:*"
     "@types/node": "npm:^22.0.0"
     typescript: "npm:@typescript/typescript6@6.0.2"
     yjs: "npm:^13.6.27"
@@ -1023,7 +1024,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@affine/routes@workspace:packages/frontend/routes"
   dependencies:
-    "@affine-tools/cli": "workspace:*"
+    "@aevum-tools/cli": "workspace:*"
     "@affine-tools/utils": "workspace:*"
     path-to-regexp: "npm:^8.4.2"
     vitest: "npm:^4.1.11"
