@@ -39,7 +39,7 @@
     "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
-    "@affine-tools/cli": "workspace:*",
+    "@aevum-tools/cli": "workspace:*",
     "@affine-tools/utils": "workspace:*",
     "@capacitor/cli": "^8.4.2",
     "@types/react": "^19.0.1",

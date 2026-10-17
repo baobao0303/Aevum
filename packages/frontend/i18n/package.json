@@ -26,7 +26,7 @@
     "react-i18next": "^15.2.0"
   },
   "devDependencies": {
-    "@affine-tools/cli": "workspace:*",
+    "@aevum-tools/cli": "workspace:*",
     "@affine-tools/utils": "workspace:*",
     "glob": "^11.0.0",
     "typescript": "npm:@typescript/typescript6@6.0.2",

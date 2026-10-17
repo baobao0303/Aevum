@@ -11,7 +11,6 @@ import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hoo
 import {
   AuthService,
   CaptchaService,
-  getSelfHostedServerName,
   ServerService,
 } from '@affine/core/modules/cloud';
 import type { AuthSessionStatus } from '@affine/core/modules/cloud/entities/session';
@@ -56,12 +55,6 @@ export const SignInWithPasswordStep = ({
       c => c.type === ServerDeploymentType.Selfhosted
     )
   );
-  const serverName = useLiveData(
-    serverService.server.config$.selector(c => c.serverName)
-  );
-  const signInServerName = isSelfhosted
-    ? getSelfHostedServerName(serverName)
-    : serverName;
 
   const verifyToken = useLiveData(captchaService.verifyToken$);
   const needCaptcha = useLiveData(captchaService.needCaptcha$);
@@ -86,6 +79,13 @@ export const SignInWithPasswordStep = ({
 
   const onSignIn = useAsyncCallback(async () => {
     if (isLoading || (!verifyToken && needCaptcha)) return;
+
+    if (!password) {
+      setPasswordError(true);
+      setPasswordErrorHint('Please enter your password');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -104,7 +104,7 @@ export const SignInWithPasswordStep = ({
         error.is('PASSWORD_REQUIRED')
       ) {
         setPasswordError(true);
-        setPasswordErrorHint(t['com.affine.auth.password.error']());
+        setPasswordErrorHint('Invalid email or password. Please try again.');
       } else {
         setPasswordError(false);
         notify.error({
@@ -136,13 +136,11 @@ export const SignInWithPasswordStep = ({
 
   return (
     <AuthContainer>
-      <AuthHeader
-        title={t['com.affine.auth.sign.in']()}
-        subTitle={signInServerName}
-      />
+      <AuthHeader title={t['com.affine.auth.sign.in']()} />
 
       <AuthContent>
         <form
+          noValidate
           onSubmit={event => {
             event.preventDefault();
             onSignIn();

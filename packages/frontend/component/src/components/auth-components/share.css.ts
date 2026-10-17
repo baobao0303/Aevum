@@ -3,75 +3,98 @@ import { globalStyle, style } from '@vanilla-extract/css';
 export const authContainer = style({
   display: 'flex',
   flexDirection: 'column',
-  height: '100%',
   width: '100%',
-  minHeight: '422px',
 });
 
 export const authHeaderWrapper = style({
   marginBottom: '20px',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  textAlign: 'center',
+  width: '100%',
 });
 globalStyle(`${authHeaderWrapper} .logo`, {
-  fontSize: cssVar('fontH3'),
-  fontWeight: 600,
+  display: 'block',
   color: cssVar('black'),
-  marginRight: '6px',
-  verticalAlign: 'middle',
+  background: 'transparent',
+  margin: '0 auto 10px auto',
+  flexShrink: 0,
 });
 
 globalStyle(`${authHeaderWrapper} > p:first-of-type`, {
-  fontSize: cssVar('fontH5'),
+  fontSize: '18px',
   fontWeight: 600,
-  marginBottom: '4px',
-  lineHeight: '28px',
+  letterSpacing: '-0.01em',
+  margin: 0,
+  lineHeight: '26px',
   display: 'flex',
   alignItems: 'center',
+  justifyContent: 'center',
+  width: '100%',
+  textAlign: 'center',
 });
 globalStyle(`${authHeaderWrapper} > p:last-of-type`, {
-  fontSize: cssVar('fontH4'),
+  fontSize: '18px',
   fontWeight: 600,
-  lineHeight: '28px',
+  letterSpacing: '-0.01em',
+  lineHeight: '26px',
+  textAlign: 'center',
+  width: '100%',
 });
 
 export const authContent = style({
-  fontSize: cssVar('fontBase'),
-  lineHeight: cssVar('fontH3'),
+  fontSize: '14px',
+  lineHeight: '20px',
   flexGrow: 1,
 });
 
 globalStyle(`${authContent} > *:not(:last-child)`, {
-  marginBottom: '20px',
+  marginBottom: '16px',
 });
 
 export const authInputWrapper = style({
   position: 'relative',
+  marginBottom: '16px',
   selectors: {
     '&.with-hint': {
-      marginBottom: '8px',
+      marginBottom: '12px',
     },
   },
 });
 
-export const authFooter = style({});
+export const authFooter = style({
+  marginTop: '16px',
+});
 
 globalStyle(`${authFooter} > *:not(:last-child)`, {
-  marginBottom: '20px',
+  marginBottom: '16px',
 });
 
 globalStyle(`${authInputWrapper} label`, {
   display: 'block',
   color: cssVar('textSecondaryColor'),
-  marginBottom: '4px',
-  fontSize: cssVar('fontSm'),
-  fontWeight: 600,
-  lineHeight: '22px',
+  marginBottom: '6px',
+  fontSize: '13px',
+  fontWeight: 500,
+  lineHeight: '18px',
+});
+
+globalStyle(`${authInputWrapper} input`, {
+  fontSize: '14px',
+  fontWeight: 400,
+  lineHeight: '20px',
 });
 
 export const authInputError = style({
   color: cssVar('errorColor'),
-  fontSize: cssVar('fontXs'),
-  lineHeight: '20px',
-  minHeight: '20px',
+  fontSize: '12px',
+  lineHeight: '16px',
+  marginTop: '4px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '6px',
 });
 
 globalStyle(`${authContent} a`, {

@@ -182,7 +182,7 @@ function i18nnext() {
 }
 
 async function appendErrorI18n() {
-  const server = new Package('@affine/server');
+  const server = new Package('@aevum/server' as any);
   const defFilePath = server.srcPath.join('base/error/def.ts');
 
   if (!defFilePath.exists()) {

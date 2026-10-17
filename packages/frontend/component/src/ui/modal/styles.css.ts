@@ -73,6 +73,10 @@ export const modalOverlay = style({
   position: 'fixed',
   inset: 0,
   backgroundColor: cssVar('backgroundModalColor'),
+  backdropFilter: 'blur(8px)',
+  WebkitBackdropFilter: 'blur(8px)',
+  overflow: 'hidden',
+  overscrollBehavior: 'contain',
   zIndex: cssVar('zIndexModal'),
   animation: `${overlayShow} 150ms forwards`,
   selectors: {
@@ -178,6 +182,7 @@ export const modalContent = style({
   backgroundColor: cssVar('backgroundOverlayPanelColor'),
   boxShadow: cssVar('popoverShadow'),
   borderRadius: '12px',
+  overscrollBehavior: 'contain',
   // :focus-visible will set outline
   outline: 'none',
 
