@@ -54,7 +54,7 @@ const cloudUserSchema = z.object({
   password: z.string(),
 });
 
-const server = new Package('@affine/server');
+const server = new Package('@aevum/server' as any);
 const require = createRequire(server.srcPath.join('index.ts').toFileUrl());
 
 export const runPrisma = async <T>(

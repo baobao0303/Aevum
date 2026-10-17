@@ -45,7 +45,7 @@ function initTestStaticFiles(staticPath: string) {
 }
 
 test.before(async t => {
-  const staticPath = new Package('@affine/server').join('static').value;
+  const staticPath = new Package('@aevum/server').join('static').value;
   initTestStaticFiles(staticPath);
 
   const app = await createTestingApp();
