@@ -81,7 +81,7 @@ export class ServerConfigResolver {
       name:
         this.config.server.name ??
         (this.selfhosted
-          ? 'Aevum Self-hosted'
+          ? 'Aevum'
           : env.namespaces.canary
             ? 'Aevum Canary Cloud'
             : env.namespaces.beta

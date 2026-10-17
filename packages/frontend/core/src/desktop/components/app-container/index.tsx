@@ -31,7 +31,7 @@ export const UnauthenticatedWorkspaceBackdrop = () => {
         position: 'relative',
         width: '100vw',
         height: '100dvh',
-        backgroundColor: '#090a14',
+        backgroundColor: '#000000',
         overflow: 'hidden',
         userSelect: 'none',
         pointerEvents: 'none',
@@ -44,15 +44,16 @@ export const UnauthenticatedWorkspaceBackdrop = () => {
         playsInline
         width={1280}
         height={720}
-        src="/aevum-auth-bg.mp4?v=2"
+        src="/aevum-auth-bg.mp4?v=3"
         style={{
           position: 'absolute',
           inset: 0,
           width: '100%',
           height: '100%',
           objectFit: 'cover',
-          filter: 'blur(5px) brightness(0.88)',
-          WebkitFilter: 'blur(5px) brightness(0.88)',
+          filter: 'grayscale(100%) brightness(0.24) contrast(1.35) blur(6px)',
+          WebkitFilter:
+            'grayscale(100%) brightness(0.24) contrast(1.35) blur(6px)',
           transform: 'scale(1.02)',
         }}
       />
@@ -61,7 +62,7 @@ export const UnauthenticatedWorkspaceBackdrop = () => {
           position: 'absolute',
           inset: 0,
           background:
-            'radial-gradient(circle at 50% 50%, rgba(9, 10, 18, 0.25) 0%, rgba(9, 10, 18, 0.52) 100%)',
+            'radial-gradient(circle at 50% 45%, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.9) 100%)',
         }}
       />
     </div>
