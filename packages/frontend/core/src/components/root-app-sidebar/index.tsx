@@ -47,6 +47,7 @@ import {
 } from './index.css';
 import { InviteMembersButton } from './invite-members-button';
 import { AppSidebarJournalButton } from './journal-button';
+import { MobileQrButton } from './mobile-qr-button';
 import { NotificationButton } from './notification-button';
 import { SidebarAudioPlayer } from './sidebar-audio-player';
 import { TemplateDocEntrance } from './template-doc-entrance';
@@ -223,6 +224,7 @@ export const RootAppSidebar = memo((): ReactElement => {
             {t['com.affine.settingSidebar.title']()}
           </span>
         </MenuItem>
+        <MobileQrButton />
       </SidebarContainer>
       <SidebarScrollableContainer>
         <NavigationPanelFavorites />

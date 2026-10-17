@@ -248,6 +248,47 @@ export class AuthService extends Service {
     return body.code;
   }
 
+  async createMobileQrHandoff(): Promise<{
+    code: string | null;
+    lanIps: { ip: string; label: string; kind: 'lan' | 'vpn' | 'other' }[];
+  }> {
+    try {
+      const res = await this.fetchService.fetch(
+        '/api/auth/open-app/sign-in-code',
+        {
+          method: 'POST',
+        }
+      );
+      const body = (await res.json()) as {
+        code?: string;
+        lanIps?: { ip: string; label: string; kind: 'lan' | 'vpn' | 'other' }[];
+      };
+      return {
+        code: body.code ?? null,
+        lanIps: body.lanIps ?? [],
+      };
+    } catch {
+      try {
+        const netRes = await this.fetchService.fetch(
+          '/api/auth/open-app/network-info'
+        );
+        const netBody = (await netRes.json()) as {
+          lanIps?: {
+            ip: string;
+            label: string;
+            kind: 'lan' | 'vpn' | 'other';
+          }[];
+        };
+        return {
+          code: null,
+          lanIps: netBody.lanIps ?? [],
+        };
+      } catch {
+        return { code: null, lanIps: [] };
+      }
+    }
+  }
+
   async signInOpenAppSignInCode(code: string) {
     await this.store.signInOpenAppSignInCode(code);
 

@@ -80,12 +80,14 @@ export const Component = (): ReactElement => {
   });
 
   const sessionStatus = useLiveData(authService.session.status$);
+  const authRevalidating = useLiveData(authService.session.isRevalidating$);
   const loggedIn = sessionStatus === 'authenticated';
 
   const params = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const hasQrParam = searchParams.has('aevum_qr_code');
 
   // check if we are in detail doc route, if so, maybe render share page
   const detailDocRoute = useMemo(() => {
@@ -112,6 +114,7 @@ export const Component = (): ReactElement => {
   }, [location.pathname]);
 
   const [workspaceNotFound, setWorkspaceNotFound] = useState(false);
+  const [hasFetchedAfterAuth, setHasFetchedAfterAuth] = useState(false);
   const listLoading = useLiveData(workspacesService.list.isRevalidating$);
   const workspaces = useLiveData(workspacesService.list.workspaces$);
   const meta = useMemo(() => {
@@ -119,6 +122,22 @@ export const Component = (): ReactElement => {
       ({ id, flavour }) => id === params.workspaceId && flavour !== 'local'
     );
   }, [workspaces, params.workspaceId]);
+
+  useEffect(() => {
+    if (loggedIn) {
+      workspacesService.list.revalidate();
+    } else {
+      setHasFetchedAfterAuth(false);
+    }
+  }, [loggedIn, workspacesService]);
+
+  useEffect(() => {
+    if (loggedIn && !listLoading) {
+      const timer = setTimeout(() => setHasFetchedAfterAuth(true), 250);
+      return () => clearTimeout(timer);
+    }
+    return;
+  }, [loggedIn, listLoading]);
 
   // Purge any local Demo Workspace
   useEffect(() => {
@@ -133,24 +152,48 @@ export const Component = (): ReactElement => {
 
   // Redirect to index select page when unauthenticated or when local demo workspace was removed
   useEffect(() => {
+    if (authRevalidating || hasQrParam) {
+      return;
+    }
     if (sessionStatus === 'unauthenticated' && !detailDocRoute) {
       navigate('/', { replace: true })?.catch(console.error);
       return;
     }
-    if (loggedIn && !listLoading && !meta && !detailDocRoute) {
+    if (
+      loggedIn &&
+      hasFetchedAfterAuth &&
+      !listLoading &&
+      !meta &&
+      !detailDocRoute
+    ) {
       navigate('/', { replace: true })?.catch(console.error);
     }
-  }, [detailDocRoute, listLoading, loggedIn, meta, navigate, sessionStatus]);
+  }, [
+    authRevalidating,
+    detailDocRoute,
+    hasFetchedAfterAuth,
+    hasQrParam,
+    listLoading,
+    loggedIn,
+    meta,
+    navigate,
+    sessionStatus,
+  ]);
 
   // if listLoading is false, we can show 404 page, otherwise we should show loading page.
   useEffect(() => {
-    if (loggedIn && listLoading === false && meta === undefined) {
+    if (
+      loggedIn &&
+      hasFetchedAfterAuth &&
+      listLoading === false &&
+      meta === undefined
+    ) {
       setWorkspaceNotFound(true);
     }
     if (meta) {
       setWorkspaceNotFound(false);
     }
-  }, [listLoading, loggedIn, meta]);
+  }, [hasFetchedAfterAuth, listLoading, loggedIn, meta]);
 
   // if workspace is not found, we should retry
   const retryTimesRef = useRef(3);

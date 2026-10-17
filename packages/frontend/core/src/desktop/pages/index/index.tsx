@@ -42,6 +42,7 @@ export const Component = ({
   const globalDialogService = useService(GlobalDialogService);
 
   const sessionStatus = useLiveData(authService.session.status$);
+  const authRevalidating = useLiveData(authService.session.isRevalidating$);
   const loggedIn = sessionStatus === 'authenticated';
   const openedDialogs = useLiveData(globalDialogService.dialogs$);
 
@@ -128,14 +129,25 @@ export const Component = ({
 
   // Automatically open the Sign-In modal when unauthenticated
   useEffect(() => {
+    const hasQrCode =
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).has('aevum_qr_code');
     if (
       sessionStatus === 'unauthenticated' &&
+      !authRevalidating &&
+      !hasQrCode &&
       videoReady &&
       !openedDialogs.some(d => d.type === 'sign-in')
     ) {
       globalDialogService.open('sign-in', {});
     }
-  }, [globalDialogService, openedDialogs, sessionStatus, videoReady]);
+  }, [
+    authRevalidating,
+    globalDialogService,
+    openedDialogs,
+    sessionStatus,
+    videoReady,
+  ]);
 
   if (createError && createErrorFallback) {
     return createErrorFallback(retryCreate);

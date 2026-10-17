@@ -1,4 +1,32 @@
 import { setServers } from 'node:dns/promises';
+import { networkInterfaces } from 'node:os';
+
+function getLocalNetworkIps() {
+  const nets = networkInterfaces();
+  const list: { ip: string; label: string; kind: 'lan' | 'vpn' | 'other' }[] =
+    [];
+  for (const [name, addrs] of Object.entries(nets)) {
+    if (!addrs) continue;
+    for (const addr of addrs) {
+      if (addr.family !== 'IPv4' || addr.internal) continue;
+      const ip = addr.address;
+      if (
+        ip.startsWith('192.168.') ||
+        ip.startsWith('10.') ||
+        /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip)
+      ) {
+        list.push({ ip, label: `Wi-Fi / LAN (${name})`, kind: 'lan' });
+      } else if (ip.startsWith('100.')) {
+        list.push({ ip, label: `Tailscale / VPN (${name})`, kind: 'vpn' });
+      } else {
+        list.push({ ip, label: `Network (${name})`, kind: 'other' });
+      }
+    }
+  }
+  const order = { lan: 0, vpn: 1, other: 2 };
+  list.sort((a, b) => order[a.kind] - order[b.kind]);
+  return list;
+}
 
 import {
   Body,
@@ -235,11 +263,18 @@ export class AuthController {
 
   @Public()
   @UseNamedGuard('version')
+  @Get('/open-app/network-info')
+  async openAppNetworkInfo() {
+    return { lanIps: getLocalNetworkIps() };
+  }
+
+  @Public()
+  @UseNamedGuard('version')
   @Post('/open-app/sign-in-code')
   async openAppSignInCode(@CurrentUser() user?: CurrentUser) {
     if (!user) throw new ActionForbidden();
     const code = await this.openApp.createSignInCode(user);
-    return { code };
+    return { code, lanIps: getLocalNetworkIps() };
   }
 
   @Public()

@@ -66,10 +66,19 @@ export class AuthSession extends Entity {
       signal
     ) as Promise<AuthSessionAuthenticated>;
 
-  isRevalidating$ = new LiveData(false);
+  isRevalidating$ = new LiveData(
+    typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).has('aevum_qr_code')
+  );
 
   constructor(private readonly store: AuthStore) {
     super();
+    if (
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).has('aevum_qr_code')
+    ) {
+      this.revalidate();
+    }
   }
 
   revalidate = effect(
@@ -103,6 +112,24 @@ export class AuthSession extends Entity {
 
   private async getSession(): Promise<AuthSessionInfo | null> {
     try {
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        const qrCode = url.searchParams.get('aevum_qr_code');
+        if (qrCode) {
+          url.searchParams.delete('aevum_qr_code');
+          window.history.replaceState(
+            {},
+            '',
+            url.pathname + url.search + url.hash
+          );
+          try {
+            await this.store.signInOpenAppSignInCode(qrCode);
+          } catch (err) {
+            console.error('Failed to exchange Aevum QR sign-in code:', err);
+          }
+        }
+      }
+
       const session = await this.store.fetchSession();
 
       if (session?.user) {
