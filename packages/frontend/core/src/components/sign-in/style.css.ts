@@ -6,6 +6,7 @@ export const authMessage = style({
   color: cssVar('textSecondaryColor'),
   fontSize: cssVar('fontXs'),
   lineHeight: '20px',
+  textAlign: 'center',
 });
 
 globalStyle(`${authMessage} a`, {
@@ -91,4 +92,5 @@ export const authInput = style({
 
 export const signInButton = style({
   backgroundColor: cssVarV2.button.signinbutton.background,
+  marginTop: '8px',
 });

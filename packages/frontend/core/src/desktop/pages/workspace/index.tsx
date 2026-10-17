@@ -2,6 +2,7 @@ import { DNDContext } from '@affine/component';
 import { AffineOtherPageLayout } from '@affine/component/affine-other-page-layout';
 import { workbenchRoutes } from '@affine/core/desktop/workbench-router';
 import {
+  AuthService,
   DefaultServerService,
   ServersService,
 } from '@affine/core/modules/cloud';
@@ -28,6 +29,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   matchPath,
   useLocation,
+  useNavigate,
   useParams,
   useSearchParams,
 } from 'react-router-dom';
@@ -36,7 +38,10 @@ import * as _Y from 'yjs';
 
 import { AffineErrorBoundary } from '../../../components/affine/affine-error-boundary';
 import { WorkbenchRoot } from '../../../modules/workbench';
-import { AppContainer } from '../../components/app-container';
+import {
+  AppContainer,
+  UnauthenticatedWorkspaceBackdrop,
+} from '../../components/app-container';
 import { PageNotFound } from '../404';
 import { WorkspaceLayout } from './layouts/workspace-layout';
 import { SharePage } from './share/share-page';
@@ -67,16 +72,23 @@ export const Component = (): ReactElement => {
     serversService,
     defaultServerService,
     globalContextService,
+    authService,
   } = useServices({
     WorkspacesService,
     GlobalDialogService,
     ServersService,
     DefaultServerService,
     GlobalContextService,
+    AuthService,
   });
+
+  const sessionStatus = useLiveData(authService.session.status$);
+  const loggedIn = sessionStatus === 'authenticated';
+  const signInOpenedRef = useRef(false);
 
   const params = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   // check if we are in detail doc route, if so, maybe render share page
@@ -107,18 +119,50 @@ export const Component = (): ReactElement => {
   const listLoading = useLiveData(workspacesService.list.isRevalidating$);
   const workspaces = useLiveData(workspacesService.list.workspaces$);
   const meta = useMemo(() => {
-    return workspaces.find(({ id }) => id === params.workspaceId);
+    return workspaces.find(
+      ({ id, flavour }) => id === params.workspaceId && flavour !== 'local'
+    );
   }, [workspaces, params.workspaceId]);
+
+  // Purge any local Demo Workspace
+  useEffect(() => {
+    const localWorkspaces = workspaces.filter(w => w.flavour === 'local');
+    if (localWorkspaces.length > 0) {
+      localStorage.removeItem('last_workspace_id');
+      localWorkspaces.forEach(w => {
+        workspacesService.deleteWorkspace(w).catch(console.error);
+      });
+    }
+  }, [workspaces, workspacesService]);
+
+  // Require login before showing workspace
+  useEffect(() => {
+    if (sessionStatus === 'unauthenticated' && !signInOpenedRef.current) {
+      signInOpenedRef.current = true;
+      globalDialogService.open('sign-in', {
+        server: searchParams.get('server') ?? undefined,
+      });
+    } else if (sessionStatus === 'authenticated') {
+      signInOpenedRef.current = false;
+    }
+  }, [globalDialogService, searchParams, sessionStatus]);
+
+  // Once authenticated, if current route was a removed local demo workspace, redirect to index to open/create cloud workspace
+  useEffect(() => {
+    if (loggedIn && !listLoading && !meta && !detailDocRoute) {
+      navigate('/', { replace: true });
+    }
+  }, [detailDocRoute, listLoading, loggedIn, meta, navigate]);
 
   // if listLoading is false, we can show 404 page, otherwise we should show loading page.
   useEffect(() => {
-    if (listLoading === false && meta === undefined) {
+    if (loggedIn && listLoading === false && meta === undefined) {
       setWorkspaceNotFound(true);
     }
     if (meta) {
       setWorkspaceNotFound(false);
     }
-  }, [listLoading, meta, workspacesService]);
+  }, [listLoading, loggedIn, meta]);
 
   // if workspace is not found, we should retry
   const retryTimesRef = useRef(3);
@@ -129,7 +173,7 @@ export const Component = (): ReactElement => {
     }
   }, [params.workspaceId, workspacesService]);
   useEffect(() => {
-    if (listLoading === false && meta === undefined) {
+    if (loggedIn && listLoading === false && meta === undefined) {
       const timer = setTimeout(() => {
         if (retryTimesRef.current > 0) {
           workspacesService.list.revalidate();
@@ -139,7 +183,7 @@ export const Component = (): ReactElement => {
       return () => clearTimeout(timer);
     }
     return;
-  }, [listLoading, meta, workspaceNotFound, workspacesService]);
+  }, [listLoading, loggedIn, meta, workspaceNotFound, workspacesService]);
 
   // server search params
   const serverFromSearchParams = useLiveData(
@@ -171,28 +215,23 @@ export const Component = (): ReactElement => {
     server,
   ]);
 
-  // if server is not found, and we have server in search params, we should show add selfhosted dialog
-  const needAddSelfhosted = server === undefined && searchParams.has('server');
-  // use ref to avoid useEffect trigger twice
-  const addSelfhostedDialogOpened = useRef<boolean>(false);
-
-  useEffect(() => {
-    if (addSelfhostedDialogOpened.current) {
-      return;
-    }
-    addSelfhostedDialogOpened.current = true;
-    if (BUILD_CONFIG.isElectron && needAddSelfhosted) {
-      globalDialogService.open('sign-in', {
-        server: searchParams.get('server') as string,
-      });
-    }
-    return;
-  }, [
-    globalDialogService,
-    needAddSelfhosted,
-    searchParams,
-    serverFromSearchParams,
-  ]);
+  if (!loggedIn) {
+    return (
+      <div
+        style={{
+          filter: 'blur(4px)',
+          WebkitFilter: 'blur(4px)',
+          pointerEvents: 'none',
+          userSelect: 'none',
+          width: '100vw',
+          height: '100dvh',
+          overflow: 'hidden',
+        }}
+      >
+        <UnauthenticatedWorkspaceBackdrop />
+      </div>
+    );
+  }
 
   if (workspaceNotFound) {
     if (detailDocRoute) {

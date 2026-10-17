@@ -26,7 +26,8 @@ export const inputWrapper = style({
     },
     '&.extra-large': {
       height: 40,
-      fontWeight: 600,
+      fontSize: '14px',
+      fontWeight: 400,
     },
     // color
     '&.disabled': {
@@ -34,6 +35,12 @@ export const inputWrapper = style({
     },
     '&.error': {
       borderColor: cssVarV2('input/border/error'),
+      backgroundColor: 'rgba(235, 67, 53, 0.06)',
+    },
+    '&.error:is(:focus-within, :focus, :focus-visible)': {
+      borderColor: cssVarV2('input/border/error'),
+      outline: 'none',
+      boxShadow: '0px 0px 0px 2px rgba(235, 67, 53, 0.25)',
     },
     '&.success': {
       borderColor: cssVarV2('input/border/active'),
@@ -66,6 +73,8 @@ export const input = style({
   flex: 1,
   boxSizing: 'border-box',
   padding: '0 12px',
+  fontSize: 'inherit',
+  fontWeight: 'inherit',
   // prevent default style
   WebkitAppearance: 'none',
   WebkitTapHighlightColor: 'transparent',

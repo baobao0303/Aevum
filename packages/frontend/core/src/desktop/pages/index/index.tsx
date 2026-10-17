@@ -1,11 +1,7 @@
-import { DefaultServerService } from '@affine/core/modules/cloud';
 import { DesktopApiService } from '@affine/core/modules/desktop-api';
+import { GlobalDialogService } from '@affine/core/modules/dialogs';
 import { WorkspacesService } from '@affine/core/modules/workspace';
-import {
-  buildShowcaseWorkspace,
-  createFirstAppData,
-} from '@affine/core/utils/first-app-data';
-import { ServerFeature } from '@affine/graphql';
+import { buildShowcaseWorkspace } from '@affine/core/utils/first-app-data';
 import {
   useLiveData,
   useService,
@@ -19,7 +15,6 @@ import {
   useRef,
   useState,
 } from 'react';
-import { useSearchParams } from 'react-router-dom';
 
 import {
   RouteLogic,
@@ -27,7 +22,10 @@ import {
 } from '../../../components/hooks/use-navigate-helper';
 import { WorkspaceNavigator } from '../../../components/workspace-selector';
 import { AuthService } from '../../../modules/cloud';
-import { AppContainer } from '../../components/app-container';
+import {
+  AppContainer,
+  UnauthenticatedWorkspaceBackdrop,
+} from '../../components/app-container';
 
 /**
  * index page
@@ -46,40 +44,51 @@ export const Component = ({
   fallback?: ReactNode;
   createErrorFallback?: (retry: () => void) => ReactNode;
 }) => {
-  // navigating and creating may be slow, to avoid flickering, we show workspace fallback
   const [navigating, setNavigating] = useState(true);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState(false);
-  const [createAttempt, setCreateAttempt] = useState(0);
   const authService = useService(AuthService);
-  const defaultServerService = useService(DefaultServerService);
+  const globalDialogService = useService(GlobalDialogService);
 
-  const loggedIn = useLiveData(
-    authService.session.status$.map(s => s === 'authenticated')
-  );
-  const enableLocalWorkspace =
-    useLiveData(
-      defaultServerService.server.config$.selector(
-        c =>
-          c.features.includes(ServerFeature.LocalWorkspace) ||
-          BUILD_CONFIG.isNative
-      )
-    ) ?? true;
+  const sessionStatus = useLiveData(authService.session.status$);
+  const loggedIn = sessionStatus === 'authenticated';
 
   const workspacesService = useService(WorkspacesService);
   const list = useLiveData(workspacesService.list.workspaces$);
   const listIsLoading = useLiveData(workspacesService.list.isRevalidating$);
 
-  const { openPage, jumpToPage, jumpToSignIn } = useNavigateHelper();
-  const [searchParams] = useSearchParams();
+  const { openPage, jumpToPage } = useNavigateHelper();
 
   const createOnceRef = useRef(false);
+  const signInDialogOpenedRef = useRef(false);
+
+  // Remove any legacy local Demo Workspace automatically
+  useEffect(() => {
+    const localWorkspaces = list.filter(w => w.flavour === 'local');
+    if (localWorkspaces.length > 0) {
+      localStorage.removeItem('last_workspace_id');
+      localWorkspaces.forEach(w => {
+        workspacesService.deleteWorkspace(w).catch(console.error);
+      });
+    }
+  }, [list, workspacesService]);
+
+  // Open persistent SignInDialog when unauthenticated
+  useEffect(() => {
+    if (sessionStatus === 'unauthenticated' && !signInDialogOpenedRef.current) {
+      signInDialogOpenedRef.current = true;
+      globalDialogService.open('sign-in', {});
+    } else if (sessionStatus === 'authenticated') {
+      signInDialogOpenedRef.current = false;
+    }
+  }, [globalDialogService, sessionStatus]);
 
   const createCloudWorkspace = useCallback(() => {
     if (createOnceRef.current) return;
     createOnceRef.current = true;
-    // TODO: support selfhosted
-    buildShowcaseWorkspace(workspacesService, 'affine-cloud', 'AFFiNE Cloud')
+    setCreateError(false);
+    setCreating(true);
+    buildShowcaseWorkspace(workspacesService, 'affine-cloud', 'Aevum Workspace')
       .then(({ meta, defaultDocId }) => {
         if (defaultDocId) {
           jumpToPage(meta.id, defaultDocId);
@@ -87,60 +96,40 @@ export const Component = ({
           openPage(meta.id, defaultIndexRoute);
         }
       })
-      .catch(err => console.error('Failed to create cloud workspace', err));
+      .catch(err => {
+        console.error('Failed to create cloud workspace', err);
+        createOnceRef.current = false;
+        setCreateError(true);
+      })
+      .finally(() => {
+        setCreating(false);
+      });
   }, [defaultIndexRoute, jumpToPage, openPage, workspacesService]);
 
   useLayoutEffect(() => {
-    if (!navigating) {
+    if (!navigating || listIsLoading) {
       return;
     }
 
-    if (listIsLoading) {
-      return;
-    }
-
-    if (!enableLocalWorkspace && !loggedIn) {
+    if (!loggedIn) {
       localStorage.removeItem('last_workspace_id');
-      jumpToSignIn();
       return;
     }
 
-    // check is user logged in && has cloud workspace
-    if (searchParams.get('initCloud') === 'true') {
-      if (loggedIn) {
-        if (list.every(w => w.flavour !== 'affine-cloud')) {
-          createCloudWorkspace();
-          return;
-        }
-
-        // open first cloud workspace
-        const openWorkspace =
-          list.find(w => w.flavour === 'affine-cloud') ?? list[0];
-        openPage(openWorkspace.id, defaultIndexRoute);
-      } else {
-        return;
-      }
-    } else {
-      if (list.length === 0) {
-        if (BUILD_CONFIG.isMobileEdition && enableLocalWorkspace) {
-          return;
-        }
-        setNavigating(false);
-        return;
-      }
-      // open last workspace
-      const lastId = localStorage.getItem('last_workspace_id');
-
-      const openWorkspace = list.find(w => w.id === lastId) ?? list[0];
-      openPage(openWorkspace.id, defaultIndexRoute, RouteLogic.REPLACE);
+    const cloudWorkspaces = list.filter(w => w.flavour !== 'local');
+    if (cloudWorkspaces.length === 0) {
+      createCloudWorkspace();
+      return;
     }
+
+    const lastId = localStorage.getItem('last_workspace_id');
+    const openWorkspace =
+      cloudWorkspaces.find(w => w.id === lastId) ?? cloudWorkspaces[0];
+    openPage(openWorkspace.id, defaultIndexRoute, RouteLogic.REPLACE);
   }, [
-    enableLocalWorkspace,
     createCloudWorkspace,
     list,
     openPage,
-    searchParams,
-    jumpToSignIn,
     listIsLoading,
     loggedIn,
     navigating,
@@ -153,49 +142,28 @@ export const Component = ({
     desktopApi?.handler.ui.pingAppLayoutReady().catch(console.error);
   }, [desktopApi]);
 
-  useEffect(() => {
-    if (listIsLoading || list.length > 0 || !enableLocalWorkspace) {
-      return;
-    }
-
-    const creation = createFirstAppData(workspacesService);
-    if (!creation) return;
-
-    setCreateError(false);
-    setCreating(true);
-    creation
-      .then(createdWorkspace => {
-        if (createdWorkspace) {
-          if (createdWorkspace.defaultPageId) {
-            jumpToPage(
-              createdWorkspace.meta.id,
-              createdWorkspace.defaultPageId
-            );
-          } else {
-            openPage(createdWorkspace.meta.id, 'all');
-          }
-        }
-      })
-      .catch(err => {
-        console.error('Failed to create first app data', err);
-        setCreateError(true);
-      })
-      .finally(() => {
-        setCreating(false);
-      });
-  }, [
-    jumpToPage,
-    openPage,
-    workspacesService,
-    listIsLoading,
-    list,
-    enableLocalWorkspace,
-    createAttempt,
-  ]);
-
   const retryCreate = useCallback(() => {
-    setCreateAttempt(attempt => attempt + 1);
-  }, []);
+    createOnceRef.current = false;
+    createCloudWorkspace();
+  }, [createCloudWorkspace]);
+
+  if (!loggedIn) {
+    return (
+      <div
+        style={{
+          filter: 'blur(4px)',
+          WebkitFilter: 'blur(4px)',
+          pointerEvents: 'none',
+          userSelect: 'none',
+          width: '100vw',
+          height: '100dvh',
+          overflow: 'hidden',
+        }}
+      >
+        <UnauthenticatedWorkspaceBackdrop />
+      </div>
+    );
+  }
 
   if (createError && createErrorFallback) {
     return createErrorFallback(retryCreate);
@@ -205,7 +173,6 @@ export const Component = ({
     return fallback ?? <AppContainer fallback />;
   }
 
-  // TODO(@eyhn): We need a no workspace page
   return (
     children ?? (
       <div

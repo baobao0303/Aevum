@@ -1,12 +1,19 @@
 import { BackButton } from '@affine/component/auth-components';
-import { type Dispatch, type SetStateAction, useCallback } from 'react';
+import {
+  type CSSProperties,
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+} from 'react';
 
 import type { SignInState } from '.';
 
 interface BackButtonProps {
   changeState: Dispatch<SetStateAction<SignInState>>;
+  style?: CSSProperties;
+  className?: string;
 }
-export function Back({ changeState }: BackButtonProps) {
+export function Back({ changeState, style, className }: BackButtonProps) {
   const onClick = useCallback(() => {
     changeState(prev => ({
       ...prev,
@@ -14,5 +21,5 @@ export function Back({ changeState }: BackButtonProps) {
     }));
   }, [changeState]);
 
-  return <BackButton onClick={onClick} />;
+  return <BackButton style={style} className={className} onClick={onClick} />;
 }

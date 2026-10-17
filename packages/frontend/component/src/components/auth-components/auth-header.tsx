@@ -1,7 +1,7 @@
-import { Logo1Icon } from '@blocksuite/icons/rc';
 import clsx from 'clsx';
 import type { FC } from 'react';
 
+import { AevumIcon } from './aevum-logo';
 import { authHeaderWrapper } from './share.css';
 
 export const AuthHeader: FC<{
@@ -9,13 +9,15 @@ export const AuthHeader: FC<{
   subTitle?: string;
   className?: string;
 }> = ({ title, subTitle, className }) => {
+  const cleanSubTitle =
+    subTitle && !subTitle.toLowerCase().includes('self-hosted')
+      ? subTitle
+      : undefined;
   return (
     <div className={clsx(authHeaderWrapper, className)}>
-      <p>
-        <Logo1Icon className="logo" />
-        {title}
-      </p>
-      <p>{subTitle}</p>
+      <AevumIcon size={46} className="logo" />
+      <p>{title}</p>
+      {cleanSubTitle ? <p>{cleanSubTitle}</p> : null}
     </div>
   );
 };

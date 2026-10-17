@@ -112,11 +112,11 @@ export const button = style({
       vars: {
         [hVar]: '40px',
         [paddingVar]: '0px 8px',
-        [iconSizeVar]: '24px',
+        [iconSizeVar]: '20px',
         [paddingVar]: '8px 18px',
-        [fontSizeVar]: '15',
-        [fontWeightVar]: '600',
-        [lineHeightVar]: '24px',
+        [fontSizeVar]: '14px',
+        [fontWeightVar]: '500',
+        [lineHeightVar]: '22px',
       },
     },
 

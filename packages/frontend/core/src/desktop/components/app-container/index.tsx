@@ -24,6 +24,52 @@ import {
 
 import * as styles from './styles.css';
 
+export const UnauthenticatedWorkspaceBackdrop = () => {
+  return (
+    <div
+      style={{
+        position: 'relative',
+        width: '100vw',
+        height: '100dvh',
+        backgroundColor: '#090a14',
+        overflow: 'hidden',
+        userSelect: 'none',
+        pointerEvents: 'none',
+      }}
+    >
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        width={1280}
+        height={720}
+        src="/aevum-auth-bg.mp4?v=2"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          filter: 'blur(5px) brightness(0.88)',
+          WebkitFilter: 'blur(5px) brightness(0.88)',
+          transform: 'scale(1.02)',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background:
+            'radial-gradient(circle at 50% 50%, rgba(9, 10, 18, 0.25) 0%, rgba(9, 10, 18, 0.52) 100%)',
+        }}
+      />
+    </div>
+  );
+};
+
+const MainFallbackContent = () => null;
+
 export const AppContainer = ({
   children,
   className,
@@ -80,7 +126,9 @@ const DesktopLayout = ({
         ) : (
           isInWorkspace && <RootAppSidebar />
         )}
-        <MainContainer>{children}</MainContainer>
+        <MainContainer>
+          {children ?? (fallback ? <MainFallbackContent /> : null)}
+        </MainContainer>
       </div>
     </div>
   );
@@ -97,7 +145,9 @@ const BrowserLayout = ({
     <div className={styles.browserAppViewContainer}>
       <OpenInAppCard />
       {fallback ? <AppSidebarFallback /> : isInWorkspace && <RootAppSidebar />}
-      <MainContainer>{children}</MainContainer>
+      <MainContainer>
+        {children ?? (fallback ? <MainFallbackContent /> : null)}
+      </MainContainer>
     </div>
   );
 };
