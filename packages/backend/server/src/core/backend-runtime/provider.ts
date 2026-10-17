@@ -97,6 +97,7 @@ export class BackendRuntimeProvider
 
   async start() {
     await this.runtime.start();
+    await this.runMigrations();
     await this.event?.emitAsync('backendRuntime.configApplied', {
       updates: { payment: {}, indexer: {}, copilot: {}, crypto: {}, oauth: {} },
     });

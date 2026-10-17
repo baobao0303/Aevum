@@ -1,4 +1,4 @@
-import serverNativeModule from '@affine/server-native';
+import serverNativeModule from '@aevum/server-native';
 import { type Prisma, PrismaClient } from '@prisma/client';
 
 import { disableIncompleteManagedProfiles } from './utils/managed-profiles';

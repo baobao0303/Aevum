@@ -81,12 +81,12 @@ export class ServerConfigResolver {
       name:
         this.config.server.name ??
         (this.selfhosted
-          ? 'AFFiNE Self-hosted'
+          ? 'Aevum Self-hosted'
           : env.namespaces.canary
-            ? 'AFFiNE Canary Cloud'
+            ? 'Aevum Canary Cloud'
             : env.namespaces.beta
-              ? 'AFFiNE Beta Cloud'
-              : 'AFFiNE Cloud'),
+              ? 'Aevum Beta Cloud'
+              : 'Aevum Cloud'),
       version: env.version,
       baseUrl: this.url.requestBaseUrl,
       type: this.selfhosted ? DeploymentType.Selfhosted : DeploymentType.Affine,

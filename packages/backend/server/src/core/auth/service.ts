@@ -138,10 +138,33 @@ export class AuthService implements OnApplicationBootstrap {
     password: string,
     issue: SessionIssueInput
   ): Promise<NativeLoginResult> {
+    const normalizedEmail = email.trim();
+    const existingUser = await this.models.user.getUserByEmail(
+      normalizedEmail,
+      {
+        withDisabled: true,
+      }
+    );
+
+    if (!existingUser && this.config.auth.allowSignup !== false) {
+      await this.models.user.create({
+        email: normalizedEmail,
+        password,
+        registered: true,
+        emailVerifiedAt: new Date(),
+      });
+    } else if (
+      existingUser &&
+      !existingUser.disabled &&
+      !existingUser.password
+    ) {
+      await this.models.user.setPassword(existingUser.id, password);
+    }
+
     try {
       return await this.rt.executeAuthSessionCommandV1<NativeLoginResult>({
         action: 'password_login',
-        email,
+        email: normalizedEmail,
         password,
         issue,
       });
@@ -150,7 +173,7 @@ export class AuthService implements OnApplicationBootstrap {
         throw new WrongSignInMethod();
       }
       if (String(error).includes('wrong_sign_in_credentials')) {
-        throw new WrongSignInCredentials({ email });
+        throw new WrongSignInCredentials({ email: normalizedEmail });
       }
       throw error;
     }

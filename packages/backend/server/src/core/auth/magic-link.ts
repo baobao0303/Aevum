@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import {
   Config,
   EmailServiceNotConfigured,
+  EventBus,
   InvalidAuthState,
   InvalidEmailToken,
   NetworkError,
@@ -25,7 +26,8 @@ export class MagicLinkAuthService {
     private readonly url: URLHelper,
     private readonly config: Config,
     private readonly runtime: BackendRuntimeProvider,
-    private readonly sender: MailSender
+    private readonly sender: MailSender,
+    private readonly event?: EventBus
   ) {}
 
   async send(
@@ -53,9 +55,10 @@ export class MagicLinkAuthService {
           clientNonce,
           serverName:
             this.config.server.name ??
-            (env.selfhosted ? 'AFFiNE Self-hosted' : 'AFFiNE Cloud'),
+            (env.selfhosted ? 'Aevum Self-hosted' : 'Aevum Cloud'),
           source,
         });
+      this.event?.emit('mail.dispatch');
       return { email: canonicalEmail };
     } catch (error) {
       if (String(error).includes('wrong_sign_in_credentials')) {

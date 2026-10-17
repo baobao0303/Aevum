@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
-import { Config, metrics, URLHelper } from '../../base';
+import { Config, metrics, OnEvent, URLHelper } from '../../base';
 import { type MailName, Renderers } from '../../mails';
 import { UserProps, WorkspaceProps } from '../../mails/components';
 import { MailDeliveryRow, Models } from '../../models';
@@ -38,6 +38,13 @@ export class MailJob {
     await this.processReadyDeliveries();
     await this.cleanupRetainedDeliveries();
     await this.recordDeliveryMetrics();
+  }
+
+  @OnEvent('mail.dispatch')
+  async onMailDispatch() {
+    await this.processReadyDeliveries().catch(e =>
+      this.logger.error('failed to process ready deliveries on dispatch', e)
+    );
   }
 
   async processReadyDeliveries(
@@ -123,6 +130,18 @@ export class MailJob {
     );
     if (!attempt) {
       return;
+    }
+
+    if (env.dev || this.config.mailer.preview) {
+      const otp = (payload.props as any)?.otp;
+      const url = (payload.props as any)?.url;
+      this.logger.log(
+        `\n========================================\n` +
+        `📨 [AUTH EMAIL] To: ${row.recipientEmail}\n` +
+        (otp ? `🔑 Verification Code / OTP: ${otp}\n` : '') +
+        (url ? `🔗 Magic Link: ${url}\n` : '') +
+        `========================================`
+      );
     }
 
     const result = await this.sender.send(payload.name, {

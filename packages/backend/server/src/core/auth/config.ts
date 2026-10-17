@@ -1,4 +1,4 @@
-import serverNativeModule from '@affine/server-native';
+import serverNativeModule from '@aevum/server-native';
 import { z } from 'zod';
 
 import { defineNativeModuleConfig } from '../../base';
