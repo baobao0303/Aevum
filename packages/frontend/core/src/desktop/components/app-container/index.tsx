@@ -20,11 +20,26 @@ import {
   type HTMLAttributes,
   type PropsWithChildren,
   type ReactElement,
+  useEffect,
+  useRef,
 } from 'react';
 
 import * as styles from './styles.css';
 
-export const UnauthenticatedWorkspaceBackdrop = () => {
+export const UnauthenticatedWorkspaceBackdrop = ({
+  onReady,
+}: {
+  onReady?: () => void;
+} = {}) => {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (v && v.readyState >= 2) {
+      onReady?.();
+    }
+  }, [onReady]);
+
   return (
     <div
       style={{
@@ -38,22 +53,27 @@ export const UnauthenticatedWorkspaceBackdrop = () => {
       }}
     >
       <video
+        ref={videoRef}
         autoPlay
         loop
         muted
         playsInline
+        preload="auto"
         width={1920}
         height={1080}
-        poster="/aevum-auth-bg.jpg"
-        src="/aevum-auth-bg.mp4?v=6"
+        poster="/aevum-auth-bg.jpg?v=7"
+        src="/aevum-auth-bg.mp4?v=7"
+        onLoadedData={() => onReady?.()}
+        onCanPlay={() => onReady?.()}
         style={{
           position: 'absolute',
           inset: 0,
           width: '100%',
           height: '100%',
           objectFit: 'cover',
-          filter: 'brightness(0.95)',
-          WebkitFilter: 'brightness(0.95)',
+          filter: 'blur(7px) brightness(0.92)',
+          WebkitFilter: 'blur(7px) brightness(0.92)',
+          transform: 'scale(1.03)',
         }}
       />
       <div
@@ -61,7 +81,7 @@ export const UnauthenticatedWorkspaceBackdrop = () => {
           position: 'absolute',
           inset: 0,
           background:
-            'radial-gradient(circle at 50% 45%, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.45) 100%)',
+            'radial-gradient(circle at 50% 45%, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.48) 100%)',
         }}
       />
     </div>

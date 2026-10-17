@@ -52,6 +52,7 @@ export const Component = ({
 
   const sessionStatus = useLiveData(authService.session.status$);
   const loggedIn = sessionStatus === 'authenticated';
+  const openedDialogs = useLiveData(globalDialogService.dialogs$);
 
   const workspacesService = useService(WorkspacesService);
   const list = useLiveData(workspacesService.list.workspaces$);
@@ -60,7 +61,6 @@ export const Component = ({
   const { openPage, jumpToPage } = useNavigateHelper();
 
   const createOnceRef = useRef(false);
-  const signInDialogOpenedRef = useRef(false);
 
   // Remove any legacy local Demo Workspace automatically
   useEffect(() => {
@@ -72,16 +72,6 @@ export const Component = ({
       });
     }
   }, [list, workspacesService]);
-
-  // Open persistent SignInDialog when unauthenticated
-  useEffect(() => {
-    if (sessionStatus === 'unauthenticated' && !signInDialogOpenedRef.current) {
-      signInDialogOpenedRef.current = true;
-      globalDialogService.open('sign-in', {});
-    } else if (sessionStatus === 'authenticated') {
-      signInDialogOpenedRef.current = false;
-    }
-  }, [globalDialogService, sessionStatus]);
 
   const createCloudWorkspace = useCallback(() => {
     if (createOnceRef.current) return;
@@ -106,13 +96,20 @@ export const Component = ({
       });
   }, [defaultIndexRoute, jumpToPage, openPage, workspacesService]);
 
+  useEffect(() => {
+    if (loggedIn) {
+      workspacesService.list.revalidate();
+    }
+  }, [loggedIn, workspacesService]);
+
   useLayoutEffect(() => {
-    if (!navigating || listIsLoading) {
+    if (listIsLoading) {
       return;
     }
 
     if (!loggedIn) {
       localStorage.removeItem('last_workspace_id');
+      setNavigating(false);
       return;
     }
 
@@ -122,10 +119,12 @@ export const Component = ({
       return;
     }
 
-    const lastId = localStorage.getItem('last_workspace_id');
-    const openWorkspace =
-      cloudWorkspaces.find(w => w.id === lastId) ?? cloudWorkspaces[0];
-    openPage(openWorkspace.id, defaultIndexRoute, RouteLogic.REPLACE);
+    if (navigating) {
+      const lastId = localStorage.getItem('last_workspace_id');
+      const openWorkspace =
+        cloudWorkspaces.find(w => w.id === lastId) ?? cloudWorkspaces[0];
+      openPage(openWorkspace.id, defaultIndexRoute, RouteLogic.REPLACE);
+    }
   }, [
     createCloudWorkspace,
     list,
@@ -147,29 +146,18 @@ export const Component = ({
     createCloudWorkspace();
   }, [createCloudWorkspace]);
 
-  if (!loggedIn) {
-    return (
-      <div
-        style={{
-          filter: 'blur(4px)',
-          WebkitFilter: 'blur(4px)',
-          pointerEvents: 'none',
-          userSelect: 'none',
-          width: '100vw',
-          height: '100dvh',
-          overflow: 'hidden',
-        }}
-      >
-        <UnauthenticatedWorkspaceBackdrop />
-      </div>
-    );
-  }
+  const [videoReady, setVideoReady] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setVideoReady(true), 600);
+    return () => clearTimeout(timer);
+  }, []);
 
   if (createError && createErrorFallback) {
     return createErrorFallback(retryCreate);
   }
 
-  if (navigating || creating) {
+  if (loggedIn && (navigating || creating)) {
     return fallback ?? <AppContainer fallback />;
   }
 
@@ -177,17 +165,34 @@ export const Component = ({
     children ?? (
       <div
         style={{
-          position: 'fixed',
-          left: 'calc(50% - 150px)',
-          top: '50%',
+          position: 'relative',
+          width: '100vw',
+          height: '100dvh',
+          overflow: 'hidden',
         }}
       >
-        <WorkspaceNavigator
-          open={true}
-          menuContentOptions={{
-            forceMount: true,
-          }}
+        <UnauthenticatedWorkspaceBackdrop
+          onReady={() => setVideoReady(true)}
         />
+        {!navigating && !creating && videoReady && openedDialogs.length === 0 && (
+          <div
+            style={{
+              position: 'fixed',
+              left: 'calc(50% - 150px)',
+              top: '35%',
+              zIndex: 10,
+            }}
+          >
+            <WorkspaceNavigator
+              open={true}
+              menuContentOptions={{
+                forceMount: true,
+                onInteractOutside: e => e.preventDefault(),
+                onEscapeKeyDown: e => e.preventDefault(),
+              }}
+            />
+          </div>
+        )}
       </div>
     )
   );
