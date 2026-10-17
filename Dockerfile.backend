@@ -1,0 +1,47 @@
+# syntax=docker/dockerfile:1.7
+
+# Stage 1: Asset preparation and dependency pruning
+FROM node:22-bookworm-slim AS assets
+WORKDIR /app
+
+# Copy backend server distribution (contains dist, node_modules, schema.prisma, scripts)
+COPY ./packages/backend/server /app
+
+# Ensure static directories exist so frontend routing does not crash if served standalone
+RUN mkdir -p /app/static /app/static/admin /app/static/mobile
+
+ARG TARGETARCH
+ARG TARGETVARIANT
+
+# Required for Prisma engine resolution during cleanup
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends openssl ca-certificates && \
+  rm -rf /var/lib/apt/lists/*
+
+# Clean and prune unneeded development files and foreign architecture binaries
+RUN AFFINE_DOCKER_CLEAN=1 TARGETARCH="${TARGETARCH}" TARGETVARIANT="${TARGETVARIANT}" node ./scripts/docker-clean.mjs
+
+# Stage 2: Runtime image
+FROM node:22-bookworm-slim
+WORKDIR /app
+
+COPY --from=assets /app /app
+
+# Install runtime dependencies: openssl, jemalloc, curl (for healthcheck)
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends openssl libjemalloc2 curl && \
+  rm -rf /var/lib/apt/lists/*
+
+# Optimize memory usage with jemalloc
+ENV LD_PRELOAD=libjemalloc.so.2
+ENV NODE_ENV=production
+ENV PORT=3010
+
+EXPOSE 3010
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD curl -f http://localhost:3010/info || exit 1
+
+# Start server: upgrade config & boot main NestJS app
+CMD ["sh", "-c", "node ./scripts/upgrade-config.js && exec node ./dist/main.js"]
