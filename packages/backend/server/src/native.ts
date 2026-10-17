@@ -65,7 +65,7 @@ import serverNativeModule, {
   type StorageRuntimeHealth,
   type SyncEmbeddingStateInput,
   type Tokenizer,
-} from '@affine/server-native';
+} from '@aevum/server-native';
 
 export type {
   AppConfigCommand,
@@ -101,7 +101,7 @@ export type {
   ReorderByokProfilesInput,
   ReplaceByokProfileInput,
   RotateByokCredentialInput,
-} from '@affine/server-native';
+} from '@aevum/server-native';
 
 export type {
   AssertSafeUrlRequest,
@@ -993,4 +993,4 @@ export {
   type BuiltInPromptSessionContract as NativeBuiltInPromptSessionRenderRequest,
   type PromptRenderResult as NativePromptRenderResponse,
   type PromptSessionResult as NativePromptSessionRenderResponse,
-} from '@affine/server-native';
+} from '@aevum/server-native';

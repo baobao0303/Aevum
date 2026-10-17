@@ -1,11 +1,11 @@
 {
-  "name": "@affine/server",
+  "name": "@aevum/server",
   "private": true,
   "version": "0.27.5",
-  "description": "Affine Node.js server",
+  "description": "Aevum Node.js server",
   "type": "module",
   "scripts": {
-    "build": "affine bundle -p @affine/server",
+    "build": "affine bundle -p @aevum/server",
     "dev": "nodemon ./src/index.ts",
     "dev:mail": "email dev -d src/mails",
     "test": "ava --concurrency 1 --serial",
@@ -23,8 +23,8 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@aevum/server-native": "workspace:*",
     "@affine/s3-compat": "workspace:*",
-    "@affine/server-native": "workspace:*",
     "@apollo/server": "^5.5.1",
     "@as-integrations/express5": "^1.1.2",
     "@google-cloud/opentelemetry-cloud-trace-exporter": "^3.1.0",
@@ -113,7 +113,7 @@
     "zod-to-json-schema": "^3.20.0"
   },
   "devDependencies": {
-    "@affine-tools/cli": "workspace:*",
+    "@aevum-tools/cli": "workspace:*",
     "@affine-tools/utils": "workspace:*",
     "@affine/graphql": "workspace:*",
     "@affine/realtime": "workspace:*",

@@ -1,4 +1,4 @@
-import serverNativeModule from '@affine/server-native';
+import serverNativeModule from '@aevum/server-native';
 
 import { defineNativeModuleConfig, StorageProviderConfig } from '../../base';
 import { CopilotProviderType } from './providers/types';

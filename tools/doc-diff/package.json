@@ -12,7 +12,7 @@
     "diff:favorite": "r ./src/index.ts favorite"
   },
   "dependencies": {
-    "@affine-tools/cli": "workspace:*",
+    "@aevum-tools/cli": "workspace:*",
     "yjs": "^13.6.27"
   },
   "devDependencies": {

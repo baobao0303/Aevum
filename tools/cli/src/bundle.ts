@@ -105,6 +105,7 @@ function getRspackBundleConfigs(pkg: Package): MultiRspackOptions {
       ] as MultiRspackOptions;
     }
     case '@affine/web':
+    case '@aevum/web':
     case '@affine/mobile': {
       const workerConfigs = getBaseWorkerConfigs(
         pkg,
@@ -178,6 +179,7 @@ function getRspackBundleConfigs(pkg: Package): MultiRspackOptions {
         ...workerConfigs,
       ] as MultiRspackOptions;
     }
+    case '@aevum/server':
     case '@affine/server': {
       return [
         createRspackNodeTargetConfig(pkg, pkg.srcPath.join('index.ts').value),

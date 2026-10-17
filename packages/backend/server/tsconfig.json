@@ -8,12 +8,16 @@
     "verbatimModuleSyntax": false,
     "rootDir": "./src",
     "outDir": "./dist",
-    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo"
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
+    "paths": {
+      "@aevum/server-native": ["../native"],
+      "@affine/server-native": ["../native"]
+    }
   },
   "include": ["./src"],
   "references": [
-    { "path": "../../common/s3-compat" },
     { "path": "../native" },
+    { "path": "../../common/s3-compat" },
     { "path": "../../../tools/cli" },
     { "path": "../../../tools/utils" },
     { "path": "../../common/graphql" },
