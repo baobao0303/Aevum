@@ -1,5 +1,5 @@
 # Changelog
 
-See the [AFFiNE CHANGELOG](https://affine.pro/blog?tag=Release%20Note)
+See the [Aevum CHANGELOG](https://aevum.io/blog?tag=Release%20Note)
 
 ---
