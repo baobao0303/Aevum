@@ -42,19 +42,18 @@ export const UnauthenticatedWorkspaceBackdrop = () => {
         loop
         muted
         playsInline
-        width={1280}
-        height={720}
-        src="/aevum-auth-bg.mp4?v=3"
+        width={1920}
+        height={1080}
+        poster="/aevum-auth-bg.jpg"
+        src="/aevum-auth-bg.mp4?v=5"
         style={{
           position: 'absolute',
           inset: 0,
           width: '100%',
           height: '100%',
           objectFit: 'cover',
-          filter: 'grayscale(100%) brightness(0.24) contrast(1.35) blur(6px)',
-          WebkitFilter:
-            'grayscale(100%) brightness(0.24) contrast(1.35) blur(6px)',
-          transform: 'scale(1.02)',
+          filter: 'brightness(0.95)',
+          WebkitFilter: 'brightness(0.95)',
         }}
       />
       <div
@@ -62,7 +61,7 @@ export const UnauthenticatedWorkspaceBackdrop = () => {
           position: 'absolute',
           inset: 0,
           background:
-            'radial-gradient(circle at 50% 45%, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.9) 100%)',
+            'radial-gradient(circle at 50% 45%, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.45) 100%)',
         }}
       />
     </div>
