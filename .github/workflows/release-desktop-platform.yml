@@ -80,7 +80,7 @@ jobs:
         timeout-minutes: 10
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/electron @affine/monorepo @affine/nbstore @toeverything/infra
+          extra-flags: workspaces focus @affine/electron @aevum/monorepo @affine/nbstore @toeverything/infra
           hard-link-nm: false
           nmHoistingLimits: workspaces
           enableScripts: ${{ inputs.enable_scripts }}

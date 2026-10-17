@@ -1,0 +1,228 @@
+name: Build Package
+
+on:
+  push:
+    branches:
+      - main
+      - canary
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+  pull_request:
+    branches:
+      - main
+      - canary
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Package target to build'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - backend
+          - web
+          - docker
+      upload_artifacts:
+        description: 'Upload build artifacts to GitHub'
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: build-package-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_OPTIONS: --max-old-space-size=8192
+  HUSKY: '0'
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+  ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+  SENTRYCLI_SKIP_DOWNLOAD: '1'
+
+jobs:
+  build-backend:
+    name: Build Backend Package (@aevum/server)
+    if: github.event_name != 'workflow_dispatch' || inputs.target == 'all' || inputs.target == 'backend' || inputs.target == 'docker'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Setup Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 'stable'
+          targets: 'x86_64-unknown-linux-gnu'
+
+      - name: Cache Cargo Crates
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/backend/native
+          shared-key: backend-native-x86_64
+
+      - name: Get Yarn Cache Directory
+        id: yarn-cache-dir
+        run: echo "dir=$(yarn config cacheFolder --json | jq -r .effective)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Yarn Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ${{ steps.yarn-cache-dir.outputs.dir }}
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-
+
+      - name: Install Backend Dependencies
+        run: yarn workspaces focus @aevum/server @aevum/server-native @types/affine__env
+
+      - name: Build Native Rust Engine
+        run: |
+          yarn workspace @aevum/server-native build --target x86_64-unknown-linux-gnu
+          cp ./packages/backend/native/server-native.node ./packages/backend/native/server-native.x64.node
+          touch ./packages/backend/native/server-native.arm64.node
+          touch ./packages/backend/native/server-native.armv7.node
+
+      - name: Generate Prisma Client
+        run: yarn workspace @aevum/server prisma generate
+
+      - name: Compile Backend Server Bundle
+        run: yarn workspace @aevum/server build
+
+      - name: Verify Backend Build Output
+        run: |
+          echo "Verifying backend distribution..."
+          ls -la packages/backend/server/dist
+          test -f packages/backend/server/dist/main.js
+
+      - name: Prepare Backend Package Distribution
+        if: github.event_name != 'workflow_dispatch' || inputs.upload_artifacts == true
+        run: |
+          mkdir -p aevum-backend-pkg
+          cp -r packages/backend/server/dist aevum-backend-pkg/
+          cp packages/backend/server/package.json aevum-backend-pkg/
+          cp -r packages/backend/server/schema.prisma aevum-backend-pkg/
+          cp ./packages/backend/native/server-native.node aevum-backend-pkg/dist/ || true
+
+      - name: Upload Backend Package Artifact
+        if: github.event_name != 'workflow_dispatch' || inputs.upload_artifacts == true
+        uses: actions/upload-artifact@v4
+        with:
+          name: aevum-backend-package
+          path: aevum-backend-pkg
+          retention-days: 7
+
+  build-web:
+    name: Build Web App Package (@aevum/web)
+    if: github.event_name != 'workflow_dispatch' || inputs.target == 'all' || inputs.target == 'web'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Get Yarn Cache Directory
+        id: yarn-cache-dir
+        run: echo "dir=$(yarn config cacheFolder --json | jq -r .effective)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Yarn Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ${{ steps.yarn-cache-dir.outputs.dir }}
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-
+
+      - name: Install Web Dependencies
+        run: yarn workspaces focus @affine/web @aevum-tools/cli @affine/component @affine/core @affine/i18n @affine/nbstore @toeverything/infra
+
+      - name: Bundle Web Application
+        run: yarn aevum bundle -p @affine/web
+
+      - name: Verify Web Build Output
+        run: |
+          echo "Verifying web distribution bundle..."
+          ls -la packages/frontend/apps/web/dist
+          test -f packages/frontend/apps/web/dist/index.html
+
+      - name: Upload Web App Package Artifact
+        if: github.event_name != 'workflow_dispatch' || inputs.upload_artifacts == true
+        uses: actions/upload-artifact@v4
+        with:
+          name: aevum-web-package
+          path: packages/frontend/apps/web/dist
+          retention-days: 7
+
+  build-docker:
+    name: Build & Verify Docker Package
+    needs: build-backend
+    if: github.event_name != 'workflow_dispatch' || inputs.target == 'all' || inputs.target == 'docker'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Download Backend Package
+        uses: actions/download-artifact@v4
+        with:
+          name: aevum-backend-package
+          path: packages/backend/server
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.backend
+          push: false
+          tags: aevum-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  summary:
+    name: Build & Package Summary
+    needs: [build-backend, build-web]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate Summary Report
+        run: |
+          echo "## 📦 Aevum Build Package Pipeline Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Target | Status | Artifact |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Backend Server** | \`@aevum/server\` | ${{ needs.build-backend.result == 'success' && '✅ Success' || '⚠️ Skipped/Failed' }} | \`aevum-backend-package\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Web Frontend** | \`@aevum/web\` | ${{ needs.build-web.result == 'success' && '✅ Success' || '⚠️ Skipped/Failed' }} | \`aevum-web-package\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 How to Run Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- **Backend**: Download \`aevum-backend-package\`, run \`node dist/main.js\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Web**: Download \`aevum-web-package\`, serve static files using Nginx or Caddy." >> $GITHUB_STEP_SUMMARY
