@@ -1,0 +1,80 @@
+name: aevum
+
+services:
+  # Aevum Backend Server API & WebSocket Service
+  aevum_server:
+    image: ${AEVUM_IMAGE:-ghcr.io/your-username/aevum-backend:latest}
+    container_name: aevum_server
+    restart: unless-stopped
+    ports:
+      - '3010:3010'
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      aevum_migration:
+        condition: service_completed_successfully
+    volumes:
+      - ./data/storage:/root/.affine/storage
+      - ./config:/root/.affine/config
+    environment:
+      - NODE_ENV=production
+      - DEPLOYMENT_TYPE=selfhosted
+      - REDIS_SERVER_HOST=redis
+      - REDIS_SERVER_PORT=6379
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-affine}:${POSTGRES_PASSWORD:-affine_password}@postgres:5432/${POSTGRES_DB:-affine}
+      - AFFINE_SERVER_HOST=${AEVUM_SERVER_HOST:-0.0.0.0}
+      - AFFINE_SERVER_PORT=3010
+
+  # Automatic Database & Data Migration Runner
+  aevum_migration:
+    image: ${AEVUM_IMAGE:-ghcr.io/your-username/aevum-backend:latest}
+    container_name: aevum_migration
+    restart: "no"
+    command: ['sh', '-c', 'node ./scripts/self-host-predeploy.js']
+    volumes:
+      - ./data/storage:/root/.affine/storage
+      - ./config:/root/.affine/config
+    environment:
+      - NODE_ENV=production
+      - DEPLOYMENT_TYPE=selfhosted
+      - REDIS_SERVER_HOST=redis
+      - REDIS_SERVER_PORT=6379
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-affine}:${POSTGRES_PASSWORD:-affine_password}@postgres:5432/${POSTGRES_DB:-affine}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # Redis Cache & PubSub
+  redis:
+    image: redis:7-alpine
+    container_name: aevum_redis
+    restart: unless-stopped
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL with PGVector Extension
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: aevum_postgres
+    restart: unless-stopped
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-affine}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-affine_password}
+      POSTGRES_DB: ${POSTGRES_DB:-affine}
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', '${POSTGRES_USER:-affine}', '-d', '${POSTGRES_DB:-affine}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
