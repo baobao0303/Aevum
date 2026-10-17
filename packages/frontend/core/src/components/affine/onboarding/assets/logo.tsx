@@ -11,19 +11,37 @@ export default memo(function Logo() {
       style={{ background: 'transparent' }}
     >
       <defs>
-        <linearGradient id="onboarding_leftPillar" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient
+          id="onboarding_leftPillar"
+          x1="0%"
+          y1="0%"
+          x2="100%"
+          y2="100%"
+        >
           <stop offset="0%" stopColor="#38BDF8" />
           <stop offset="50%" stopColor="#6366F1" />
           <stop offset="100%" stopColor="#4338CA" />
         </linearGradient>
 
-        <linearGradient id="onboarding_rightPillar" x1="100%" y1="0%" x2="0%" y2="100%">
+        <linearGradient
+          id="onboarding_rightPillar"
+          x1="100%"
+          y1="0%"
+          x2="0%"
+          y2="100%"
+        >
           <stop offset="0%" stopColor="#C084FC" />
           <stop offset="50%" stopColor="#8B5CF6" />
           <stop offset="100%" stopColor="#4F46E5" />
         </linearGradient>
 
-        <linearGradient id="onboarding_coreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient
+          id="onboarding_coreGrad"
+          x1="0%"
+          y1="0%"
+          x2="100%"
+          y2="100%"
+        >
           <stop offset="0%" stopColor="#F472B6" />
           <stop offset="50%" stopColor="#A855F7" />
           <stop offset="100%" stopColor="#06B6D4" />

@@ -17,7 +17,7 @@ import type { AuthSessionStatus } from '@affine/core/modules/cloud/entities/sess
 import { UserFriendlyError } from '@affine/error';
 import { ServerDeploymentType } from '@affine/graphql';
 import { Trans, useI18n } from '@affine/i18n';
-import { ArrowRightBigIcon } from '@blocksuite/icons/rc';
+import { ArrowRightBigIcon, PublishIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import {
   type Dispatch,
@@ -155,7 +155,7 @@ export const SignInStep = ({
           title: t['com.affine.auth.toast.title.failed'](),
           message: error.is('REQUEST_ABORTED')
             ? t['error.NETWORK_ERROR']()
-            : t[`error.${error.name}`]?.(error.data) ?? error.message,
+            : (t[`error.${error.name}`]?.(error.data) ?? error.message),
         });
       }
       captchaService.revalidate();
@@ -294,6 +294,26 @@ export const SignInStep = ({
             </Trans>
           </div>
         )}
+        <div className={style.skipDivider}>
+          <div className={style.skipDividerLine} />
+          <span className={style.skipDividerText}>or</span>
+          <div className={style.skipDividerLine} />
+        </div>
+        <div className={style.skipSection}>
+          <Button
+            variant="plain"
+            className={style.addSelfhostedButton}
+            prefix={<PublishIcon className={style.addSelfhostedButtonPrefix} />}
+            onClick={() => {
+              changeState(prev => ({
+                ...prev,
+                step: 'addSelfhosted',
+              }));
+            }}
+          >
+            {t['com.affine.auth.sign.add-selfhosted']()}
+          </Button>
+        </div>
       </AuthContent>
       {isSelfhosted && state.step !== 'signIn' && (
         <AuthFooter>

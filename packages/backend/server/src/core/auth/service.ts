@@ -146,7 +146,7 @@ export class AuthService implements OnApplicationBootstrap {
       }
     );
 
-    if (!existingUser && this.config.auth.allowSignup !== false) {
+    if (!existingUser && (this.config.auth as any).allowSignup !== false) {
       await this.models.user.create({
         email: normalizedEmail,
         password,

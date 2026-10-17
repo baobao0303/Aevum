@@ -31,7 +31,7 @@ services:
   aevum_migration:
     image: ${AEVUM_IMAGE:-ghcr.io/your-username/aevum-backend:latest}
     container_name: aevum_migration
-    restart: "no"
+    restart: 'no'
     command: ['sh', '-c', 'node ./scripts/self-host-predeploy.js']
     volumes:
       - ./data/storage:/root/.aevum/storage
@@ -74,7 +74,15 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-aevum}
       POSTGRES_INITDB_ARGS: '--data-checksums'
     healthcheck:
-      test: ['CMD', 'pg_isready', '-U', '${POSTGRES_USER:-aevum}', '-d', '${POSTGRES_DB:-aevum}']
+      test:
+        [
+          'CMD',
+          'pg_isready',
+          '-U',
+          '${POSTGRES_USER:-aevum}',
+          '-d',
+          '${POSTGRES_DB:-aevum}',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5

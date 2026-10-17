@@ -1,7 +1,7 @@
+import { AevumIcon } from '@affine/component/auth-components';
 import clsx from 'clsx';
 import type { FC } from 'react';
 
-import { AevumIcon } from './aevum-logo';
 import { authHeaderWrapper } from './share.css';
 
 export const AuthHeader: FC<{

@@ -48,7 +48,7 @@ export function useAFFiNEI18N(): {
       */
     ["404.signOut"](): string;
     /**
-      * `AFFiNE Cloud`
+      * `Aevum Cloud`
       */
     ["AFFiNE Cloud"](): string;
     /**
@@ -184,15 +184,15 @@ export function useAFFiNEI18N(): {
       */
     Enable(): string;
     /**
-      * `Enable AFFiNE Sync`
+      * `Enable Aevum Sync`
       */
     ["Enable AFFiNE Cloud"](): string;
     /**
-      * `Your workspace will be synced and backed up with AFFiNE Sync.`
+      * `Your workspace will be synced and backed up with Aevum Sync.`
       */
     ["Enable AFFiNE Cloud Description"](): string;
     /**
-      * `Some features need AFFiNE Sync. Web workspaces are saved in this browser and may be removed automatically when disk space is low. Enable AFFiNE Sync to keep this workspace safer and available across devices.`
+      * `Some features need Aevum Sync. Web workspaces are saved in this browser and may be removed automatically when disk space is low. Enable Aevum Sync to keep this workspace safer and available across devices.`
       */
     ["Enable cloud hint"](): string;
     /**
@@ -438,7 +438,7 @@ export function useAFFiNEI18N(): {
       */
     Select(): string;
     /**
-      * `Sign in to AFFiNE`
+      * `Sign in to Aevum`
       */
     ["Sign in"](): string;
     /**
@@ -446,7 +446,7 @@ export function useAFFiNEI18N(): {
       */
     ["Sign in and Enable"](): string;
     /**
-      * `Sign out of AFFiNE`
+      * `Sign out of Aevum`
       */
     ["Sign out"](): string;
     /**
@@ -622,7 +622,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.aboutAFFiNE.autoDownloadUpdate.title"](): string;
     /**
-      * `View the AFFiNE Changelog.`
+      * `View the Aevum Changelog.`
       */
     ["com.affine.aboutAFFiNE.changelog.description"](): string;
     /**
@@ -666,7 +666,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.aboutAFFiNE.checkUpdate.subtitle.error"](): string;
     /**
-      * `You've got the latest version of AFFiNE.`
+      * `You've got the latest version of Aevum.`
       */
     ["com.affine.aboutAFFiNE.checkUpdate.subtitle.latest"](): string;
     /**
@@ -688,7 +688,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.aboutAFFiNE.community.title"](): string;
     /**
-      * `AFFiNE community`
+      * `Aevum community`
       */
     ["com.affine.aboutAFFiNE.contact.community"](): string;
     /**
@@ -712,11 +712,11 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.aboutAFFiNE.legal.tos"](): string;
     /**
-      * `Information about AFFiNE`
+      * `Information about Aevum`
       */
     ["com.affine.aboutAFFiNE.subtitle"](): string;
     /**
-      * `About AFFiNE`
+      * `About Aevum`
       */
     ["com.affine.aboutAFFiNE.title"](): string;
     /**
@@ -752,15 +752,15 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.ai-onboarding.general.1.description"](): string;
     /**
-      * `Meet AFFiNE AI`
+      * `Meet Aevum AI`
       */
     ["com.affine.ai-onboarding.general.1.title"](): string;
     /**
-      * `Answer questions, draft docs, visualize ideas - AFFiNE AI can save you time at every possible step. Powered by GPT's most powerful model.`
+      * `Answer questions, draft docs, visualize ideas - Aevum AI can save you time at every possible step. Powered by GPT's most powerful model.`
       */
     ["com.affine.ai-onboarding.general.2.description"](): string;
     /**
-      * `Chat with AFFiNE AI`
+      * `Chat with Aevum AI`
       */
     ["com.affine.ai-onboarding.general.2.title"](): string;
     /**
@@ -768,7 +768,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.ai-onboarding.general.3.description"](): string;
     /**
-      * `Edit inline with AFFiNE AI`
+      * `Edit inline with Aevum AI`
       */
     ["com.affine.ai-onboarding.general.3.title"](): string;
     /**
@@ -780,7 +780,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.ai-onboarding.general.4.title"](): string;
     /**
-      * `AFFiNE AI is ready`
+      * `Aevum AI is ready`
       */
     ["com.affine.ai-onboarding.general.5.title"](): string;
     /**
@@ -824,7 +824,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.ai-onboarding.local.message"](): string;
     /**
-      * `Meet AFFiNE AI`
+      * `Meet Aevum AI`
       */
     ["com.affine.ai-onboarding.local.title"](): string;
     /**
@@ -832,7 +832,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.ai-scroll-tip.tag"](): string;
     /**
-      * `Meet AFFiNE AI`
+      * `Meet Aevum AI`
       */
     ["com.affine.ai-scroll-tip.title"](): string;
     /**
@@ -852,7 +852,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.ai.login-required.dialog-confirm"](): string;
     /**
-      * `To use AFFiNE AI, please sign in to your AFFiNE Cloud account.`
+      * `To use Aevum AI, please sign in to your Aevum Cloud account.`
       */
     ["com.affine.ai.login-required.dialog-content"](): string;
     /**
@@ -864,11 +864,11 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.ai.template-insert.failed"](): string;
     /**
-      * `AFFiNE AI`
+      * `Aevum AI`
       */
     ["com.affine.ai.chat-panel.title"](): string;
     /**
-      * `AFFiNE AI is loading history...`
+      * `Aevum AI is loading history...`
       */
     ["com.affine.ai.chat-panel.loading-history"](): string;
     /**
@@ -1116,7 +1116,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.appearanceSettings.color.title"](): string;
     /**
-      * `Edit all AFFiNE theme variables here`
+      * `Edit all Aevum theme variables here`
       */
     ["com.affine.appearanceSettings.customize-theme.description"](): string;
     /**
@@ -1184,7 +1184,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.appearanceSettings.sidebar.title"](): string;
     /**
-      * `Customize your AFFiNE appearance`
+      * `Customize your Aevum appearance`
       */
     ["com.affine.appearanceSettings.subtitle"](): string;
     /**
@@ -1196,7 +1196,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.appearanceSettings.menubar.toggle"](): string;
     /**
-      * `Display the menubar app in the tray for quick access to AFFiNE or meeting recordings.`
+      * `Display the menubar app in the tray for quick access to Aevum or meeting recordings.`
       */
     ["com.affine.appearanceSettings.menubar.description"](): string;
     /**
@@ -1208,7 +1208,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.appearanceSettings.menubar.windowBehavior.openOnLeftClick.toggle"](): string;
     /**
-      * `Open AFFiNE when left‑clicking the tray icon.`
+      * `Open Aevum when left‑clicking the tray icon.`
       */
     ["com.affine.appearanceSettings.menubar.windowBehavior.openOnLeftClick.description"](): string;
     /**
@@ -1216,7 +1216,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.appearanceSettings.menubar.windowBehavior.minimizeToTray.toggle"](): string;
     /**
-      * `Minimize AFFiNE to the system tray.`
+      * `Minimize Aevum to the system tray.`
       */
     ["com.affine.appearanceSettings.menubar.windowBehavior.minimizeToTray.description"](): string;
     /**
@@ -1224,7 +1224,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.appearanceSettings.menubar.windowBehavior.closeToTray.toggle"](): string;
     /**
-      * `Close AFFiNE to the system tray.`
+      * `Close Aevum to the system tray.`
       */
     ["com.affine.appearanceSettings.menubar.windowBehavior.closeToTray.description"](): string;
     /**
@@ -1232,7 +1232,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.appearanceSettings.menubar.windowBehavior.startMinimized.toggle"](): string;
     /**
-      * `Start AFFiNE minimized to the system tray.`
+      * `Start Aevum minimized to the system tray.`
       */
     ["com.affine.appearanceSettings.menubar.windowBehavior.startMinimized.description"](): string;
     /**
@@ -1270,7 +1270,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.auth.change.email.page.subtitle"](): string;
     /**
-      * `Congratulations! You have successfully updated the email address associated with your AFFiNE account.`
+      * `Congratulations! You have successfully updated the email address associated with your Aevum account.`
       */
     ["com.affine.auth.change.email.page.success.subtitle"](): string;
     /**
@@ -1290,7 +1290,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.auth.later"](): string;
     /**
-      * `Open AFFiNE`
+      * `Open Aevum`
       */
     ["com.affine.auth.open.affine"](): string;
     /**
@@ -1322,7 +1322,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.auth.open.affine.doc.edit-settings"](): string;
     /**
-      * `Requires AFFiNE desktop app version 0.18 or later.`
+      * `Requires Aevum desktop app version 0.18 or later.`
       */
     ["com.affine.auth.open.affine.doc.footer-text"](): string;
     /**
@@ -1333,7 +1333,7 @@ export function useAFFiNEI18N(): {
         max: string;
     }>): string;
     /**
-      * `Welcome to AFFiNE, you're almost there!`
+      * `Welcome to Aevum, you're almost there!`
       */
     ["com.affine.auth.page.sent.email.title"](): string;
     /**
@@ -1361,7 +1361,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.auth.reset.password.page.success"](): string;
     /**
-      * `Reset your AFFiNE password`
+      * `Reset your Aevum password`
       */
     ["com.affine.auth.reset.password.page.title"](): string;
     /**
@@ -1415,7 +1415,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.auth.sent.change.password.hint"](): string;
     /**
-      * `Your password has been updated! You can sign in to AFFiNE with the new password.`
+      * `Your password has been updated! You can sign in to Aevum with the new password.`
       */
     ["com.affine.auth.sent.reset.password.success.message"](): string;
     /**
@@ -1423,7 +1423,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.auth.sent.set.password.hint"](): string;
     /**
-      * `Your password has been saved! You can sign in to AFFiNE with email and password.`
+      * `Your password has been saved! You can sign in to Aevum with email and password.`
       */
     ["com.affine.auth.sent.set.password.success.message"](): string;
     /**
@@ -1462,7 +1462,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.auth.set.password.page.success"](): string;
     /**
-      * `Set your AFFiNE password`
+      * `Set your Aevum password`
       */
     ["com.affine.auth.set.password.page.title"](): string;
     /**
@@ -1520,7 +1520,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.auth.sign.email.placeholder"](): string;
     /**
-      * `Sign in to AFFiNE`
+      * `Sign in to Aevum`
       */
     ["com.affine.auth.sign.in"](): string;
     /**
@@ -1528,15 +1528,15 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.auth.sign.in.sent.email.subtitle"](): string;
     /**
-      * `Self-hosted AFFiNE`
+      * `Self-hosted Aevum`
       */
     ["com.affine.auth.sign.add-selfhosted.title"](): string;
     /**
-      * `Connect to your AFFiNE server`
+      * `Connect to your Aevum server`
       */
     ["com.affine.auth.sign.add-selfhosted"](): string;
     /**
-      * `AFFiNE Server URL`
+      * `Aevum Server URL`
       */
     ["com.affine.auth.sign.add-selfhosted.baseurl"](): string;
     /**
@@ -1560,7 +1560,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.auth.sign.up.sent.email.subtitle"](): string;
     /**
-      * `The app will automatically open or redirect to the web version. If you encounter any issues, you can also click the button below to manually open the AFFiNE app.`
+      * `The app will automatically open or redirect to the web version. If you encounter any issues, you can also click the button below to manually open the Aevum app.`
       */
     ["com.affine.auth.sign.up.success.subtitle"](): string;
     /**
@@ -1568,7 +1568,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.auth.sign.up.success.title"](): string;
     /**
-      * `You have successfully signed in. The app will automatically open or redirect to the web version. if you encounter any issues, you can also click the button below to  manually open the AFFiNE app.`
+      * `You have successfully signed in. The app will automatically open or redirect to the web version. if you encounter any issues, you can also click the button below to  manually open the Aevum app.`
       */
     ["com.affine.auth.signed.success.subtitle"](): string;
     /**
@@ -1580,7 +1580,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.auth.toast.message.failed"](): string;
     /**
-      * `You have signed in to AFFiNE.`
+      * `You have signed in to Aevum.`
       */
     ["com.affine.auth.toast.message.signed-in"](): string;
     /**
@@ -1602,11 +1602,11 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.backButton"](): string;
     /**
-      * `Your workspace is saved in this browser. When disk space is low, the browser may remove it automatically. Enable AFFiNE Sync to keep it safer.`
+      * `Your workspace is saved in this browser. When disk space is low, the browser may remove it automatically. Enable Aevum Sync to keep it safer.`
       */
     ["com.affine.banner.local-warning"](): string;
     /**
-      * `AFFiNE Cloud`
+      * `Aevum Cloud`
       */
     ["com.affine.brand.affineCloud"](): string;
     /**
@@ -1622,11 +1622,11 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.calendar-date-picker.week-days"](): string;
     /**
-      * `Host by AFFiNE.Pro, Save, sync, and backup all your data.`
+      * `Host by Aevum.Pro, Save, sync, and backup all your data.`
       */
     ["com.affine.cloud-scroll-tip.caption"](): string;
     /**
-      * `AFFiNE Cloud`
+      * `Aevum Cloud`
       */
     ["com.affine.cloud-scroll-tip.title"](): string;
     /**
@@ -2252,7 +2252,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.enableAffineCloudModal.button.cancel"](): string;
     /**
-      * `Enable AFFiNE Sync for {{workspaceName}}`
+      * `Enable Aevum Sync for {{workspaceName}}`
       */
     ["com.affine.enableAffineCloudModal.custom-server.title"](options: {
         readonly workspaceName: string;
@@ -2262,7 +2262,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.enableAffineCloudModal.custom-server.description"](): string;
     /**
-      * `Enable AFFiNE Sync`
+      * `Enable Aevum Sync`
       */
     ["com.affine.enableAffineCloudModal.custom-server.enable"](): string;
     /**
@@ -2282,7 +2282,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.error.refetch"](): string;
     /**
-      * `Reload AFFiNE`
+      * `Reload Aevum`
       */
     ["com.affine.error.reload"](): string;
     /**
@@ -2514,15 +2514,15 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.history-vision.tips-modal.cancel"](): string;
     /**
-      * `Enable AFFiNE Sync`
+      * `Enable Aevum Sync`
       */
     ["com.affine.history-vision.tips-modal.confirm"](): string;
     /**
-      * `Version history can't work with local workspace. Enable AFFiNE Sync for this workspace to use version history.`
+      * `Version history can't work with local workspace. Enable Aevum Sync for this workspace to use version history.`
       */
     ["com.affine.history-vision.tips-modal.description"](): string;
     /**
-      * `Version history needs AFFiNE Sync`
+      * `Version history needs Aevum Sync`
       */
     ["com.affine.history-vision.tips-modal.title"](): string;
     /**
@@ -2624,7 +2624,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.import_file"](): string;
     /**
-      * `AFFiNE workspace data`
+      * `Aevum workspace data`
       */
     ["com.affine.import.affine-workspace-data"](): string;
     /**
@@ -2632,7 +2632,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.import.bear"](): string;
     /**
-      * `Import your Bear note backup. Tags will be converted to AFFiNE tags and folders.`
+      * `Import your Bear note backup. Tags will be converted to Aevum tags and folders.`
       */
     ["com.affine.import.bear.tooltip"](): string;
     /**
@@ -2684,7 +2684,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.import.onenote.tooltip"](): string;
     /**
-      * `This format importer is available in the AFFiNE desktop app.`
+      * `This format importer is available in the Aevum desktop app.`
       */
     ["com.affine.import.onenote.desktop-only"](): string;
     /**
@@ -2700,7 +2700,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.import.snapshot"](): string;
     /**
-      * `Import your AFFiNE workspace and page snapshot file.`
+      * `Import your Aevum workspace and page snapshot file.`
       */
     ["com.affine.import.snapshot.tooltip"](): string;
     /**
@@ -2708,7 +2708,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.import.dotaffinefile"](): string;
     /**
-      * `Import your AFFiNE db file (.affine)`
+      * `Import your Aevum db file (.affine)`
       */
     ["com.affine.import.dotaffinefile.tooltip"](): string;
     /**
@@ -2732,7 +2732,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.import.status.importing.title"](): string;
     /**
-      * `Your document has been imported successfully, thank you for choosing AFFiNE. Any questions please feel free to feedback to us`
+      * `Your document has been imported successfully, thank you for choosing Aevum. Any questions please feel free to feedback to us`
       */
     ["com.affine.import.status.success.message"](): string;
     /**
@@ -3116,7 +3116,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.mobile.setting.promo.description"](): string;
     /**
-      * `AFFiNE for teams`
+      * `Aevum for teams`
       */
     ["com.affine.mobile.setting.promo.title"](): string;
     /**
@@ -3124,7 +3124,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.mobile.setting.subscription.description"](): string;
     /**
-      * `AFFiNE Pro`
+      * `Aevum Pro`
       */
     ["com.affine.mobile.setting.subscription.title"](): string;
     /**
@@ -3132,11 +3132,11 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.mobile.setting.support.invite"](): string;
     /**
-      * `Check out AFFiNE for notes, whiteboards, docs, and AI.`
+      * `Check out Aevum for notes, whiteboards, docs, and AI.`
       */
     ["com.affine.mobile.setting.support.invite-message"](): string;
     /**
-      * `Rate AFFiNE`
+      * `Rate Aevum`
       */
     ["com.affine.mobile.setting.support.rate"](): string;
     /**
@@ -3148,7 +3148,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.mobile.sign-in.skip.hint"](): string;
     /**
-      * `Start AFFiNE without an account`
+      * `Start Aevum without an account`
       */
     ["com.affine.mobile.sign-in.skip.link"](): string;
     /**
@@ -3194,11 +3194,11 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.multi-tab.new-tab"](): string;
     /**
-      * `AFFiNE Sync keeps your workspace backed up, available across devices, and ready for collaboration and publishing.`
+      * `Aevum Sync keeps your workspace backed up, available across devices, and ready for collaboration and publishing.`
       */
     ["com.affine.nameWorkspace.affine-cloud.description"](): string;
     /**
-      * `Sync across devices with AFFiNE Sync`
+      * `Sync across devices with Aevum Sync`
       */
     ["com.affine.nameWorkspace.affine-cloud.title"](): string;
     /**
@@ -3258,7 +3258,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.notFoundPage.title"](): string;
     /**
-      * `AFFiNE Community`
+      * `Aevum Community`
       */
     ["com.affine.other-page.nav.affine-community"](): string;
     /**
@@ -3278,7 +3278,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.other-page.nav.official-website"](): string;
     /**
-      * `Open AFFiNE`
+      * `Open Aevum`
       */
     ["com.affine.other-page.nav.open-affine"](): string;
     /**
@@ -3506,7 +3506,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.page-properties.property.select.tooltips"](): string;
     /**
-      * `Enter a link to websites or AFFiNE docs. Useful for connecting to external resources and referencing internal docs.`
+      * `Enter a link to websites or Aevum docs. Useful for connecting to external resources and referencing internal docs.`
       */
     ["com.affine.page-properties.property.link.tooltips"](): string;
     /**
@@ -3652,7 +3652,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.pageMode.page"](): string;
     /**
-      * `Congratulations on your successful purchase of AFFiNE AI! You're now empowered to refine your content, generate images, and craft comprehensive mindmaps directly within AFFiNE AI, dramatically enhancing your productivity.`
+      * `Congratulations on your successful purchase of Aevum AI! You're now empowered to refine your content, generate images, and craft comprehensive mindmaps directly within Aevum AI, dramatically enhancing your productivity.`
       */
     ["com.affine.payment.ai-upgrade-success-page.text"](): string;
     /**
@@ -3664,7 +3664,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.ai.action.cancel.button-label"](): string;
     /**
-      * `Keep AFFiNE AI`
+      * `Keep Aevum AI`
       */
     ["com.affine.payment.ai.action.cancel.confirm.cancel-text"](): string;
     /**
@@ -3672,7 +3672,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.ai.action.cancel.confirm.confirm-text"](): string;
     /**
-      * `If you end your subscription now, you can still use AFFiNE AI until the end of this billing period.`
+      * `If you end your subscription now, you can still use Aevum AI until the end of this billing period.`
       */
     ["com.affine.payment.ai.action.cancel.confirm.description"](): string;
     /**
@@ -3696,7 +3696,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.ai.action.resume.confirm.confirm-text"](): string;
     /**
-      * `Are you sure you want to resume the subscription for AFFiNE AI? This means your payment method will be charged automatically at the end of each billing cycle, starting from the next billing cycle.`
+      * `Are you sure you want to resume the subscription for Aevum AI? This means your payment method will be charged automatically at the end of each billing cycle, starting from the next billing cycle.`
       */
     ["com.affine.payment.ai.action.resume.confirm.description"](): string;
     /**
@@ -3760,13 +3760,13 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.ai.benefit.g3-3"](): string;
     /**
-      * `You have purchased AFFiNE AI. The expiration date is {{end}}.`
+      * `You have purchased Aevum AI. The expiration date is {{end}}.`
       */
     ["com.affine.payment.ai.billing-tip.end-at"](options: {
         readonly end: string;
     }): string;
     /**
-      * `You have purchased AFFiNE AI. The next payment date is {{due}}.`
+      * `You have purchased Aevum AI. The next payment date is {{due}}.`
       */
     ["com.affine.payment.ai.billing-tip.next-bill-at"](options: {
         readonly due: string;
@@ -3782,15 +3782,15 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.ai.pricing-plan.caption-free"](): string;
     /**
-      * `You have purchased AFFiNE AI`
+      * `You have purchased Aevum AI`
       */
     ["com.affine.payment.ai.pricing-plan.caption-purchased"](): string;
     /**
-      * `Learn about AFFiNE AI`
+      * `Learn about Aevum AI`
       */
     ["com.affine.payment.ai.pricing-plan.learn"](): string;
     /**
-      * `AFFiNE AI`
+      * `Aevum AI`
       */
     ["com.affine.payment.ai.pricing-plan.title"](): string;
     /**
@@ -3806,11 +3806,11 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.ai.subscribe.billed-annually"](): string;
     /**
-      * `You have purchased AFFiNE AI.`
+      * `You have purchased Aevum AI.`
       */
     ["com.affine.payment.ai.usage-description-purchased"](): string;
     /**
-      * `AFFiNE AI usage`
+      * `Aevum AI usage`
       */
     ["com.affine.payment.ai.usage-title"](): string;
     /**
@@ -3881,7 +3881,7 @@ export function useAFFiNEI18N(): {
         readonly capacity: string;
     }): string;
     /**
-      * `AFFiNE AI`
+      * `Aevum AI`
       */
     ["com.affine.payment.billing-setting.ai-plan"](): string;
     /**
@@ -3897,7 +3897,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.billing-setting.believer.price-caption"](): string;
     /**
-      * `AFFiNE Cloud`
+      * `Aevum Cloud`
       */
     ["com.affine.payment.billing-setting.believer.title"](): string;
     /**
@@ -3913,7 +3913,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.billing-setting.change-plan"](): string;
     /**
-      * `AFFiNE Cloud`
+      * `Aevum Cloud`
       */
     ["com.affine.payment.billing-setting.current-plan"](): string;
     /**
@@ -4007,7 +4007,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.billing-setting.year"](): string;
     /**
-      * `Please tell us more about your use case, to make AFFiNE better.`
+      * `Please tell us more about your use case, to make Aevum better.`
       */
     ["com.affine.payment.billing-type-form.description"](): string;
     /**
@@ -4101,7 +4101,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.cloud.pricing-plan.select.caption"](): string;
     /**
-      * `Hosted by AFFiNE.Pro`
+      * `Hosted by Aevum.Pro`
       */
     ["com.affine.payment.cloud.pricing-plan.select.title"](): string;
     /**
@@ -4123,7 +4123,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.cloud.pro.benefit.g1"](): string;
     /**
-      * `Everything in AFFiNE FOSS & Basic.`
+      * `Everything in Aevum FOSS & Basic.`
       */
     ["com.affine.payment.cloud.pro.benefit.g1-1"](): string;
     /**
@@ -4181,7 +4181,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.cloud.team-workspace.benefit.g1"](): string;
     /**
-      * `Everything in AFFiNE Pro.`
+      * `Everything in Aevum Pro.`
       */
     ["com.affine.payment.cloud.team-workspace.benefit.g1-1"](): string;
     /**
@@ -4245,7 +4245,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.downgrade"](): string;
     /**
-      * `We'd like to hear more about where we fall short, so that we can make AFFiNE better.`
+      * `We'd like to hear more about where we fall short, so that we can make Aevum better.`
       */
     ["com.affine.payment.downgraded-notify.content"](): string;
     /**
@@ -4289,7 +4289,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.dynamic-benefit-5"](): string;
     /**
-      * `Everything in AFFiNE Pro`
+      * `Everything in Aevum Pro`
       */
     ["com.affine.payment.lifetime.benefit-1"](): string;
     /**
@@ -4303,7 +4303,7 @@ export function useAFFiNEI18N(): {
         readonly capacity: string;
     }): string;
     /**
-      * `Dedicated Discord support with AFFiNE makers`
+      * `Dedicated Discord support with Aevum makers`
       */
     ["com.affine.payment.lifetime.benefit-4"](): string;
     /**
@@ -4334,7 +4334,7 @@ export function useAFFiNEI18N(): {
         quota: string;
     }>): string;
     /**
-      * `Upgrade to AFFiNE Pro for expanded member capacity`
+      * `Upgrade to Aevum Pro for expanded member capacity`
       */
     ["com.affine.payment.member-limit.description.tips-for-free-plan"](): string;
     /**
@@ -4647,11 +4647,11 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.modal.downgrade.cancel"](): string;
     /**
-      * `You can still use AFFiNE Cloud Pro until the end of this billing period :)`
+      * `You can still use Aevum Cloud Pro until the end of this billing period :)`
       */
     ["com.affine.payment.modal.downgrade.caption"](): string;
     /**
-      * `Keep AFFiNE Cloud Pro`
+      * `Keep Aevum Cloud Pro`
       */
     ["com.affine.payment.modal.downgrade.confirm"](): string;
     /**
@@ -4749,7 +4749,7 @@ export function useAFFiNEI18N(): {
         readonly plan: string;
     }): string;
     /**
-      * `This is the pricing plans of AFFiNE Cloud. You can sign up or sign in to your account first.`
+      * `This is the pricing plans of Aevum Cloud. You can sign up or sign in to your account first.`
       */
     ["com.affine.payment.subtitle-not-signed-in"](): string;
     /**
@@ -4783,7 +4783,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.redeem-code"](): string;
     /**
-      * `We'd like to hear more about your use case, so that we can make AFFiNE better.`
+      * `We'd like to hear more about your use case, so that we can make Aevum better.`
       */
     ["com.affine.payment.upgrade-success-notify.content"](): string;
     /**
@@ -4803,7 +4803,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.upgrade-success-notify.title"](): string;
     /**
-      * `Congratulations! Your AFFiNE account has been successfully upgraded to a Pro account.`
+      * `Congratulations! Your Aevum account has been successfully upgraded to a Pro account.`
       */
     ["com.affine.payment.upgrade-success-page.text"](): string;
     /**
@@ -4819,7 +4819,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.license-success.title"](): string;
     /**
-      * `Thank you for purchasing the AFFiNE self-hosted license.`
+      * `Thank you for purchasing the Aevum self-hosted license.`
       */
     ["com.affine.payment.license-success.text-1"](): string;
     /**
@@ -4827,7 +4827,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.payment.license-success.hint"](): string;
     /**
-      * `Open AFFiNE`
+      * `Open Aevum`
       */
     ["com.affine.payment.license-success.open-affine"](): string;
     /**
@@ -4899,7 +4899,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.doc.analytics.paywall.open-pricing"](): string;
     /**
-      * `Doc analytics over 7 days require an AFFiNE Team subscription.`
+      * `Doc analytics over 7 days require an Aevum Team subscription.`
       */
     ["com.affine.doc.analytics.paywall.toast"](): string;
     /**
@@ -5331,7 +5331,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.setting.account.message"](): string;
     /**
-      * `Sync with AFFiNE`
+      * `Sync with Aevum`
       */
     ["com.affine.setting.sign.message"](): string;
     /**
@@ -5383,7 +5383,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.setting.appearance.links"](): string;
     /**
-      * `Open AFFiNE links`
+      * `Open Aevum links`
       */
     ["com.affine.setting.appearance.open-in-app"](): string;
     /**
@@ -5403,11 +5403,11 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.setting.appearance.open-in-app.open-in-web"](): string;
     /**
-      * `Open AFFiNE links`
+      * `Open Aevum links`
       */
     ["com.affine.setting.appearance.open-in-app.title"](): string;
     /**
-      * `Open this doc in AFFiNE app`
+      * `Open this doc in Aevum app`
       */
     ["com.affine.open-in-app.card.title"](): string;
     /**
@@ -5691,7 +5691,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.settings.editorSettings.general"](): string;
     /**
-      * `Enable the powerful AI assistant, AFFiNE AI.`
+      * `Enable the powerful AI assistant, Aevum AI.`
       */
     ["com.affine.settings.editorSettings.general.ai.description"](): string;
     /**
@@ -5719,7 +5719,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.settings.editorSettings.general.ai.enable.title"](): string;
     /**
-      * `AFFiNE AI`
+      * `Aevum AI`
       */
     ["com.affine.settings.editorSettings.general.ai.title"](): string;
     /**
@@ -5947,7 +5947,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.settings.email.action.verify"](): string;
     /**
-      * `Enable AFFiNE Sync to collaborate with others`
+      * `Enable Aevum Sync to collaborate with others`
       */
     ["com.affine.settings.member-tooltip"](): string;
     /**
@@ -6136,7 +6136,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.settings.meetings.record.permission-modal.title"](): string;
     /**
-      * `AFFiNE will generate meeting notes by recording your meetings. Authorization to "Screen & System Audio Recording" is necessary.`
+      * `Aevum will generate meeting notes by recording your meetings. Authorization to "Screen & System Audio Recording" is necessary.`
       */
     ["com.affine.settings.meetings.record.permission-modal.description"](): string;
     /**
@@ -6168,7 +6168,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.settings.workspace.byok.subtitle"](): string;
     /**
-      * `Use workspace provider keys before AFFiNE AI plan routes.`
+      * `Use workspace provider keys before Aevum AI plan routes.`
       */
     ["com.affine.settings.workspace.byok.header"](): string;
     /**
@@ -6176,7 +6176,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.settings.workspace.byok.locked.title"](): string;
     /**
-      * `Upgrade this workspace to add provider keys and route AFFiNE AI through your own OpenAI, Anthropic, Gemini, or FAL account.`
+      * `Upgrade this workspace to add provider keys and route Aevum AI through your own OpenAI, Anthropic, Gemini, or FAL account.`
       */
     ["com.affine.settings.workspace.byok.locked.description"](): string;
     /**
@@ -6212,7 +6212,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.settings.workspace.byok.storage.local.description"](): string;
     /**
-      * `Available in the AFFiNE desktop app.`
+      * `Available in the Aevum desktop app.`
       */
     ["com.affine.settings.workspace.byok.storage.local.desktop-only"](): string;
     /**
@@ -6310,11 +6310,11 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.settings.workspace.byok.feature.workspace-indexing.fallback"](): string;
     /**
-      * `Transcript and workspace indexing require a server Gemini BYOK key or AFFiNE AI plan fallback.`
+      * `Transcript and workspace indexing require a server Gemini BYOK key or Aevum AI plan fallback.`
       */
     ["com.affine.settings.workspace.byok.warning.transcript"](): string;
     /**
-      * `Workspace indexing requires a server Gemini BYOK key or AFFiNE AI plan fallback.`
+      * `Workspace indexing requires a server Gemini BYOK key or Aevum AI plan fallback.`
       */
     ["com.affine.settings.workspace.byok.warning.workspace-indexing"](): string;
     /**
@@ -6340,7 +6340,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.settings.workspace.byok.modal.manage-title"](): string;
     /**
-      * `Choose where the key is stored, then select the models AFFiNE may use.`
+      * `Choose where the key is stored, then select the models Aevum may use.`
       */
     ["com.affine.settings.workspace.byok.modal.connect-description"](): string;
     /**
@@ -6947,7 +6947,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.settings.workspace.experimental-features.enable-meetings.name"](): string;
     /**
-      * `Meetings allows you to record and transcribe meetings. Don't forget to enable it in AFFiNE settings.`
+      * `Meetings allows you to record and transcribe meetings. Don't forget to enable it in Aevum settings.`
       */
     ["com.affine.settings.workspace.experimental-features.enable-meetings.description"](): string;
     /**
@@ -7209,7 +7209,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.settings.workspace.state.local"](): string;
     /**
-      * `Sync with AFFiNE Cloud`
+      * `Sync with Aevum Cloud`
       */
     ["com.affine.settings.workspace.state.sync-affine-cloud"](): string;
     /**
@@ -7285,7 +7285,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.settings.workspace.storage.subtitle"](): string;
     /**
-      * `Enable AFFiNE Sync to publish this workspace`
+      * `Enable Aevum Sync to publish this workspace`
       */
     ["com.affine.settings.workspace.publish-tooltip"](): string;
     /**
@@ -7309,15 +7309,15 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.settings.workspace.sharing.workspace-sharing.title"](): string;
     /**
-      * `AFFiNE AI`
+      * `Aevum AI`
       */
     ["com.affine.settings.workspace.affine-ai.title"](): string;
     /**
-      * `Allow AFFiNE AI Assistant`
+      * `Allow Aevum AI Assistant`
       */
     ["com.affine.settings.workspace.affine-ai.label"](): string;
     /**
-      * `Allow workspace members to use AFFiNE AI features. This setting doesn't affect billing. Workspace members use AFFiNE AI through their personal accounts.`
+      * `Allow workspace members to use Aevum AI features. This setting doesn't affect billing. Workspace members use Aevum AI through their personal accounts.`
       */
     ["com.affine.settings.workspace.affine-ai.description"](): string;
     /**
@@ -7368,7 +7368,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.settings.workspace.indexer-embedding.title"](): string;
     /**
-      * `Manage AFFiNE indexing and AFFiNE AI Embedding for local content processing`
+      * `Manage Aevum indexing and Aevum AI Embedding for local content processing`
       */
     ["com.affine.settings.workspace.indexer-embedding.description"](): string;
     /**
@@ -7456,7 +7456,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.settings.workspace.indexer-embedding.embedding.additional-attachments.remove-attachment.tooltip"](): string;
     /**
-      * `Sharing docs requires AFFiNE Sync.`
+      * `Sharing docs requires Aevum Sync.`
       */
     ["com.affine.share-menu.EnableCloudDescription"](): string;
     /**
@@ -7725,7 +7725,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.share-page.footer.create-with"](): string;
     /**
-      * `Empower your sharing with AFFiNE Cloud: One-click doc sharing`
+      * `Empower your sharing with Aevum Cloud: One-click doc sharing`
       */
     ["com.affine.share-page.footer.description"](): string;
     /**
@@ -7809,7 +7809,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.storage.plan"](): string;
     /**
-      * `AFFiNE Sync storage`
+      * `Aevum Sync storage`
       */
     ["com.affine.storage.title"](): string;
     /**
@@ -8053,7 +8053,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.upgrade.tips.error"](): string;
     /**
-      * `To ensure compatibility with the updated AFFiNE client, please upgrade your data by clicking the "Upgrade workspace data" button below.`
+      * `To ensure compatibility with the updated Aevum client, please upgrade your data by clicking the "Upgrade workspace data" button below.`
       */
     ["com.affine.upgrade.tips.normal"](): string;
     /**
@@ -8133,11 +8133,11 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.workspace.cloud.account.team.tips-2"](): string;
     /**
-      * `Sign in / Sign up to AFFiNE`
+      * `Sign in / Sign up to Aevum`
       */
     ["com.affine.workspace.cloud.auth"](): string;
     /**
-      * `Sync with AFFiNE`
+      * `Sync with Aevum`
       */
     ["com.affine.workspace.cloud.description"](): string;
     /**
@@ -8145,11 +8145,11 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.workspace.cloud.join"](): string;
     /**
-      * `AFFiNE Sync`
+      * `Aevum Sync`
       */
     ["com.affine.workspace.cloud.sync"](): string;
     /**
-      * `Failed to turn on AFFiNE Sync. Please try again.`
+      * `Failed to turn on Aevum Sync. Please try again.`
       */
     ["com.affine.workspace.enable-cloud.failed"](): string;
     /**
@@ -8975,7 +8975,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.invitation.account-mismatch.switch-account"](): string;
     /**
-      * `Back to AFFiNE`
+      * `Back to Aevum`
       */
     ["com.affine.invitation.account-mismatch.back-to-affine"](): string;
     /**
@@ -9007,15 +9007,15 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.integration.web-clipper.name"](): string;
     /**
-      * `Import web pages to AFFiNE`
+      * `Import web pages to Aevum`
       */
     ["com.affine.integration.web-clipper.desc"](): string;
     /**
-      * `Elevate your AFFiNE experience with diverse add-ons and seamless integrations.`
+      * `Elevate your Aevum experience with diverse add-ons and seamless integrations.`
       */
     ["com.affine.integration.setting.description"](): string;
     /**
-      * `Learn how to develop a integration for AFFiNE`
+      * `Learn how to develop a integration for Aevum`
       */
     ["com.affine.integration.setting.learn"](): string;
     /**
@@ -9023,7 +9023,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.integration.readwise.name"](): string;
     /**
-      * `Manually import your content to AFFiNE from Readwise`
+      * `Manually import your content to Aevum from Readwise`
       */
     ["com.affine.integration.readwise.desc"](): string;
     /**
@@ -9063,7 +9063,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.integration.readwise.disconnect.title"](): string;
     /**
-      * `Once disconnected, content will no longer be imported. Do you want to keep your existing highlights in AFFiNE?`
+      * `Once disconnected, content will no longer be imported. Do you want to keep your existing highlights in Aevum?`
       */
     ["com.affine.integration.readwise.disconnect.desc"](): string;
     /**
@@ -9137,11 +9137,11 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.integration.readwise.setting.caption"](): string;
     /**
-      * `New Readwise highlights will be imported to AFFiNE `
+      * `New Readwise highlights will be imported to Aevum `
       */
     ["com.affine.integration.readwise.setting.sync-new-name"](): string;
     /**
-      * `New highlights in Readwise will be synced to AFFiNE `
+      * `New highlights in Readwise will be synced to Aevum `
       */
     ["com.affine.integration.readwise.setting.sync-new-desc"](): string;
     /**
@@ -9217,7 +9217,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.integration.calendar.name"](): string;
     /**
-      * `New events will be scheduled in AFFiNE’s journal`
+      * `New events will be scheduled in Aevum’s journal`
       */
     ["com.affine.integration.calendar.desc"](): string;
     /**
@@ -9361,7 +9361,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.integration.calendar.show-events"](): string;
     /**
-      * `Enabling this setting allows you to connect your calendar events to your Journal in AFFiNE`
+      * `Enabling this setting allows you to connect your calendar events to your Journal in Aevum`
       */
     ["com.affine.integration.calendar.show-events-desc"](): string;
     /**
@@ -9389,7 +9389,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.integration.mcp-server.name"](): string;
     /**
-      * `Enable other MCP Client to search and read the doc of AFFiNE.`
+      * `Enable other MCP Client to search and read the doc of Aevum.`
       */
     ["com.affine.integration.mcp-server.desc"](): string;
     /**
@@ -9813,7 +9813,7 @@ export function useAFFiNEI18N(): {
       */
     ["com.affine.realtime.connection-error.server"](): string;
     /**
-      * `The server did not respond in time. AFFiNE will keep trying to reconnect.`
+      * `The server did not respond in time. Aevum will keep trying to reconnect.`
       */
     ["com.affine.realtime.connection-error.timeout"](): string;
     /**
@@ -10592,7 +10592,7 @@ function createComponent(i18nKey: string) {
 }
 export const TypedTrans: {
     /**
-      * `Go to <a>{{link}}</a> for learn more details about AFFiNE AI.`
+      * `Go to <a>{{link}}</a> for learn more details about Aevum AI.`
       */
     ["com.affine.ai-onboarding.general.5.description"]: ComponentType<TypedTransProps<{
         readonly link: string;
@@ -10606,13 +10606,13 @@ export const TypedTrans: {
         a: JSX.Element;
     }>>;
     /**
-      * `Opening <1>AFFiNE</1> app now`
+      * `Opening <1>Aevum</1> app now`
       */
     ["com.affine.auth.open.affine.prompt"]: ComponentType<TypedTransProps<Readonly<{}>, {
         ["1"]: JSX.Element;
     }>>;
     /**
-      * `This doc is now opened in <1>AFFiNE</1> app`
+      * `This doc is now opened in <1>Aevum</1> app`
       */
     ["com.affine.auth.open.affine.open-doc-prompt"]: ComponentType<TypedTransProps<Readonly<{}>, {
         ["1"]: JSX.Element;
@@ -10632,20 +10632,20 @@ export const TypedTrans: {
         ["1"]: JSX.Element;
     }>>;
     /**
-      * `This is an AFFiNE server hosted by you or your team. After signing in, workspace data is saved to the AFFiNE server you enter, not to AFFiNE Cloud. <1>Learn more about self-hosting.</1>`
+      * `This is an Aevum server hosted by you or your team. After signing in, workspace data is saved to the Aevum server you enter, not to Aevum Cloud. <1>Learn more about self-hosting.</1>`
       */
     ["com.affine.auth.sign.add-selfhosted.description"]: ComponentType<TypedTransProps<Readonly<{}>, {
         ["1"]: JSX.Element;
     }>>;
     /**
-      * `By clicking “Continue with Google/Email” above, you acknowledge that you agree to AFFiNE's <1>Terms of Conditions</1> and <3>Privacy Policy</3>.`
+      * `By clicking “Continue with Google/Email” above, you acknowledge that you agree to Aevum's <1>Terms of Conditions</1> and <3>Privacy Policy</3>.`
       */
     ["com.affine.auth.sign.message"]: ComponentType<TypedTransProps<Readonly<{}>, {
         ["1"]: JSX.Element;
         ["3"]: JSX.Element;
     }>>;
     /**
-      * `This demo is limited. <1>Download the AFFiNE Client</1> for the latest features and Performance.`
+      * `This demo is limited. <1>Download the Aevum Client</1> for the latest features and Performance.`
       */
     ["com.affine.banner.content"]: ComponentType<TypedTransProps<Readonly<{}>, {
         ["1"]: JSX.Element;
@@ -10950,7 +10950,7 @@ export const TypedTrans: {
         li: JSX.Element;
     }>>;
     /**
-      * `Utilize the meeting notes and AI summarization features provided by AFFiNE. <1>Discuss more in the community</1>.`
+      * `Utilize the meeting notes and AI summarization features provided by Aevum. <1>Discuss more in the community</1>.`
       */
     ["com.affine.settings.meetings.enable.description"]: ComponentType<TypedTransProps<Readonly<{}>, {
         ["1"]: JSX.Element;
@@ -11195,7 +11195,7 @@ export const TypedTrans: {
         ["3"]: JSX.Element;
     }>>;
     /**
-      * `Import your Readwise highlights to AFFiNE. Please visit Readwise, <br />click <a>"Get Access Token"</a>, and paste the token below.`
+      * `Import your Readwise highlights to Aevum. Please visit Readwise, <br />click <a>"Get Access Token"</a>, and paste the token below.`
       */
     ["com.affine.integration.readwise.connect.desc"]: ComponentType<TypedTransProps<Readonly<{}>, {
         br: JSX.Element;

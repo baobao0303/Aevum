@@ -58,7 +58,7 @@ export class MagicLinkAuthService {
             (env.selfhosted ? 'Aevum Self-hosted' : 'Aevum Cloud'),
           source,
         });
-      this.event?.emit('mail.dispatch');
+      this.event?.emit('mail.dispatch', undefined);
       return { email: canonicalEmail };
     } catch (error) {
       if (String(error).includes('wrong_sign_in_credentials')) {

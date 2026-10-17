@@ -20,10 +20,6 @@ export const AddServer = () => {
     globalDialogService.open('sign-in', { step: 'addSelfhosted' });
   }, [globalDialogService]);
 
-  if (!BUILD_CONFIG.isNative) {
-    return null;
-  }
-
   return (
     <>
       <div className={addServerDividerWrapper}>

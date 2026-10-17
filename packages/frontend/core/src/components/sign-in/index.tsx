@@ -1,12 +1,13 @@
 import { DefaultServerService, type Server } from '@affine/core/modules/cloud';
 import type { AuthSessionStatus } from '@affine/core/modules/cloud/entities/session';
 import { FrameworkScope, useService } from '@toeverything/infra';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 import { AddSelfhostedStep } from './add-selfhosted';
 import { SignInStep } from './sign-in';
 import { SignInWithEmailStep } from './sign-in-with-email';
 import { SignInWithPasswordStep } from './sign-in-with-password';
+import * as style from './style.css';
 
 export type SignInStep =
   | 'signIn'
@@ -51,30 +52,65 @@ export const SignInPanel = ({
   const step = state.step;
   const server = state.server ?? defaultServerService.server;
 
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [panelHeight, setPanelHeight] = useState<number | undefined>(undefined);
+
+  useLayoutEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+
+    const updateHeight = () => {
+      const nextHeight = el.offsetHeight;
+      if (nextHeight > 0) {
+        setPanelHeight(nextHeight);
+      }
+    };
+
+    updateHeight();
+
+    const observer = new ResizeObserver(() => {
+      updateHeight();
+    });
+    observer.observe(el);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [step]);
+
   return (
     <FrameworkScope scope={server.scope}>
-      {step === 'signIn' ? (
-        <SignInStep
-          state={state}
-          changeState={setState}
-          onSkip={onSkip}
-          onAuthenticated={onAuthenticated}
-        />
-      ) : step === 'signInWithEmail' ? (
-        <SignInWithEmailStep
-          state={state}
-          changeState={setState}
-          onAuthenticated={onAuthenticated}
-        />
-      ) : step === 'signInWithPassword' ? (
-        <SignInWithPasswordStep
-          state={state}
-          changeState={setState}
-          onAuthenticated={onAuthenticated}
-        />
-      ) : step === 'addSelfhosted' ? (
-        <AddSelfhostedStep state={state} changeState={setState} />
-      ) : null}
+      <div
+        className={style.panelHeightWrapper}
+        style={
+          panelHeight !== undefined ? { height: `${panelHeight}px` } : undefined
+        }
+      >
+        <div ref={contentRef} key={step} className={style.stepContentAnimated}>
+          {step === 'signIn' ? (
+            <SignInStep
+              state={state}
+              changeState={setState}
+              onSkip={onSkip}
+              onAuthenticated={onAuthenticated}
+            />
+          ) : step === 'signInWithEmail' ? (
+            <SignInWithEmailStep
+              state={state}
+              changeState={setState}
+              onAuthenticated={onAuthenticated}
+            />
+          ) : step === 'signInWithPassword' ? (
+            <SignInWithPasswordStep
+              state={state}
+              changeState={setState}
+              onAuthenticated={onAuthenticated}
+            />
+          ) : step === 'addSelfhosted' ? (
+            <AddSelfhostedStep state={state} changeState={setState} />
+          ) : null}
+        </div>
+      </div>
     </FrameworkScope>
   );
 };

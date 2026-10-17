@@ -96,7 +96,7 @@ function getBaseWorkerConfigs(
 function getRspackBundleConfigs(pkg: Package): MultiRspackOptions {
   assertRspackSupportedPackage(pkg);
 
-  switch (pkg.name) {
+  switch (pkg.name as string) {
     case '@affine/admin': {
       return [
         createRspackHTMLTargetConfig(pkg, pkg.srcPath.join('index.tsx').value, {

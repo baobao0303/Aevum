@@ -16,16 +16,9 @@ import {
   useState,
 } from 'react';
 
-import {
-  RouteLogic,
-  useNavigateHelper,
-} from '../../../components/hooks/use-navigate-helper';
 import { WorkspaceNavigator } from '../../../components/workspace-selector';
 import { AuthService } from '../../../modules/cloud';
-import {
-  AppContainer,
-  UnauthenticatedWorkspaceBackdrop,
-} from '../../components/app-container';
+import { UnauthenticatedWorkspaceBackdrop } from '../../components/app-container';
 
 /**
  * index page
@@ -34,9 +27,7 @@ import {
  * - initCloud: boolean, if true, when user is logged in, create a cloud workspace
  */
 export const Component = ({
-  defaultIndexRoute = 'all',
   children,
-  fallback,
   createErrorFallback,
 }: {
   defaultIndexRoute?: string;
@@ -58,8 +49,6 @@ export const Component = ({
   const list = useLiveData(workspacesService.list.workspaces$);
   const listIsLoading = useLiveData(workspacesService.list.isRevalidating$);
 
-  const { openPage, jumpToPage } = useNavigateHelper();
-
   const createOnceRef = useRef(false);
 
   // Remove any legacy local Demo Workspace automatically
@@ -79,12 +68,8 @@ export const Component = ({
     setCreateError(false);
     setCreating(true);
     buildShowcaseWorkspace(workspacesService, 'affine-cloud', 'Aevum Workspace')
-      .then(({ meta, defaultDocId }) => {
-        if (defaultDocId) {
-          jumpToPage(meta.id, defaultDocId);
-        } else {
-          openPage(meta.id, defaultIndexRoute);
-        }
+      .then(() => {
+        workspacesService.list.revalidate();
       })
       .catch(err => {
         console.error('Failed to create cloud workspace', err);
@@ -93,8 +78,9 @@ export const Component = ({
       })
       .finally(() => {
         setCreating(false);
+        setNavigating(false);
       });
-  }, [defaultIndexRoute, jumpToPage, openPage, workspacesService]);
+  }, [workspacesService]);
 
   useEffect(() => {
     if (loggedIn) {
@@ -119,21 +105,8 @@ export const Component = ({
       return;
     }
 
-    if (navigating) {
-      const lastId = localStorage.getItem('last_workspace_id');
-      const openWorkspace =
-        cloudWorkspaces.find(w => w.id === lastId) ?? cloudWorkspaces[0];
-      openPage(openWorkspace.id, defaultIndexRoute, RouteLogic.REPLACE);
-    }
-  }, [
-    createCloudWorkspace,
-    list,
-    openPage,
-    listIsLoading,
-    loggedIn,
-    navigating,
-    defaultIndexRoute,
-  ]);
+    setNavigating(false);
+  }, [createCloudWorkspace, list, listIsLoading, loggedIn]);
 
   const desktopApi = useServiceOptional(DesktopApiService);
 
@@ -153,12 +126,19 @@ export const Component = ({
     return () => clearTimeout(timer);
   }, []);
 
+  // Automatically open the Sign-In modal when unauthenticated
+  useEffect(() => {
+    if (
+      sessionStatus === 'unauthenticated' &&
+      videoReady &&
+      !openedDialogs.some(d => d.type === 'sign-in')
+    ) {
+      globalDialogService.open('sign-in', {});
+    }
+  }, [globalDialogService, openedDialogs, sessionStatus, videoReady]);
+
   if (createError && createErrorFallback) {
     return createErrorFallback(retryCreate);
-  }
-
-  if (loggedIn && (navigating || creating)) {
-    return fallback ?? <AppContainer fallback />;
   }
 
   return (
@@ -171,28 +151,30 @@ export const Component = ({
           overflow: 'hidden',
         }}
       >
-        <UnauthenticatedWorkspaceBackdrop
-          onReady={() => setVideoReady(true)}
-        />
-        {!navigating && !creating && videoReady && openedDialogs.length === 0 && (
-          <div
-            style={{
-              position: 'fixed',
-              left: 'calc(50% - 150px)',
-              top: '35%',
-              zIndex: 10,
-            }}
-          >
-            <WorkspaceNavigator
-              open={true}
-              menuContentOptions={{
-                forceMount: true,
-                onInteractOutside: e => e.preventDefault(),
-                onEscapeKeyDown: e => e.preventDefault(),
+        <UnauthenticatedWorkspaceBackdrop onReady={() => setVideoReady(true)} />
+        {loggedIn &&
+          !navigating &&
+          !creating &&
+          videoReady &&
+          openedDialogs.length === 0 && (
+            <div
+              style={{
+                position: 'fixed',
+                left: 'calc(50% - 150px)',
+                top: '35%',
+                zIndex: 10,
               }}
-            />
-          </div>
-        )}
+            >
+              <WorkspaceNavigator
+                open={true}
+                menuContentOptions={{
+                  forceMount: true,
+                  onInteractOutside: e => e.preventDefault(),
+                  onEscapeKeyDown: e => e.preventDefault(),
+                }}
+              />
+            </div>
+          )}
       </div>
     )
   );

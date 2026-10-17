@@ -19,6 +19,12 @@ type DynamicProp = Record<string, unknown> & {
   $$userId?: string;
 };
 
+declare global {
+  interface Events {
+    'mail.dispatch': undefined;
+  }
+}
+
 @Injectable()
 export class MailJob {
   private readonly logger = new Logger('MailDeliveryWorker');
@@ -132,15 +138,15 @@ export class MailJob {
       return;
     }
 
-    if (env.dev || this.config.mailer.preview) {
+    if (env.dev || (this.config.mailer as any).preview) {
       const otp = (payload.props as any)?.otp;
       const url = (payload.props as any)?.url;
       this.logger.log(
         `\n========================================\n` +
-        `📨 [AUTH EMAIL] To: ${row.recipientEmail}\n` +
-        (otp ? `🔑 Verification Code / OTP: ${otp}\n` : '') +
-        (url ? `🔗 Magic Link: ${url}\n` : '') +
-        `========================================`
+          `📨 [AUTH EMAIL] To: ${row.recipientEmail}\n` +
+          (otp ? `🔑 Verification Code / OTP: ${otp}\n` : '') +
+          (url ? `🔗 Magic Link: ${url}\n` : '') +
+          `========================================`
       );
     }
 

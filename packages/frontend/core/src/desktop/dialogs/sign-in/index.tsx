@@ -8,11 +8,16 @@ import type {
 } from '@affine/core/modules/dialogs';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback } from 'react';
+
 export const SignInDialog = ({
   close,
   server: initialServerBaseUrl,
   step,
 }: DialogComponentProps<GLOBAL_DIALOG_SCHEMA['sign-in']>) => {
+  const authService = useService(AuthService);
+  const sessionStatus = useLiveData(authService.session.status$);
+  const loggedIn = sessionStatus === 'authenticated';
+
   const onAuthenticated = useCallback(
     (status: AuthSessionStatus) => {
       if (status === 'authenticated') {
@@ -24,7 +29,14 @@ export const SignInDialog = ({
   return (
     <Modal
       open
-      onOpenChange={close}
+      disableAutoFocus
+      persistent={!loggedIn}
+      withoutCloseButton={!loggedIn}
+      onOpenChange={open => {
+        if (!open && loggedIn) {
+          close();
+        }
+      }}
       width={400}
       overlayOptions={{
         style: {
@@ -38,6 +50,7 @@ export const SignInDialog = ({
         style: {
           padding: '40px 40px 24px',
           maxHeight: 650,
+          transition: 'height 280ms cubic-bezier(0.22, 1, 0.36, 1)',
         },
       }}
     >

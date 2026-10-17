@@ -216,13 +216,15 @@ jobs:
     steps:
       - name: Generate Summary Report
         run: |
-          echo "## 📦 Aevum Build Package Pipeline Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Component | Target | Status | Artifact |" >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Backend Server** | \`@aevum/server\` | ${{ needs.build-backend.result == 'success' && '✅ Success' || '⚠️ Skipped/Failed' }} | \`aevum-backend-package\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Web Frontend** | \`@aevum/web\` | ${{ needs.build-web.result == 'success' && '✅ Success' || '⚠️ Skipped/Failed' }} | \`aevum-web-package\` |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🚀 How to Run Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "- **Backend**: Download \`aevum-backend-package\`, run \`node dist/main.js\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Web**: Download \`aevum-web-package\`, serve static files using Nginx or Caddy." >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## 📦 Aevum Build Package Pipeline Report"
+            echo ""
+            echo "| Component | Target | Status | Artifact |"
+            echo "|---|---|---|---|"
+            echo "| **Backend Server** | \`@aevum/server\` | ${{ needs.build-backend.result == 'success' && '✅ Success' || '⚠️ Skipped/Failed' }} | \`aevum-backend-package\` |"
+            echo "| **Web Frontend** | \`@aevum/web\` | ${{ needs.build-web.result == 'success' && '✅ Success' || '⚠️ Skipped/Failed' }} | \`aevum-web-package\` |"
+            echo ""
+            echo "### 🚀 How to Run Artifacts"
+            echo "- **Backend**: Download \`aevum-backend-package\`, run \`node dist/main.js\`"
+            echo "- **Web**: Download \`aevum-web-package\`, serve static files using Nginx or Caddy."
+          } >> "$GITHUB_STEP_SUMMARY"

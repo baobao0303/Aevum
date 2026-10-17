@@ -208,16 +208,18 @@ jobs:
 
       - name: Publish Workflow Summary
         run: |
-          echo "### 🚀 Aevum Backend Image Published!" >> $GITHUB_STEP_SUMMARY
-          echo "**Published Tags:**" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Run on server with Docker Compose:" >> $GITHUB_STEP_SUMMARY
-          echo '```bash' >> $GITHUB_STEP_SUMMARY
-          echo "AEVUM_IMAGE=ghcr.io/${{ github.repository_owner }}/aevum-backend:latest docker compose -f docker-compose.backend.yml up -d" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          {
+            echo "### 🚀 Aevum Backend Image Published!"
+            echo "**Published Tags:**"
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+            echo ""
+            echo "Run on server with Docker Compose:"
+            echo '```bash'
+            echo "AEVUM_IMAGE=ghcr.io/${{ github.repository_owner }}/aevum-backend:latest docker compose -f docker-compose.backend.yml up -d"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
     name: Deploy to Server (CD)

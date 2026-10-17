@@ -66,6 +66,11 @@ export const authInputWrapper = style({
 
 export const authFooter = style({
   marginTop: '16px',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '100%',
 });
 
 globalStyle(`${authFooter} > *:not(:last-child)`, {

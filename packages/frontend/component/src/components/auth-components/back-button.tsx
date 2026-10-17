@@ -5,13 +5,18 @@ import type { FC } from 'react';
 import type { ButtonProps } from '../../ui/button';
 import { Button } from '../../ui/button';
 
-export const BackButton: FC<ButtonProps> = props => {
+export const BackButton: FC<ButtonProps> = ({ style, ...props }) => {
   const t = useI18n();
   return (
     <Button
       variant="plain"
       style={{
-        padding: '2px 8px 2px 0',
+        padding: '4px 12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        margin: '0 auto',
+        ...style,
       }}
       prefix={<ArrowLeftSmallIcon />}
       {...props}

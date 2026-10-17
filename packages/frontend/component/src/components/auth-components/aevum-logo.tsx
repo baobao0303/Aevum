@@ -2,13 +2,7 @@ import type { FC, SVGProps } from 'react';
 
 export const AevumIcon: FC<
   SVGProps<SVGSVGElement> & { size?: number; withBackground?: boolean }
-> = ({
-  size = 28,
-  withBackground = false,
-  className,
-  style,
-  ...props
-}) => {
+> = ({ size = 28, withBackground = false, className, style, ...props }) => {
   if (withBackground) {
     return (
       <svg
@@ -33,17 +27,35 @@ export const AevumIcon: FC<
             <stop offset="60%" stopColor="#0F172A" />
             <stop offset="100%" stopColor="#020617" />
           </radialGradient>
-          <linearGradient id="aevum_leftPillar_bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient
+            id="aevum_leftPillar_bg"
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="100%"
+          >
             <stop offset="0%" stopColor="#38BDF8" />
             <stop offset="50%" stopColor="#6366F1" />
             <stop offset="100%" stopColor="#4338CA" />
           </linearGradient>
-          <linearGradient id="aevum_rightPillar_bg" x1="100%" y1="0%" x2="0%" y2="100%">
+          <linearGradient
+            id="aevum_rightPillar_bg"
+            x1="100%"
+            y1="0%"
+            x2="0%"
+            y2="100%"
+          >
             <stop offset="0%" stopColor="#C084FC" />
             <stop offset="50%" stopColor="#8B5CF6" />
             <stop offset="100%" stopColor="#4F46E5" />
           </linearGradient>
-          <linearGradient id="aevum_coreGrad_bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient
+            id="aevum_coreGrad_bg"
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="100%"
+          >
             <stop offset="0%" stopColor="#F472B6" />
             <stop offset="50%" stopColor="#A855F7" />
             <stop offset="100%" stopColor="#06B6D4" />
@@ -98,12 +110,24 @@ export const AevumIcon: FC<
       {...props}
     >
       <defs>
-        <linearGradient id="aevum_leftPillar" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient
+          id="aevum_leftPillar"
+          x1="0%"
+          y1="0%"
+          x2="100%"
+          y2="100%"
+        >
           <stop offset="0%" stopColor="#38BDF8" />
           <stop offset="50%" stopColor="#6366F1" />
           <stop offset="100%" stopColor="#4338CA" />
         </linearGradient>
-        <linearGradient id="aevum_rightPillar" x1="100%" y1="0%" x2="0%" y2="100%">
+        <linearGradient
+          id="aevum_rightPillar"
+          x1="100%"
+          y1="0%"
+          x2="0%"
+          y2="100%"
+        >
           <stop offset="0%" stopColor="#C084FC" />
           <stop offset="50%" stopColor="#8B5CF6" />
           <stop offset="100%" stopColor="#4F46E5" />

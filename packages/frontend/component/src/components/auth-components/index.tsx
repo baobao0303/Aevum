@@ -1,3 +1,4 @@
+export * from './aevum-logo';
 export * from './auth-container';
 export * from './auth-content';
 export * from './auth-footer';
@@ -7,6 +8,7 @@ export * from './auth-page-container';
 export * from './back-button';
 export * from './change-email-page';
 export * from './change-password-page';
+export * from './logo';
 export * from './onboarding-page';
 export * from './password-input';
 export * from './set-password-page';

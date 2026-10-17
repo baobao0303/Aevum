@@ -170,7 +170,8 @@ export class RunCommand extends PackageCommand {
 
     const bin = args[0] === 'yarn' ? args[1] : args[0];
     const loader =
-      pkg.name === '@aevum/server' || pkg.name === '@affine/server'
+      (pkg.name as string) === '@aevum/server' ||
+      (pkg.name as string) === '@affine/server'
         ? serverRuntimeLoader
         : tsxRuntimeLoader;
     const hasKnownLoader =

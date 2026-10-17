@@ -27,7 +27,7 @@ const overlayShow = keyframes({
 const contentShowFadeScaleTop = keyframes({
   from: {
     opacity: 0,
-    transform: 'translateY(-2%) scale(0.96)',
+    transform: 'translateY(8px) scale(0.96)',
   },
   to: {
     opacity: 1,
@@ -37,7 +37,7 @@ const contentShowFadeScaleTop = keyframes({
 const contentHideFadeScaleTop = keyframes({
   to: {
     opacity: 0,
-    transform: 'translateY(-2%) scale(0.96)',
+    transform: 'translateY(8px) scale(0.95)',
   },
   from: {
     opacity: 1,
@@ -78,7 +78,7 @@ export const modalOverlay = style({
   overflow: 'hidden',
   overscrollBehavior: 'contain',
   zIndex: cssVar('zIndexModal'),
-  animation: `${overlayShow} 150ms forwards`,
+  animation: `${overlayShow} 220ms cubic-bezier(0.22, 1, 0.36, 1) forwards`,
   selectors: {
     '&.anim-none': {
       animation: 'none',
@@ -118,7 +118,7 @@ export const modalContentWrapper = style({
       animation: 'none',
     },
     '&.anim-fadeScaleTop': {
-      animation: `${contentShowFadeScaleTop} 150ms cubic-bezier(0.42, 0, 0.58, 1)`,
+      animation: `${contentShowFadeScaleTop} 240ms cubic-bezier(0.22, 1, 0.36, 1)`,
       animationFillMode: 'forwards',
     },
     [`${vtScopeSelector(modalVTScope)} &.anim-fadeScaleTop.vt-active`]: {
@@ -143,7 +143,7 @@ export const modalContentWrapper = style({
 globalStyle(
   `::view-transition-old(${modalContentViewTransitionNameFadeScaleTop})`,
   {
-    animation: `${contentHideFadeScaleTop} 150ms cubic-bezier(0.42, 0, 0.58, 1)`,
+    animation: `${contentHideFadeScaleTop} 220ms cubic-bezier(0.22, 1, 0.36, 1)`,
     animationFillMode: 'forwards',
   }
 );
@@ -204,6 +204,13 @@ export const closeButton = style({
   top: '22px',
   right: '20px',
   zIndex: cssVar('zIndexModal'),
+  outline: 'none',
+  selectors: {
+    '&:focus, &:focus-visible': {
+      outline: 'none',
+      boxShadow: 'none',
+    },
+  },
 });
 export const modalHeader = style({
   fontSize: cssVar('fontH6'),

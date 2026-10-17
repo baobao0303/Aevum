@@ -1,6 +1,39 @@
 import { cssVar } from '@toeverything/theme';
 import { cssVarV2 } from '@toeverything/theme/v2';
-import { globalStyle, style } from '@vanilla-extract/css';
+import { globalStyle, keyframes, style } from '@vanilla-extract/css';
+
+const stepFadeIn = keyframes({
+  from: {
+    opacity: 0,
+    transform: 'translateY(8px)',
+  },
+  to: {
+    opacity: 1,
+    transform: 'translateY(0)',
+  },
+});
+
+export const panelHeightWrapper = style({
+  overflow: 'hidden',
+  width: '100%',
+  transition: 'height 280ms cubic-bezier(0.22, 1, 0.36, 1)',
+  willChange: 'height',
+  '@media': {
+    '(prefers-reduced-motion: reduce)': {
+      transition: 'none',
+    },
+  },
+});
+
+export const stepContentAnimated = style({
+  width: '100%',
+  animation: `${stepFadeIn} 260ms cubic-bezier(0.22, 1, 0.36, 1) forwards`,
+  '@media': {
+    '(prefers-reduced-motion: reduce)': {
+      animation: 'none',
+    },
+  },
+});
 
 export const authMessage = style({
   color: cssVar('textSecondaryColor'),

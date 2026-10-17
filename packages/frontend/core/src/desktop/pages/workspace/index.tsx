@@ -6,7 +6,6 @@ import {
   DefaultServerService,
   ServersService,
 } from '@affine/core/modules/cloud';
-import { GlobalDialogService } from '@affine/core/modules/dialogs';
 import { DndService } from '@affine/core/modules/dnd/services';
 import { GlobalContextService } from '@affine/core/modules/global-context';
 import { OpenInAppGuard } from '@affine/core/modules/open-in-app';
@@ -68,14 +67,12 @@ globalThis.Y = _Y;
 export const Component = (): ReactElement => {
   const {
     workspacesService,
-    globalDialogService,
     serversService,
     defaultServerService,
     globalContextService,
     authService,
   } = useServices({
     WorkspacesService,
-    GlobalDialogService,
     ServersService,
     DefaultServerService,
     GlobalContextService,
@@ -84,7 +81,6 @@ export const Component = (): ReactElement => {
 
   const sessionStatus = useLiveData(authService.session.status$);
   const loggedIn = sessionStatus === 'authenticated';
-  const signInOpenedRef = useRef(false);
 
   const params = useParams();
   const location = useLocation();
@@ -135,24 +131,16 @@ export const Component = (): ReactElement => {
     }
   }, [workspaces, workspacesService]);
 
-  // Require login before showing workspace
+  // Redirect to index select page when unauthenticated or when local demo workspace was removed
   useEffect(() => {
-    if (sessionStatus === 'unauthenticated' && !signInOpenedRef.current) {
-      signInOpenedRef.current = true;
-      globalDialogService.open('sign-in', {
-        server: searchParams.get('server') ?? undefined,
-      });
-    } else if (sessionStatus === 'authenticated') {
-      signInOpenedRef.current = false;
+    if (sessionStatus === 'unauthenticated' && !detailDocRoute) {
+      navigate('/', { replace: true })?.catch(console.error);
+      return;
     }
-  }, [globalDialogService, searchParams, sessionStatus]);
-
-  // Once authenticated, if current route was a removed local demo workspace, redirect to index to open/create cloud workspace
-  useEffect(() => {
     if (loggedIn && !listLoading && !meta && !detailDocRoute) {
-      navigate('/', { replace: true });
+      navigate('/', { replace: true })?.catch(console.error);
     }
-  }, [detailDocRoute, listLoading, loggedIn, meta, navigate]);
+  }, [detailDocRoute, listLoading, loggedIn, meta, navigate, sessionStatus]);
 
   // if listLoading is false, we can show 404 page, otherwise we should show loading page.
   useEffect(() => {

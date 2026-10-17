@@ -173,9 +173,7 @@ export class MailSender {
       metrics.mail.counter('accepted_total').add(1, { name });
       this.logger.debug(`Mail [${name}] sent successfully.`);
       if (this.usingTestAccount) {
-        this.logger.log(
-          `  ⚙️ Mail preview url: ${getTestMessageUrl(result)}`
-        );
+        this.logger.log(`  ⚙️ Mail preview url: ${getTestMessageUrl(result)}`);
       }
 
       return {

@@ -11,24 +11,64 @@ export const LogoIcon = () => {
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <linearGradient id="leftPillarAbout" x1="146" y1="392" x2="284" y2="104" gradientUnits="userSpaceOnUse">
+        <linearGradient
+          id="leftPillarAbout"
+          x1="146"
+          y1="392"
+          x2="284"
+          y2="104"
+          gradientUnits="userSpaceOnUse"
+        >
           <stop stopColor="#3B82F6" />
           <stop offset="1" stopColor="#60A5FA" />
         </linearGradient>
-        <linearGradient id="rightPillarAbout" x1="366" y1="392" x2="256" y2="104" gradientUnits="userSpaceOnUse">
+        <linearGradient
+          id="rightPillarAbout"
+          x1="366"
+          y1="392"
+          x2="256"
+          y2="104"
+          gradientUnits="userSpaceOnUse"
+        >
           <stop stopColor="#1D4ED8" />
           <stop offset="1" stopColor="#3B82F6" />
         </linearGradient>
-        <radialGradient id="coreGradAbout" cx="256" cy="256" r="64" gradientUnits="userSpaceOnUse">
+        <radialGradient
+          id="coreGradAbout"
+          cx="256"
+          cy="256"
+          r="64"
+          gradientUnits="userSpaceOnUse"
+        >
           <stop stopColor="#93C5FD" />
           <stop offset="1" stopColor="#3B82F6" />
         </radialGradient>
       </defs>
-      <path d="M 256 104 L 146 376 C 143 384 150 392 158 392 L 206 392 C 212 392 217 388 220 382 L 256 294 L 284 362 L 312 304 L 256 170 Z" fill="url(#leftPillarAbout)" />
-      <path d="M 256 104 L 366 376 C 369 384 362 392 354 392 L 306 392 C 300 392 295 388 292 382 L 256 294 L 284 226 L 256 170 Z" fill="url(#rightPillarAbout)" />
-      <polygon points="256,192 296,256 256,320 216,256" fill="url(#coreGradAbout)" opacity="0.95" />
-      <polygon points="256,224 274,256 256,288 238,256" fill="#FFFFFF" opacity="0.9" />
-      <path d="M 184 350 L 328 350" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" opacity="0.4" />
+      <path
+        d="M 256 104 L 146 376 C 143 384 150 392 158 392 L 206 392 C 212 392 217 388 220 382 L 256 294 L 284 362 L 312 304 L 256 170 Z"
+        fill="url(#leftPillarAbout)"
+      />
+      <path
+        d="M 256 104 L 366 376 C 369 384 362 392 354 392 L 306 392 C 300 392 295 388 292 382 L 256 294 L 284 226 L 256 170 Z"
+        fill="url(#rightPillarAbout)"
+      />
+      <polygon
+        points="256,192 296,256 256,320 216,256"
+        fill="url(#coreGradAbout)"
+        opacity="0.95"
+      />
+      <polygon
+        points="256,224 274,256 256,288 238,256"
+        fill="#FFFFFF"
+        opacity="0.9"
+      />
+      <path
+        d="M 184 350 L 328 350"
+        stroke="#FFFFFF"
+        strokeWidth="3"
+        strokeLinecap="round"
+        opacity="0.4"
+      />
     </svg>
   );
 };
