@@ -81,7 +81,7 @@ target
 *.node
 tsconfig.node.tsbuildinfo
 lib
-affine.db
+aevum.db
 apps/web/next-routes.conf
 .nx
 
@@ -89,8 +89,8 @@ packages/frontend/templates/edgeless
 packages/frontend/core/public/static/templates
 
 # script
-af
-af.cmd
+ae
+ae.cmd
 *.resolved
 
 # playwright
