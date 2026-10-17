@@ -1,23 +1,23 @@
 version: '1'
 
 projects:
-  - name: affine
+  - name: aevum
     environments:
       - name: production
         services:
           - type: web
-            name: affine
+            name: aevum
             runtime: docker
             plan: standard
-            # The Dockerfile adds a start script to ghcr.io/toeverything/affine:stable. It runs migrations and the server
+            # The Dockerfile adds a start script to ghcr.io/aevum/aevum:stable. It runs migrations and the server
             dockerfilePath: ./.render/Dockerfile
             dockerContext: ./.render
             healthCheckPath: /info
             disk:
-              # Uploaded blobs (~/.affine/storage) and the generated private key
-              # (~/.affine/config/private.key) must survive restarts.
-              name: affine-data
-              mountPath: /root/.affine
+              # Uploaded blobs (~/.aevum/storage) and the generated private key
+              # (~/.aevum/config/private.key) must survive restarts.
+              name: aevum-data
+              mountPath: /root/.aevum
               sizeGB: 10
             envVars:
               - key: AFFINE_SERVER_PORT
@@ -26,27 +26,27 @@ projects:
                 value: true
               - key: DATABASE_URL
                 fromDatabase:
-                  name: affine-postgres
+                  name: aevum-postgres
                   property: connectionString
               - key: REDIS_SERVER_HOST
                 fromService:
-                  name: affine-keyvalue
+                  name: aevum-keyvalue
                   type: keyvalue
                   property: host
               - key: REDIS_SERVER_PORT
                 fromService:
-                  name: affine-keyvalue
+                  name: aevum-keyvalue
                   type: keyvalue
                   property: port
 
           - type: keyvalue
-            name: affine-keyvalue
+            name: aevum-keyvalue
             plan: starter
             maxmemoryPolicy: noeviction
             ipAllowList: [] # internal connections only
 
         databases:
-          - name: affine-postgres
+          - name: aevum-postgres
             plan: basic-256mb
             postgresMajorVersion: '16'
             ipAllowList: [] # internal connections only
