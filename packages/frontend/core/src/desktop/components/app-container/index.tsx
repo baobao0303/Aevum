@@ -45,7 +45,7 @@ export const UnauthenticatedWorkspaceBackdrop = () => {
         width={1920}
         height={1080}
         poster="/aevum-auth-bg.jpg"
-        src="/aevum-auth-bg.mp4?v=5"
+        src="/aevum-auth-bg.mp4?v=6"
         style={{
           position: 'absolute',
           inset: 0,
