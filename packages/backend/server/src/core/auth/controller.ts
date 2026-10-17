@@ -94,10 +94,22 @@ export class AuthController {
     validators.assertValidEmail(input.data.email);
 
     try {
-      return await this.runtime.executeAuthSessionCommandV1<PreflightResponse>({
-        action: 'login_preflight',
-        email: input.data.email,
-      });
+      const result =
+        await this.runtime.executeAuthSessionCommandV1<PreflightResponse>({
+          action: 'login_preflight',
+          email: input.data.email,
+        });
+      return {
+        ...result,
+        methods: {
+          ...result.methods,
+          password: {
+            available:
+              result.methods.password.available ||
+              result.methods.magicLink.available,
+          },
+        },
+      };
     } catch (error) {
       if (String(error).includes('email_domain_verification_unavailable')) {
         throw new NetworkError();

@@ -1,4 +1,4 @@
-import serverNativeModule from '@affine/server-native';
+import serverNativeModule from '@aevum/server-native';
 import type { Prisma } from '@prisma/client';
 
 // TODO(0.27.5): Remove incomplete 0.27.4 profile handling after old writers exit.

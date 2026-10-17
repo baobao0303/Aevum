@@ -174,6 +174,21 @@ export class UserModel extends BaseModel {
     return user;
   }
 
+  async setPassword(id: string, password: string) {
+    const encryptedPassword = await this.crypto.encryptPassword(password);
+    const user = await this.db.user.update({
+      where: { id },
+      data: {
+        password: encryptedPassword,
+        registered: true,
+      },
+    });
+
+    this.logger.debug(`User [${user.id}] password set`);
+    this.event.emitDetached('user.updated', user);
+    return user;
+  }
+
   async ownedWorkspaces(id: string) {
     return await this.models.workspaceUser.getUserActiveRoles(id, {
       role: WorkspaceRole.Owner,

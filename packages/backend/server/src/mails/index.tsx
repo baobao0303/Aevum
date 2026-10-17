@@ -62,14 +62,14 @@ function make<T extends ComponentType<any>>(
 
 export const Renderers = {
   //#region Test
-  TestMail: make(TestMail, 'Test Email from AFFiNE'),
+  TestMail: make(TestMail, 'Test Email from Aevum'),
   //#endregion
 
   //#region User
-  SignIn: make(SignIn, 'Sign in to AFFiNE'),
-  SignUp: make(SignUp, 'Your AFFiNE account is waiting for you!'),
-  SetPassword: make(SetPassword, 'Set your AFFiNE password'),
-  ChangePassword: make(ChangePassword, 'Modify your AFFiNE password'),
+  SignIn: make(SignIn, 'Sign in to Aevum'),
+  SignUp: make(SignUp, 'Your Aevum account is waiting for you!'),
+  SetPassword: make(SetPassword, 'Set your Aevum password'),
+  ChangePassword: make(ChangePassword, 'Modify your Aevum password'),
   VerifyEmail: make(VerifyEmail, 'Verify your email address'),
   ChangeEmail: make(ChangeEmail, 'Change your email address'),
   VerifyChangeEmail: make(VerifyChangeEmail, 'Verify your new email address'),
@@ -79,7 +79,7 @@ export const Renderers = {
   //#region Workspace
   MemberInvitation: make(
     Invitation,
-    'You were invited to join a workspace on AFFiNE'
+    'You were invited to join a workspace on Aevum'
   ),
   MemberAccepted: make(
     InvitationAccepted,
@@ -110,8 +110,8 @@ export const Renderers = {
   //#endregion
 
   //#region Doc
-  Mention: make(Mention, 'You were mentioned in AFFiNE'),
-  Comment: make(Comment, 'New comment in AFFiNE'),
+  Mention: make(Mention, 'You were mentioned in Aevum'),
+  Comment: make(Comment, 'New comment in Aevum'),
   CommentMention: make(CommentMention, 'You were mentioned in a comment'),
   //#endregion
 
@@ -148,7 +148,7 @@ export const Renderers = {
   //#region License
   TeamLicense: make(
     TeamLicense,
-    'Your AFFiNE Self-Hosted Team Workspace license is ready'
+    'Your Aevum Self-Hosted Team Workspace license is ready'
   ),
   //#endregion
 } as const;
