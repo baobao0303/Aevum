@@ -71,8 +71,8 @@ export const UnauthenticatedWorkspaceBackdrop = ({
           width: '100%',
           height: '100%',
           objectFit: 'cover',
-          filter: 'blur(7px) brightness(0.92)',
-          WebkitFilter: 'blur(7px) brightness(0.92)',
+          filter: 'blur(8px) brightness(0.95)',
+          WebkitFilter: 'blur(8px) brightness(0.95)',
           transform: 'scale(1.03)',
         }}
       />
@@ -80,8 +80,7 @@ export const UnauthenticatedWorkspaceBackdrop = ({
         style={{
           position: 'absolute',
           inset: 0,
-          background:
-            'radial-gradient(circle at 50% 45%, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.48) 100%)',
+          backgroundColor: 'rgba(10, 12, 18, 0.32)',
         }}
       />
     </div>

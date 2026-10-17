@@ -13,10 +13,6 @@ export const SignInDialog = ({
   server: initialServerBaseUrl,
   step,
 }: DialogComponentProps<GLOBAL_DIALOG_SCHEMA['sign-in']>) => {
-  const authService = useService(AuthService);
-  const loggedIn = useLiveData(
-    authService.session.status$.map(s => s === 'authenticated')
-  );
   const onAuthenticated = useCallback(
     (status: AuthSessionStatus) => {
       if (status === 'authenticated') {
@@ -25,23 +21,16 @@ export const SignInDialog = ({
     },
     [close]
   );
-  const handleClose = useCallback(() => {
-    if (loggedIn) {
-      close();
-    }
-  }, [close, loggedIn]);
   return (
     <Modal
       open
-      persistent
-      withoutCloseButton={!loggedIn}
-      onOpenChange={handleClose}
+      onOpenChange={close}
       width={400}
       overlayOptions={{
         style: {
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          backgroundColor: 'rgba(10, 12, 18, 0.32)',
+          backdropFilter: 'none',
+          WebkitBackdropFilter: 'none',
+          backgroundColor: 'transparent',
         },
       }}
       contentOptions={{
@@ -53,7 +42,7 @@ export const SignInDialog = ({
       }}
     >
       <SignInPanel
-        onSkip={handleClose}
+        onSkip={close}
         onAuthenticated={onAuthenticated}
         server={initialServerBaseUrl}
         initStep={step as SignInStep}
