@@ -4,11 +4,11 @@
   <name>AFFiNE</name>
   <summary>Productivity and note-taking app</summary>
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>MIT AND LicenseRef-proprietary=https://github.com/toeverything/AFFiNE/blob/canary/LICENSE</project_license>
+  <project_license>MIT AND LicenseRef-proprietary=https://github.com/baobao0303/Aevum/blob/canary/LICENSE</project_license>
   <url type="homepage">https://affine.pro</url>
-  <url type="bugtracker">https://github.com/toeverything/AFFiNE/issues</url>
+  <url type="bugtracker">https://github.com/baobao0303/Aevum/issues</url>
   <url type="help">https://docs.affine.pro/</url>
-  <url type="vcs-browser">https://github.com/toeverything/AFFiNE</url>
+  <url type="vcs-browser">https://github.com/baobao0303/Aevum</url>
   <url type="contribute">https://docs.affine.pro/contributing</url>
   <developer id="pro.affine.app">
     <name>affine</name>
@@ -65,7 +65,7 @@
   </screenshots>
   <releases>
     <release version="0.27.5" date="2026-09-09">
-      <url>https://github.com/toeverything/AFFiNE/releases/tag/v0.27.5</url>
+      <url>https://github.com/baobao0303/Aevum/releases/tag/v0.27.5</url>
     </release>
   </releases>
 </component>

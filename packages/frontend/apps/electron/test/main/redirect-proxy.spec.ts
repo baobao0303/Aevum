@@ -48,7 +48,7 @@ describe('redirect proxy allowlist', () => {
       )
     ).toEqual({
       allow: true,
-      redirectTarget: 'https://github.com/toeverything/AFFiNE',
+      redirectTarget: 'https://github.com/baobao0303/Aevum',
     });
   });
 
