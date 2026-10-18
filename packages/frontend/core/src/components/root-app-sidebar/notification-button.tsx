@@ -1,5 +1,5 @@
-import { Menu } from '@affine/component';
-import { MenuItem } from '@affine/core/modules/app-sidebar/views';
+import { IconButton, Menu } from '@affine/component';
+import { MenuItem } from '@affine/core/modules/app-sidebar/views/menu-item';
 import { NotificationCountService } from '@affine/core/modules/notification';
 import { useI18n } from '@affine/i18n';
 import { track } from '@affine/track';
@@ -63,6 +63,57 @@ export const NotificationButton = () => {
           {t['com.affine.rootAppSidebar.notifications']()}
         </span>
       </MenuItem>
+    </Menu>
+  );
+};
+
+export const HeaderNotificationButton = () => {
+  const notificationCountService = useService(NotificationCountService);
+  const notificationCount = useLiveData(notificationCountService.count$);
+  const t = useI18n();
+
+  const [notificationListOpen, setNotificationListOpen] = useState(false);
+
+  const handleNotificationListOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) {
+        track.$.sidebar.notifications.openInbox({
+          unreadCount: notificationCountService.count$.value,
+        });
+      }
+      setNotificationListOpen(open);
+    },
+    [notificationCountService.count$.value]
+  );
+
+  return (
+    <Menu
+      rootOptions={{
+        open: notificationListOpen,
+        onOpenChange: handleNotificationListOpenChange,
+      }}
+      contentOptions={{
+        side: 'bottom',
+        align: 'end',
+        sideOffset: 8,
+      }}
+      items={<NotificationList />}
+    >
+      <div className={styles.headerButtonWrapper}>
+        <IconButton
+          size="24"
+          data-active={notificationListOpen || undefined}
+          data-testid="header-notification-button"
+          tooltip={t['com.affine.rootAppSidebar.notifications']()}
+        >
+          <NotificationIcon />
+        </IconButton>
+        {notificationCount > 0 ? (
+          <span className={styles.headerBadge}>
+            {notificationCount > 99 ? '99+' : notificationCount}
+          </span>
+        ) : null}
+      </div>
     </Menu>
   );
 };

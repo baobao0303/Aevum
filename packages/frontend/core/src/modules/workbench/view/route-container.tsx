@@ -1,5 +1,6 @@
 import { IconButton } from '@affine/component';
 import { AffineErrorBoundary } from '@affine/core/components/affine/affine-error-boundary';
+import { HeaderNotificationButton } from '@affine/core/components/root-app-sidebar/notification-button';
 import { RightSidebarIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { Suspense, useCallback } from 'react';
@@ -71,6 +72,7 @@ export const RouteContainer = () => {
           viewId={view.id}
           className={styles.viewHeaderContainer}
         />
+        {viewPosition.isLast && <HeaderNotificationButton />}
         {!BUILD_CONFIG.isElectron && viewPosition.isLast && (
           <ToggleButton
             show={!sidebarOpen}

@@ -68,6 +68,15 @@ import {
   SessionIdSchema,
   SignInBodySchema,
 } from './input';
+import {
+  createKanbanBoard,
+  deleteKanbanBoards,
+  deleteKanbanCard,
+  getKanbanBoardDetail,
+  listKanbanBoards,
+  updateKanbanBoard,
+  upsertKanbanCard,
+} from './kanban-store';
 import { MagicLinkAuthService } from './magic-link';
 import { OpenAppAuthService } from './open-app';
 import { AuthService } from './service';
@@ -266,6 +275,389 @@ export class AuthController {
   @Get('/open-app/network-info')
   async openAppNetworkInfo() {
     return { lanIps: getLocalNetworkIps() };
+  }
+
+  @Public()
+  @Post('/open-app/hrm-rent-schedule')
+  async openAppHrmRentSchedule(@Body() body?: Record<string, unknown>) {
+    const rawBaseUrl = String(
+      body?.baseUrl || process.env.EXTERNAL_SCHEDULE_API_URL || ''
+    ).trim();
+    const cleanToken = String(body?.token || body?.bearerToken || '')
+      .trim()
+      .replace(/^Bearer\s+/i, '');
+    const customEndpoint = String(body?.customEndpoint || '').trim();
+    const filterKeyword = String(body?.filterKeyword || '')
+      .trim()
+      .toLowerCase();
+    const mode = String(body?.mode || 'related'); // 'related' | 'creator' | 'participant' | 'all'
+    const fromIso = String(body?.from || '').trim();
+    const toIso = String(body?.to || '').trim();
+
+    if (!rawBaseUrl && !customEndpoint) {
+      return {
+        ok: false,
+        error:
+          'Chưa cấu hình Base URL trong mục Config API. Vui lòng nhập URL hệ thống lịch của bạn.',
+        items: [],
+        totalCount: 0,
+        syncedAt: new Date().toISOString(),
+      };
+    }
+
+    let apiRoot = rawBaseUrl.split('#')[0].replace(/\/+$/, '');
+    try {
+      const parsed = new URL(apiRoot);
+      if (parsed.pathname === '' || parsed.pathname === '/') {
+        apiRoot = `${parsed.origin}/hrm`;
+      }
+    } catch {
+      // keep apiRoot as-is
+    }
+
+    const toMdy = (isoStr: string, endOfDay = false) => {
+      const d = isoStr ? new Date(isoStr) : new Date();
+      if (Number.isNaN(d.getTime())) {
+        return endOfDay ? '12/31/2026, 23:59:59' : '1/01/2026';
+      }
+      const m = d.getMonth() + 1;
+      const day = String(d.getDate()).padStart(2, '0');
+      const y = d.getFullYear();
+      return endOfDay ? `${m}/${day}/${y}, 23:59:59` : `${m}/${day}/${y}`;
+    };
+
+    const fromParam = toMdy(fromIso, false);
+    const toParam = toMdy(toIso, true);
+
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+    };
+    if (cleanToken) {
+      headers.Authorization = `Bearer ${cleanToken}`;
+    }
+
+    const fetchJson = async (url: string) => {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(
+          `HRM API HTTP ${response.status}: ${text.slice(0, 180) || response.statusText}`
+        );
+      }
+      return (await response.json()) as unknown;
+    };
+
+    try {
+      let userProfile: Record<string, unknown> | null = null;
+      if (cleanToken && !customEndpoint) {
+        try {
+          const prof = await fetchJson(`${apiRoot}/api/v1/user/profile`);
+          if (prof && typeof prof === 'object') {
+            userProfile = prof as Record<string, unknown>;
+          }
+        } catch {
+          // ignore profile fetch error if token only has ticket scope
+        }
+      }
+
+      const rawItems: Array<Record<string, unknown>> = [];
+
+      const extractItems = (
+        payload: unknown,
+        role: 'creator' | 'participant' | 'related'
+      ) => {
+        if (!payload) return;
+        const list = Array.isArray(payload)
+          ? payload
+          : Array.isArray((payload as { items?: unknown[] }).items)
+            ? (payload as { items: unknown[] }).items
+            : Array.isArray((payload as { data?: unknown[] }).data)
+              ? (payload as { data: unknown[] }).data
+              : [];
+
+        for (const entry of list) {
+          if (!entry || typeof entry !== 'object') continue;
+          const obj = entry as Record<string, unknown>;
+          // Check if this is an overview-schedule resource wrapper with nested schedules
+          if (
+            Array.isArray(obj.schedules) ||
+            Array.isArray(obj.rentSchedules)
+          ) {
+            const nested = (obj.schedules || obj.rentSchedules) as unknown[];
+            for (const sub of nested) {
+              if (sub && typeof sub === 'object') {
+                rawItems.push({
+                  ...(sub as Record<string, unknown>),
+                  resourceName:
+                    (sub as Record<string, unknown>).resourceName ||
+                    obj.resourceName ||
+                    obj.name,
+                  _role: role,
+                });
+              }
+            }
+          } else {
+            rawItems.push({ ...obj, _role: obj._role || role });
+          }
+        }
+      };
+
+      if (customEndpoint) {
+        const targetUrl = customEndpoint.startsWith('http')
+          ? customEndpoint
+          : `${apiRoot}${customEndpoint.startsWith('/') ? '' : '/'}${customEndpoint}`;
+        const data = await fetchJson(targetUrl);
+        extractItems(data, 'related');
+      } else {
+        const tasks: Promise<void>[] = [];
+        const qs = new URLSearchParams({
+          from: fromParam,
+          to: toParam,
+          maxResultCount: '1000',
+          skipCount: '0',
+        }).toString();
+
+        if (mode === 'related' || mode === 'creator' || mode === 'all') {
+          tasks.push(
+            fetchJson(
+              `${apiRoot}/api/v1/resource-ticket/get-by-user?${qs}`
+            ).then(data => extractItems(data, 'creator'))
+          );
+        }
+        if (mode === 'related' || mode === 'participant' || mode === 'all') {
+          tasks.push(
+            fetchJson(
+              `${apiRoot}/api/v1/resource-ticket/get-for-user-participant?${qs}`
+            ).then(data => extractItems(data, 'participant'))
+          );
+        }
+        if (mode === 'all') {
+          const overviewQs = new URLSearchParams({
+            FromTime: fromIso || new Date().toISOString().slice(0, 10),
+            ToTime: toIso || new Date().toISOString().slice(0, 10),
+            FilterStatus: '0',
+            SkipCount: '0',
+            MaxResultCount: '1000',
+          }).toString();
+          tasks.push(
+            fetchJson(
+              `${apiRoot}/api/v1/resource/overview-schedule?${overviewQs}`
+            )
+              .then(data => extractItems(data, 'related'))
+              .catch(() => undefined)
+          );
+        }
+
+        const results = await Promise.allSettled(tasks);
+        const allFailed =
+          results.length > 0 && results.every(r => r.status === 'rejected');
+        if (allFailed) {
+          const firstReason = (results[0] as PromiseRejectedResult).reason;
+          throw firstReason instanceof Error
+            ? firstReason
+            : new Error(String(firstReason));
+        }
+      }
+
+      const seen = new Map<string, Record<string, unknown>>();
+      for (const item of rawItems) {
+        const id = String(
+          item.id ||
+            item.ticketId ||
+            `${item.title || ''}-${item.startTime || ''}`
+        );
+        if (!seen.has(id)) {
+          seen.set(id, {
+            id,
+            title: String(
+              item.title || item.subject || item.name || 'Lịch thuê tài sản'
+            ),
+            startTime: String(
+              item.startTime || item.fromTime || item.startDate || ''
+            ),
+            endTime: String(item.endTime || item.toTime || item.endDate || ''),
+            resourceName: String(
+              item.resourceName ||
+                item.roomName ||
+                item.assetName ||
+                item.resourceTypeName ||
+                ''
+            ),
+            ownerName: String(
+              item.ownerName ||
+                item.fullName ||
+                item.createdByName ||
+                item.userName ||
+                ''
+            ),
+            description: String(item.description || item.note || ''),
+            status: String(
+              item.resourceTicketStatusName ||
+                item.statusName ||
+                item.status ||
+                'Active'
+            ),
+            role: item._role || 'related',
+            members: Array.isArray(item.members)
+              ? item.members
+              : Array.isArray(item.participants)
+                ? item.participants
+                : [],
+          });
+        }
+      }
+
+      let normalized = Array.from(seen.values());
+      if (filterKeyword) {
+        normalized = normalized.filter(item => {
+          const haystack = [
+            item.title,
+            item.resourceName,
+            item.ownerName,
+            item.description,
+            JSON.stringify(item.members || []),
+          ]
+            .join(' ')
+            .toLowerCase();
+          return haystack.includes(filterKeyword);
+        });
+      }
+
+      normalized.sort((a, b) =>
+        String(a.startTime).localeCompare(String(b.startTime))
+      );
+
+      return {
+        ok: true,
+        apiRoot,
+        userProfile,
+        items: normalized,
+        totalCount: normalized.length,
+        syncedAt: new Date().toISOString(),
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+        items: [],
+        totalCount: 0,
+        syncedAt: new Date().toISOString(),
+      };
+    }
+  }
+
+  @Public()
+  @Get('/open-app/kanban/boards')
+  async getKanbanBoardsList(@Query('workspaceId') workspaceId?: string) {
+    const wsId = String(workspaceId || 'default').trim();
+    const boards = listKanbanBoards(wsId);
+    return {
+      ok: true,
+      workspaceId: wsId,
+      boards,
+      totalCount: boards.length,
+    };
+  }
+
+  @Public()
+  @Get('/open-app/kanban/boards/:boardId')
+  async getKanbanBoardDetailById(
+    @Param('boardId') boardId: string,
+    @Query('workspaceId') workspaceId?: string
+  ) {
+    const wsId = String(workspaceId || 'default').trim();
+    const board = getKanbanBoardDetail(wsId, boardId);
+    if (!board) {
+      return {
+        ok: false,
+        error: `Không tìm thấy bảng Kanban #${boardId}`,
+        board: null,
+      };
+    }
+    return {
+      ok: true,
+      workspaceId: wsId,
+      board,
+    };
+  }
+
+  @Public()
+  @Post('/open-app/kanban/boards')
+  async mutateKanbanBoards(@Body() body?: Record<string, unknown>) {
+    const wsId = String(body?.workspaceId || 'default').trim();
+    const action = String(body?.action || 'create').trim();
+
+    if (action === 'delete') {
+      const ids = Array.isArray(body?.boardIds)
+        ? body.boardIds.map(String)
+        : body?.boardId
+          ? [String(body.boardId)]
+          : [];
+      const boards = deleteKanbanBoards(wsId, ids);
+      return {
+        ok: true,
+        workspaceId: wsId,
+        boards,
+      };
+    }
+
+    const board = createKanbanBoard(wsId, body ?? {});
+    const boards = listKanbanBoards(wsId);
+    return {
+      ok: true,
+      workspaceId: wsId,
+      board,
+      boards,
+    };
+  }
+
+  @Public()
+  @Post('/open-app/kanban/boards/:boardId')
+  async mutateKanbanBoardById(
+    @Param('boardId') boardId: string,
+    @Body() body?: Record<string, unknown>
+  ) {
+    const wsId = String(body?.workspaceId || 'default').trim();
+    const action = String(body?.action || 'update-board').trim();
+
+    if (action === 'upsert-card') {
+      const cardData =
+        body?.card && typeof body.card === 'object'
+          ? (body.card as Record<string, unknown>)
+          : (body ?? {});
+      const board = upsertKanbanCard(wsId, boardId, cardData);
+      const boards = listKanbanBoards(wsId);
+      return {
+        ok: Boolean(board),
+        workspaceId: wsId,
+        board,
+        boards,
+      };
+    }
+
+    if (action === 'delete-card') {
+      const cardId = String(body?.cardId || '').trim();
+      const board = deleteKanbanCard(wsId, boardId, cardId);
+      const boards = listKanbanBoards(wsId);
+      return {
+        ok: Boolean(board),
+        workspaceId: wsId,
+        board,
+        boards,
+      };
+    }
+
+    const board = updateKanbanBoard(wsId, boardId, body ?? {});
+    const boards = listKanbanBoards(wsId);
+    return {
+      ok: Boolean(board),
+      workspaceId: wsId,
+      board,
+      boards,
+    };
   }
 
   @Public()

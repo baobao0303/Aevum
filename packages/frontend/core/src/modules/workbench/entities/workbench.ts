@@ -19,7 +19,7 @@ export type WorkbenchOpenOptions = {
   show?: boolean; // only for new tab
 };
 
-const sidebarOpenKey = 'aevumWorkbenchSidebarOpen';
+const sidebarOpenKey = 'workbenchSidebarOpen';
 const sidebarWidthKey = 'workbenchSidebarWidth';
 const workspaceSelectorOpenKey = 'workspaceSelectorOpen';
 
@@ -58,15 +58,15 @@ export class Workbench extends Entity {
   });
   sidebarOpen$ = LiveData.from(
     this.globalState.watch<boolean>(sidebarOpenKey),
-    this.globalState.get<boolean>(sidebarOpenKey) ?? true
-  ).map(v => v ?? true);
+    this.globalState.get<boolean>(sidebarOpenKey) ?? false
+  ).map(v => v ?? false);
   setSidebarOpen(open: boolean) {
     this.globalState.set(sidebarOpenKey, open);
   }
   sidebarWidth$ = LiveData.from(
     this.globalState.watch<number>(sidebarWidthKey),
     this.globalState.get<number>(sidebarWidthKey) ?? 320
-  ).map(v => v ?? 320);
+  );
   setSidebarWidth(width: number) {
     this.globalState.set(sidebarWidthKey, width);
   }

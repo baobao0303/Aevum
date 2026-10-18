@@ -1,3 +1,4 @@
+import { preloadHrmRentSchedule } from '@affine/core/desktop/pages/workspace/journals/hrm-rent-schedule-panel';
 import { MenuLinkItem } from '@affine/core/modules/app-sidebar/views';
 import { DocDisplayMetaService } from '@affine/core/modules/doc-display-meta';
 import { JournalService } from '@affine/core/modules/journal';
@@ -5,6 +6,7 @@ import { WorkbenchService } from '@affine/core/modules/workbench';
 import { useI18n } from '@affine/i18n';
 import { TodayIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
+import { useEffect } from 'react';
 
 export const AppSidebarJournalButton = () => {
   const t = useI18n();
@@ -18,12 +20,21 @@ export const AppSidebarJournalButton = () => {
   const JournalIcon = useLiveData(docDisplayMetaService.icon$(maybeDocId));
   const Icon = isJournal ? JournalIcon : TodayIcon;
 
+  useEffect(() => {
+    // Preload Rent Schedule API quietly in background as soon as sidebar mounts
+    preloadHrmRentSchedule().catch(() => {});
+  }, []);
+
   return (
     <MenuLinkItem
       data-testid="slider-bar-journals-button"
       active={isJournal || location.pathname.startsWith('/journals')}
       to={'/journals'}
       icon={<Icon />}
+      onMouseEnter={() => {
+        // Preload on hover for 0ms transition
+        preloadHrmRentSchedule().catch(() => {});
+      }}
     >
       {t['com.affine.journal.app-sidebar-title']()}
     </MenuLinkItem>

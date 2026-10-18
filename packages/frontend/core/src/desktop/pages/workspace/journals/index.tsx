@@ -24,6 +24,7 @@ import type { Location } from 'history';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import { AllDocSidebarTabs } from '../layouts/all-doc-sidebar-tabs';
+import { HrmRentScheduleSection } from './hrm-rent-schedule-panel';
 import * as styles from './index.css';
 
 export function getDateFromUrl(location: Location) {
@@ -50,12 +51,23 @@ export const JournalPlaceholder = ({ dateString }: { dateString: string }) => {
     });
   }, [dateString, journalService, redirecting, workbench]);
 
+  const handleSelectDate = useCallback(
+    (targetDate: string) => {
+      workbench.open(`/journals?date=${targetDate}`, { at: 'active' });
+    },
+    [workbench]
+  );
+
   return (
     <div className={styles.body} data-mobile={BUILD_CONFIG.isMobileEdition}>
       <div className={styles.content}>
         <BlocksuiteEditorJournalDocTitleUI
           date={dateString}
           overrideClassName={styles.docTitleContainer}
+        />
+        <HrmRentScheduleSection
+          dateString={dateString}
+          onSelectDate={handleSelectDate}
         />
         <div className={styles.placeholder}>
           <div className={styles.placeholderIcon}>

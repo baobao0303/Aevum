@@ -7,9 +7,10 @@ import {
   QuickSearchInput,
   SidebarContainer,
   SidebarScrollableContainer,
+  SidebarSwitch,
 } from '@affine/core/modules/app-sidebar/views';
 import { ExternalMenuLinkItem } from '@affine/core/modules/app-sidebar/views/menu-item/external-menu-link-item';
-import { AuthService, ServerService } from '@affine/core/modules/cloud';
+import { ServerService } from '@affine/core/modules/cloud';
 import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
 import { FeatureFlagService } from '@affine/core/modules/feature-flag';
 import { CMDKQuickSearchService } from '@affine/core/modules/quicksearch/services/cmdk';
@@ -22,7 +23,6 @@ import {
   AllDocsIcon,
   ImportIcon,
   JournalIcon,
-  SettingsIcon,
 } from '@blocksuite/icons/rc';
 import { useLiveData, useService, useServices } from '@toeverything/infra';
 import type { ReactElement } from 'react';
@@ -48,7 +48,6 @@ import {
 import { InviteMembersButton } from './invite-members-button';
 import { AppSidebarJournalButton } from './journal-button';
 import { AppSidebarKanbanButton } from './kanban-button';
-import { NotificationButton } from './notification-button';
 import { SidebarAudioPlayer } from './sidebar-audio-player';
 import { TemplateDocEntrance } from './template-doc-entrance';
 import { TrashButton } from './trash-button';
@@ -122,15 +121,11 @@ const AIChatButton = () => {
  *
  */
 export const RootAppSidebar = memo((): ReactElement => {
-  const { workbenchService, cMDKQuickSearchService, authService } = useServices(
-    {
-      WorkbenchService,
-      CMDKQuickSearchService,
-      AuthService,
-    }
-  );
+  const { workbenchService, cMDKQuickSearchService } = useServices({
+    WorkbenchService,
+    CMDKQuickSearchService,
+  });
 
-  const sessionStatus = useLiveData(authService.session.status$);
   const t = useI18n();
   const workspaceDialogService = useService(WorkspaceDialogService);
   const workbench = workbenchService.workbench;
@@ -145,13 +140,6 @@ export const RootAppSidebar = memo((): ReactElement => {
     },
     [workbench]
   );
-
-  const onOpenSettingModal = useCallback(() => {
-    workspaceDialogService.open('setting', {
-      activeTab: 'appearance',
-    });
-    track.$.navigationPanel.$.openSettings();
-  }, [workspaceDialogService]);
 
   const handleOpenDocs = useCallback(
     (result: {
@@ -201,6 +189,7 @@ export const RootAppSidebar = memo((): ReactElement => {
             />
           </div>
           <UserInfo />
+          <SidebarSwitch show={true} />
         </div>
         <div className={quickSearchAndNewPage}>
           <QuickSearchInput
@@ -214,17 +203,7 @@ export const RootAppSidebar = memo((): ReactElement => {
         <AllDocsButton />
         <AppSidebarJournalButton />
         <AppSidebarKanbanButton />
-        {sessionStatus === 'authenticated' && <NotificationButton />}
         <AIChatButton />
-        <MenuItem
-          data-testid="slider-bar-workspace-setting-button"
-          icon={<SettingsIcon />}
-          onClick={onOpenSettingModal}
-        >
-          <span data-testid="settings-modal-trigger">
-            {t['com.affine.settingSidebar.title']()}
-          </span>
-        </MenuItem>
       </SidebarContainer>
       <SidebarScrollableContainer>
         <NavigationPanelFavorites />
