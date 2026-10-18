@@ -29,7 +29,7 @@ const AFFINE_MOBILE_STORE_URL = BUILD_CONFIG.isIOS
   : BUILD_CONFIG.isAndroid
     ? 'https://play.google.com/store/apps/details?id=app.affine.pro'
     : undefined;
-const AFFINE_DOWNLOAD_URL = 'https://github.com/baobao0303/Aevum/pulls';
+const AFFINE_DOWNLOAD_URL = 'https://github.com/baobao0303/Aevum';
 
 const SupportGroup = () => {
   const t = useI18n();

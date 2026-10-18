@@ -18,7 +18,7 @@ interface OpenAppProps {
   mode?: 'auth' | 'open-doc'; // default to 'auth'
 }
 const channel = BUILD_CONFIG.appBuildType;
-const url = 'https://github.com/baobao0303/Aevum/pulls';
+const url = 'https://github.com/baobao0303/Aevum';
 
 export const OpenInAppPage = ({
   urlToOpen,
@@ -65,7 +65,7 @@ export const OpenInAppPage = ({
 
         <div className={styles.topNavLinks}>
           <a
-            href="https://github.com/baobao0303/Aevum/pulls"
+            href="https://github.com/baobao0303/Aevum"
             target="_blank"
             rel="noreferrer"
             className={styles.topNavLink}
@@ -73,7 +73,7 @@ export const OpenInAppPage = ({
             Official Website
           </a>
           <a
-            href="https://github.com/baobao0303/Aevum/pulls"
+            href="https://github.com/baobao0303/Aevum"
             target="_blank"
             rel="noreferrer"
             className={styles.topNavLink}
@@ -81,7 +81,7 @@ export const OpenInAppPage = ({
             Blog
           </a>
           <a
-            href="https://github.com/baobao0303/Aevum/pulls"
+            href="https://github.com/baobao0303/Aevum"
             target="_blank"
             rel="noreferrer"
             className={styles.topNavLink}

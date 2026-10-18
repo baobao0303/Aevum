@@ -118,7 +118,7 @@ const WorkbenchSidebar = () => {
 
   const workbench = useService(WorkbenchService).workbench;
   const sidebarWidth = useLiveData(workbench.sidebarWidth$);
-  const [width, setWidth] = useState(workbench.sidebarWidth$.value ?? 0);
+  const [width, setWidth] = useState(workbench.sidebarWidth$.value ?? 320);
 
   const views = useLiveData(workbench.views$);
   const activeView = useLiveData(workbench.activeView$);
@@ -155,7 +155,7 @@ const WorkbenchSidebar = () => {
 
   useEffect(() => {
     if (resizing) return;
-    setWidth(sidebarWidth ?? 0);
+    setWidth(sidebarWidth ?? 320);
   }, [resizing, sidebarWidth]);
 
   return (
@@ -168,7 +168,7 @@ const WorkbenchSidebar = () => {
       onResizing={setResizing}
       className={styles.workbenchSidebar}
       data-client-border={clientBorder && sidebarOpen}
-      open={sidebarOpen ?? false}
+      open={sidebarOpen ?? true}
       onOpen={handleOpenChange}
       onWidthChange={setWidth}
       onWidthChanged={onWidthChanged}

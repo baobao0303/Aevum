@@ -1,7 +1,10 @@
-import { Modal, notify } from '@affine/component';
-import { MenuItem } from '@affine/core/modules/app-sidebar/views';
+import { notify } from '@affine/component';
+import {
+  SettingHeader,
+  SettingRow,
+  SettingWrapper,
+} from '@affine/component/setting-components';
 import { AuthService } from '@affine/core/modules/cloud';
-import { QrCodePanelIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import QrCreator from 'qr-creator';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -12,10 +15,9 @@ type LanIpItem = {
   kind: 'lan' | 'vpn' | 'other';
 };
 
-export const MobileQrButton = () => {
+export const OpenOnMobileSetting = () => {
   const authService = useService(AuthService);
   const sessionStatus = useLiveData(authService.session.status$);
-  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [code, setCode] = useState<string | null>(null);
   const [lanIps, setLanIps] = useState<LanIpItem[]>([]);
@@ -38,16 +40,16 @@ export const MobileQrButton = () => {
       } else if (typeof window !== 'undefined') {
         setSelectedIp(window.location.hostname);
       }
+    } catch (err) {
+      console.error('Failed to create mobile QR handoff:', err);
     } finally {
       setLoading(false);
     }
   }, [authService]);
 
   useEffect(() => {
-    if (open) {
-      fetchQrHandoff().catch(console.error);
-    }
-  }, [open, fetchQrHandoff, sessionStatus]);
+    fetchQrHandoff().catch(console.error);
+  }, [fetchQrHandoff, sessionStatus]);
 
   const targetUrl = useMemo(() => {
     if (typeof window === 'undefined') return '';
@@ -74,7 +76,7 @@ export const MobileQrButton = () => {
   }, [targetUrl]);
 
   useEffect(() => {
-    if (!open || !targetUrl) return;
+    if (!targetUrl) return;
     const timer = requestAnimationFrame(() => {
       const el = qrContainerRef.current;
       if (!el) return;
@@ -96,7 +98,7 @@ export const MobileQrButton = () => {
       }
     });
     return () => cancelAnimationFrame(timer);
-  }, [open, targetUrl]);
+  }, [targetUrl]);
 
   const handleCopy = useCallback(() => {
     if (!targetUrl) return;
@@ -112,62 +114,31 @@ export const MobileQrButton = () => {
 
   return (
     <>
-      <MenuItem
-        data-testid="slider-bar-mobile-qr-button"
-        icon={<QrCodePanelIcon />}
-        onClick={() => setOpen(true)}
-      >
-        <span data-testid="mobile-qr-modal-trigger">Open on Mobile</span>
-      </MenuItem>
-      <Modal
-        open={open}
-        onOpenChange={setOpen}
-        width={420}
-        contentOptions={{
-          style: {
-            padding: '28px 28px 24px',
-            borderRadius: '16px',
-            overscrollBehavior: 'contain',
-          },
-        }}
-      >
+      <SettingHeader
+        title="Open on Mobile"
+        subtitle="Scan QR code with your phone camera or open the link on mobile browser to instantly connect and sync your workspaces."
+        data-testid="open-on-mobile-title"
+      />
+
+      <SettingWrapper title="QR Code & Instant Handoff">
         <div
           style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             gap: '16px',
+            padding: '24px 16px',
+            background: 'var(--affine-background-secondary-color)',
+            borderRadius: '12px',
+            border: '1px solid var(--affine-border-color)',
           }}
         >
-          <div style={{ textAlign: 'center' }}>
-            <div
-              style={{
-                fontSize: '18px',
-                fontWeight: 600,
-                color: 'var(--affine-text-primary-color)',
-                marginBottom: '6px',
-              }}
-            >
-              Open Aevum on Mobile
-            </div>
-            <div
-              style={{
-                fontSize: '13px',
-                lineHeight: 1.45,
-                color: 'var(--affine-text-secondary-color)',
-              }}
-            >
-              Scan with your phone camera on the same Wi-Fi or Tailscale network
-              to continue right where you left off.
-            </div>
-          </div>
-
           {lanIps.length > 0 && (
             <div
               style={{
                 display: 'flex',
                 flexWrap: 'wrap',
-                gap: '6px',
+                gap: '8px',
                 justifyContent: 'center',
                 width: '100%',
               }}
@@ -180,7 +151,7 @@ export const MobileQrButton = () => {
                     type="button"
                     onClick={() => setSelectedIp(item.ip)}
                     style={{
-                      padding: '5px 10px',
+                      padding: '6px 12px',
                       borderRadius: '8px',
                       fontSize: '12px',
                       fontWeight: 500,
@@ -190,7 +161,7 @@ export const MobileQrButton = () => {
                         : '1px solid var(--affine-border-color)',
                       background: active
                         ? 'var(--affine-hover-color)'
-                        : 'transparent',
+                        : 'var(--affine-background-primary-color)',
                       color: active
                         ? 'var(--affine-text-primary-color)'
                         : 'var(--affine-text-secondary-color)',
@@ -209,14 +180,13 @@ export const MobileQrButton = () => {
               padding: '16px',
               borderRadius: '16px',
               background: '#ffffff',
-              boxShadow: '0 8px 28px rgba(0, 0, 0, 0.18)',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
               border: '1px solid rgba(15, 23, 42, 0.08)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               minWidth: '248px',
               minHeight: '248px',
-              position: 'relative',
             }}
           >
             <div
@@ -238,7 +208,7 @@ export const MobileQrButton = () => {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '4px 10px',
+              padding: '4px 12px',
               borderRadius: '999px',
               fontSize: '12px',
               fontWeight: 500,
@@ -263,8 +233,9 @@ export const MobileQrButton = () => {
 
           <div
             style={{
+              maxWidth: '480px',
               width: '100%',
-              padding: '8px 12px',
+              padding: '8px 14px',
               borderRadius: '8px',
               background: 'var(--affine-hover-color)',
               border: '1px solid var(--affine-border-color)',
@@ -284,7 +255,8 @@ export const MobileQrButton = () => {
           <div
             style={{
               display: 'flex',
-              gap: '10px',
+              gap: '12px',
+              maxWidth: '380px',
               width: '100%',
             }}
           >
@@ -293,7 +265,7 @@ export const MobileQrButton = () => {
               onClick={handleCopy}
               style={{
                 flex: 1,
-                padding: '9px 14px',
+                padding: '9px 16px',
                 borderRadius: '8px',
                 fontSize: '13px',
                 fontWeight: 500,
@@ -303,7 +275,7 @@ export const MobileQrButton = () => {
                 color: 'var(--affine-text-primary-color)',
               }}
             >
-              {copied ? 'Copied!' : 'Copy Handoff Link'}
+              {copied ? 'Copied!' : 'Copy Link'}
             </button>
             <button
               type="button"
@@ -313,7 +285,7 @@ export const MobileQrButton = () => {
               disabled={loading}
               style={{
                 flex: 1,
-                padding: '9px 14px',
+                padding: '9px 16px',
                 borderRadius: '8px',
                 fontSize: '13px',
                 fontWeight: 500,
@@ -324,11 +296,26 @@ export const MobileQrButton = () => {
                 opacity: loading ? 0.7 : 1,
               }}
             >
-              {loading ? 'Refreshing...' : 'Refresh QR Code'}
+              {loading ? 'Refreshing...' : 'Refresh QR'}
             </button>
           </div>
         </div>
-      </Modal>
+      </SettingWrapper>
+
+      <SettingWrapper title="How to Connect">
+        <SettingRow
+          name="1. Connect to Same Network"
+          desc="Make sure your phone is connected to the same Wi-Fi or VPN network as this computer."
+        />
+        <SettingRow
+          name="2. Scan with Phone Camera"
+          desc="Point your mobile camera or QR scanner at the code above to open Aevum."
+        />
+        <SettingRow
+          name="3. Seamless Workspace Sync"
+          desc="Your authentication session and workspace data will synchronize instantly."
+        />
+      </SettingWrapper>
     </>
   );
 };
