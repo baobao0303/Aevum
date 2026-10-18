@@ -22,7 +22,7 @@ export function AppDownloadButton({
   // TODO(@JimmFly): unify this type of literal value.
   const handleClick = useCallback(() => {
     track.$.navigationPanel.bottomButtons.downloadApp();
-    const url = `https://github.com/baobao0303/Aevum/pulls`;
+    const url = `https://github.com/baobao0303/Aevum`;
     open(url, '_blank');
   }, []);
 

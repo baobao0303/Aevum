@@ -114,7 +114,7 @@ export function copyAsImage(std: BlockStdScope) {
           key: 'download',
           label: I18n.t('com.affine.copy.asImage.notAvailable.action'),
           onClick: () => {
-            window.open('https://github.com/baobao0303/Aevum/pulls');
+            window.open('https://github.com/baobao0303/Aevum');
           },
         },
       ],

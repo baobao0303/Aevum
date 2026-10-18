@@ -197,7 +197,9 @@ describe('createFirstAppData', () => {
     const second = createFirstAppData(service as never);
     resolveCreate?.({ id: 'workspace-1', flavour: 'local' });
 
-    await expect(Promise.all([first, second])).resolves.toEqual([
+    await expect(
+      Promise.all([Promise.resolve(first), Promise.resolve(second)])
+    ).resolves.toEqual([
       {
         meta: { id: 'workspace-1', flavour: 'local' },
         defaultPageId: 'getting-started',

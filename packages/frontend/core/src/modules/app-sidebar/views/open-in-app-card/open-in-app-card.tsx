@@ -20,7 +20,7 @@ export const OpenInAppCard = () => {
 
   const onOpen = useCallback(() => {
     window.open(
-      'https://github.com/baobao0303/Aevum/pulls',
+      'https://github.com/baobao0303/Aevum',
       '_blank',
       'noopener,noreferrer'
     );
@@ -66,7 +66,7 @@ export const OpenInAppCard = () => {
           <Trans i18nKey="com.affine.open-in-app.card.subtitle">
             Don&apos;t have the app?
             <a
-              href="https://github.com/baobao0303/Aevum/pulls"
+              href="https://github.com/baobao0303/Aevum"
               target="_blank"
               rel="noreferrer"
               className={styles.link}

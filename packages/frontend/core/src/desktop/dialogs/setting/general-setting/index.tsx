@@ -12,6 +12,7 @@ import {
   MeetingIcon,
   NotificationIcon,
   PenIcon,
+  QrCodePanelIcon,
 } from '@blocksuite/icons/rc';
 import { useLiveData, useServices } from '@toeverything/infra';
 import { useEffect, useMemo } from 'react';
@@ -27,6 +28,7 @@ import { ExperimentalFeatures } from './experimental-features';
 import { PaymentIcon, UpgradeIcon } from './icons';
 import { MeetingsSettings } from './meetings';
 import { NotificationSettings } from './notifications';
+import { OpenOnMobileSetting } from './open-on-mobile';
 import { AFFiNEPricingPlans } from './plans';
 import { Shortcuts } from './shortcuts';
 
@@ -142,6 +144,12 @@ export const useGeneralSettingList = (): GeneralSettingList => {
         testId: 'experimental-features-trigger',
       },
       {
+        key: 'open-on-mobile',
+        title: 'Open on Mobile',
+        icon: <QrCodePanelIcon />,
+        testId: 'open-on-mobile-trigger',
+      },
+      {
         key: 'about',
         title: t['com.affine.aboutAFFiNE.title'](),
         icon: <InformationIcon />,
@@ -178,6 +186,8 @@ export const GeneralSetting = ({
       return <AppearanceSettings />;
     case 'meetings':
       return <MeetingsSettings />;
+    case 'open-on-mobile':
+      return <OpenOnMobileSetting />;
     case 'about':
       return <AboutAffine />;
     case 'plans':

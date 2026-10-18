@@ -30,20 +30,24 @@ export const workbenchRoutes = [
     lazy: () => import('./pages/workspace/trash-page'),
   },
   {
+    path: '/journals',
+    lazy: () => import('./pages/workspace/journals'),
+  },
+  {
+    path: '/kanban',
+    lazy: () => import('./pages/workspace/kanban'),
+  },
+  {
+    path: '/settings',
+    lazy: () => import('./pages/workspace/settings'),
+  },
+  {
     path: '/:pageId',
     lazy: () => import('./pages/workspace/detail-page/detail-page'),
   },
   {
     path: '/:pageId/attachments/:attachmentId',
     lazy: () => import('./pages/workspace/attachment/index'),
-  },
-  {
-    path: '/journals',
-    lazy: () => import('./pages/workspace/journals'),
-  },
-  {
-    path: '/settings',
-    lazy: () => import('./pages/workspace/settings'),
   },
   {
     path: '*',
