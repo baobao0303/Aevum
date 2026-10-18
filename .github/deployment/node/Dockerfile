@@ -16,6 +16,12 @@ RUN apt-get update && \
   apt-get install -y --no-install-recommends openssl ca-certificates && \
   rm -rf /var/lib/apt/lists/*
 
+RUN ln -s /app/node_modules /node_modules && \
+  mkdir -p /app/node_modules/.bin && \
+  ln -sf ../prisma/build/index.js /app/node_modules/.bin/prisma && \
+  chmod -R +x /app/node_modules/.bin /app/node_modules/@prisma/engines /app/node_modules/prisma/build 2>/dev/null || true && \
+  node ./node_modules/prisma/build/index.js generate
+
 RUN AFFINE_DOCKER_CLEAN=1 TARGETARCH="${TARGETARCH}" TARGETVARIANT="${TARGETVARIANT}" node ./scripts/docker-clean.mjs
 
 FROM node:22-bookworm-slim
@@ -25,7 +31,8 @@ COPY --from=assets /app /app
 
 RUN apt-get update && \
   apt-get install -y --no-install-recommends openssl libjemalloc2 && \
-  rm -rf /var/lib/apt/lists/*
+  rm -rf /var/lib/apt/lists/* && \
+  ln -s /app/node_modules /node_modules
 
 # Enable jemalloc by preloading the library
 ENV LD_PRELOAD=libjemalloc.so.2

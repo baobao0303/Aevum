@@ -52,7 +52,7 @@ jobs:
   build-backend:
     name: Build Backend Package (@aevum/server)
     if: github.event_name != 'workflow_dispatch' || inputs.target == 'all' || inputs.target == 'backend' || inputs.target == 'docker'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -127,6 +127,7 @@ jobs:
         with:
           name: aevum-backend-package
           path: packages/backend/server
+          include-hidden-files: true
           retention-days: 7
 
   build-web:

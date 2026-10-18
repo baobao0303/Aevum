@@ -20,6 +20,14 @@ RUN apt-get update && \
   apt-get install -y --no-install-recommends openssl ca-certificates && \
   rm -rf /var/lib/apt/lists/*
 
+# Symlink /node_modules -> /app/node_modules for schema.prisma output (../../../node_modules/.prisma/client),
+# restore executable permissions stripped by artifact upload, and ensure Prisma Client is generated
+RUN ln -s /app/node_modules /node_modules && \
+  mkdir -p /app/node_modules/.bin && \
+  ln -sf ../prisma/build/index.js /app/node_modules/.bin/prisma && \
+  chmod -R +x /app/node_modules/.bin /app/node_modules/@prisma/engines /app/node_modules/prisma/build 2>/dev/null || true && \
+  node ./node_modules/prisma/build/index.js generate
+
 # Clean sourcemaps, deduplicate static assets, and prune foreign architecture binaries
 RUN AFFINE_DOCKER_CLEAN=1 TARGETARCH="${TARGETARCH}" TARGETVARIANT="${TARGETVARIANT}" node ./scripts/docker-clean.mjs
 
@@ -29,10 +37,11 @@ WORKDIR /app
 
 COPY --from=assets /app /app
 
-# Install runtime dependencies: openssl, jemalloc, curl (for healthcheck)
+# Install runtime dependencies: openssl, jemalloc, curl (for healthcheck), and symlink /node_modules
 RUN apt-get update && \
   apt-get install -y --no-install-recommends openssl libjemalloc2 curl && \
-  rm -rf /var/lib/apt/lists/*
+  rm -rf /var/lib/apt/lists/* && \
+  ln -s /app/node_modules /node_modules
 
 # Optimize memory usage with jemalloc
 ENV LD_PRELOAD=libjemalloc.so.2

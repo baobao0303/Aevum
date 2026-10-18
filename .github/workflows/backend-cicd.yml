@@ -200,7 +200,7 @@ jobs:
   build-backend:
     name: Build Backend & Native Module
     needs: security-secret-scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -279,6 +279,7 @@ jobs:
         with:
           name: backend-package
           path: packages/backend/server
+          include-hidden-files: true
           retention-days: 1
           if-no-files-found: error
 
