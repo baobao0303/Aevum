@@ -37,6 +37,7 @@ import dayjs from 'dayjs';
 import type { HTMLAttributes, PropsWithChildren, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useWaitingHrmScheduleDates } from '../../../journals/hrm-rent-schedule-panel';
 import { CalendarEvents } from './calendar-events';
 import * as styles from './journal.css';
 import { JournalTemplateOnboarding } from './template-onboarding';
@@ -106,7 +107,7 @@ interface JournalBlockProps {
   date: dayjs.Dayjs;
 }
 
-type DateDotType = 'journal' | 'event' | 'activity';
+type DateDotType = 'schedule' | 'journal' | 'event' | 'activity';
 
 const mobile = environment.isMobile;
 export const EditorJournalPanel = () => {
@@ -143,9 +144,9 @@ export const EditorJournalPanel = () => {
   const calendarCursorMonthEnd = useMemo(() => {
     return dayjs(`${calendarCursorMonthKey}-01`).endOf('month');
   }, [calendarCursorMonthKey]);
-  const docRecords = useLiveData(useService(DocsService).list.docs$);
   const allJournalDates = useLiveData(journalService.allJournalDates$);
   const eventDates = useLiveData(calendar.eventDates$);
+  const waitingScheduleDates = useWaitingHrmScheduleDates();
   const workspaceCalendars = useLiveData(calendar.workspaceCalendars$);
   const workspaceCalendarId = workspaceCalendars[0]?.id;
 
@@ -187,21 +188,6 @@ export const EditorJournalPanel = () => {
     [openJournal, selectedDate]
   );
 
-  const docActivityDates = useMemo(() => {
-    const dates = new Set<string>();
-    for (const docRecord of docRecords) {
-      const meta = docRecord.meta$.value;
-      if (meta.trash) continue;
-      if (meta.createDate) {
-        dates.add(dayjs(meta.createDate).format('YYYY-MM-DD'));
-      }
-      if (meta.updatedDate) {
-        dates.add(dayjs(meta.updatedDate).format('YYYY-MM-DD'));
-      }
-    }
-    return dates;
-  }, [docRecords]);
-
   useEffect(() => {
     calendar.revalidateWorkspaceCalendars().catch(() => undefined);
     calendar.loadAccountCalendars().catch(() => undefined);
@@ -226,18 +212,18 @@ export const EditorJournalPanel = () => {
   const getDotType = useCallback(
     (dateKey: string): DateDotType[] => {
       const dotTypes: DateDotType[] = [];
+      if (waitingScheduleDates.has(dateKey)) {
+        dotTypes.push('schedule');
+      }
       if (allJournalDates.has(dateKey)) {
         dotTypes.push('journal');
       }
       if (eventDates.has(dateKey)) {
         dotTypes.push('event');
       }
-      if (docActivityDates.has(dateKey)) {
-        dotTypes.push('activity');
-      }
       return dotTypes;
     },
-    [allJournalDates, docActivityDates, eventDates]
+    [allJournalDates, eventDates, waitingScheduleDates]
   );
 
   const customDayRenderer = useCallback(
@@ -257,7 +243,7 @@ export const EditorJournalPanel = () => {
           data-mobile={mobile}
         >
           {cell.label}
-          {!cell.selected && dotTypes.length ? (
+          {dotTypes.length ? (
             <div className={styles.journalDateCellDotContainer}>
               {dotTypes.map(dotType => (
                 <div

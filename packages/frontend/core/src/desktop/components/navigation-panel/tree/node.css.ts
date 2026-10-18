@@ -1,6 +1,6 @@
 import { cssVar } from '@toeverything/theme';
 import { cssVarV2 } from '@toeverything/theme/v2';
-import { createVar, keyframes, style } from '@vanilla-extract/css';
+import { createVar, globalStyle, keyframes, style } from '@vanilla-extract/css';
 export const levelIndent = createVar();
 export const linkItemRoot = style({
   color: 'inherit',
@@ -59,6 +59,29 @@ export const itemRenameAnchor = style({
   top: -10,
   width: 10,
   height: 10,
+});
+export const renamePopover = style({
+  padding: '3px 4px !important',
+  borderRadius: '6px !important',
+});
+globalStyle(`${renamePopover} > div`, {
+  gap: '6px !important',
+});
+globalStyle(`${renamePopover} button[aria-label]`, {
+  width: '26px !important',
+  height: '26px !important',
+  fontSize: '18px !important',
+});
+globalStyle(
+  `${renamePopover} div:has(> input[data-testid="rename-modal-input"])`,
+  {
+    height: '26px !important',
+    fontSize: `${cssVar('fontSm')} !important`,
+  }
+);
+globalStyle(`${renamePopover} input[data-testid="rename-modal-input"]`, {
+  fontSize: `${cssVar('fontSm')} !important`,
+  padding: '0 8px !important',
 });
 export const itemContent = style({
   overflow: 'hidden',

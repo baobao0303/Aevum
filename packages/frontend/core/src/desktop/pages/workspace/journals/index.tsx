@@ -24,7 +24,10 @@ import type { Location } from 'history';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import { AllDocSidebarTabs } from '../layouts/all-doc-sidebar-tabs';
-import { HrmRentScheduleSection } from './hrm-rent-schedule-panel';
+import {
+  HrmRentScheduleSection,
+  useWaitingHrmScheduleDates,
+} from './hrm-rent-schedule-panel';
 import * as styles from './index.css';
 
 export function getDateFromUrl(location: Location) {
@@ -107,6 +110,7 @@ export const JournalsPageWithConfirmation = () => {
   const dateString = getDateFromUrl(location);
   const todayString = dayjs().format(JOURNAL_DATE_FORMAT);
   const isToday = dateString === todayString;
+  const waitingScheduleDates = useWaitingHrmScheduleDates();
 
   const [ready, setReady] = useState(false);
 
@@ -146,6 +150,7 @@ export const JournalsPageWithConfirmation = () => {
             handleRef={handleRef}
             style={weekStyle}
             value={dateString}
+            markedDates={waitingScheduleDates}
             onChange={openJournal}
           />
 

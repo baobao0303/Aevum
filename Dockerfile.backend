@@ -1,14 +1,16 @@
 # syntax=docker/dockerfile:1.7
 
-# Stage 1: Asset preparation and dependency pruning
+# Stage 1: Asset preparation and dependency pruning (Full-Stack: Backend + Frontend)
 FROM node:22-bookworm-slim AS assets
 WORKDIR /app
 
 # Copy backend server distribution (contains dist, node_modules, schema.prisma, scripts)
 COPY ./packages/backend/server /app
 
-# Ensure static directories exist so frontend routing does not crash if served standalone
-RUN mkdir -p /app/static /app/static/admin /app/static/mobile
+# Copy compiled Frontend static distributions served by StaticFilesResolver on port 3010
+COPY ./packages/frontend/apps/web/dist /app/static
+COPY ./packages/frontend/admin/dist /app/static/admin
+COPY ./packages/frontend/apps/mobile/dist /app/static/mobile
 
 ARG TARGETARCH
 ARG TARGETVARIANT
@@ -18,10 +20,10 @@ RUN apt-get update && \
   apt-get install -y --no-install-recommends openssl ca-certificates && \
   rm -rf /var/lib/apt/lists/*
 
-# Clean and prune unneeded development files and foreign architecture binaries
+# Clean sourcemaps, deduplicate static assets, and prune foreign architecture binaries
 RUN AFFINE_DOCKER_CLEAN=1 TARGETARCH="${TARGETARCH}" TARGETVARIANT="${TARGETVARIANT}" node ./scripts/docker-clean.mjs
 
-# Stage 2: Runtime image
+# Stage 2: Runtime image (All-in-One Backend + Frontend)
 FROM node:22-bookworm-slim
 WORKDIR /app
 
@@ -35,6 +37,7 @@ RUN apt-get update && \
 # Optimize memory usage with jemalloc
 ENV LD_PRELOAD=libjemalloc.so.2
 ENV NODE_ENV=production
+ENV DEPLOYMENT_TYPE=selfhosted
 ENV PORT=3010
 
 EXPOSE 3010
@@ -43,5 +46,5 @@ EXPOSE 3010
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD curl -f http://localhost:3010/info || exit 1
 
-# Start server: upgrade config & boot main NestJS app
+# Start server: upgrade config & boot main NestJS app (serves both API & Frontend static files)
 CMD ["sh", "-c", "node ./scripts/upgrade-config.js && exec node ./dist/main.js"]

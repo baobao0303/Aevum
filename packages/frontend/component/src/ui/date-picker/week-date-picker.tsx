@@ -29,6 +29,7 @@ export interface WeekDatePickerProps extends Omit<
   value?: string;
   onChange?: (value: string) => void;
   handleRef?: ForwardedRef<WeekDatePickerHandle>;
+  markedDates?: ReadonlySet<string> | string[];
 }
 
 // TODO(catsjuice): i18n
@@ -41,6 +42,7 @@ export const WeekDatePicker = memo(function WeekDatePicker({
   onChange,
   className,
   handleRef,
+  markedDates,
   ...attrs
 }: WeekDatePickerProps) {
   const weekRef = useRef<HTMLDivElement | null>(null);
@@ -48,6 +50,11 @@ export const WeekDatePicker = memo(function WeekDatePicker({
   const [cursor, setCursor] = useState(dayjs(value));
   const [dense, setDense] = useState(false);
   const [viewPortSize, setViewPortSize] = useState(7);
+
+  const markedSet = useMemo(() => {
+    if (!markedDates) return null;
+    return markedDates instanceof Set ? markedDates : new Set(markedDates);
+  }, [markedDates]);
 
   useImperativeHandle(handleRef, () => ({
     setCursor,
@@ -136,6 +143,20 @@ export const WeekDatePicker = memo(function WeekDatePicker({
     value && setCursor(dayjs(value));
   }, [value]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && cursor.isValid()) {
+      window.dispatchEvent(
+        new CustomEvent('aevum:journal-week-cursor', {
+          detail: {
+            cursorDate: cursor.format(format),
+            weekStart: cursor.startOf('week').format(format),
+            weekEnd: cursor.endOf('week').format(format),
+          },
+        })
+      );
+    }
+  }, [cursor]);
+
   const focusCursorCell = useCallback(() => {
     if (!weekRef.current) return;
     const cursorCell = weekRef.current.querySelector(
@@ -169,16 +190,20 @@ export const WeekDatePicker = memo(function WeekDatePicker({
       </IconButton>
 
       <div ref={weekRef} className={styles.weekDatePickerContent}>
-        {displayDays.map(day => (
-          <Cell
-            key={day.toISOString()}
-            dense={dense}
-            value={value}
-            day={day}
-            cursor={cursor}
-            onClick={onDayClick}
-          />
-        ))}
+        {displayDays.map(day => {
+          const dayKey = day.format(format);
+          return (
+            <Cell
+              key={day.toISOString()}
+              dense={dense}
+              value={value}
+              day={day}
+              cursor={cursor}
+              hasDot={Boolean(markedSet?.has(dayKey))}
+              onClick={onDayClick}
+            />
+          );
+        })}
       </div>
 
       <IconButton onClick={onNext} data-testid="week-picker-next">
@@ -193,9 +218,10 @@ interface CellProps {
   day: dayjs.Dayjs;
   cursor: dayjs.Dayjs;
   value?: string;
+  hasDot?: boolean;
   onClick: (day: dayjs.Dayjs) => void;
 }
-const Cell = ({ day, dense, value, cursor, onClick }: CellProps) => {
+const Cell = ({ day, dense, value, cursor, hasDot, onClick }: CellProps) => {
   const isActive = day.format(format) === value;
   const isCurrentMonth = day.month() === cursor.month();
   const isToday = day.isSame(dayjs(), 'day');
@@ -211,6 +237,7 @@ const Cell = ({ day, dense, value, cursor, onClick }: CellProps) => {
       data-active={isActive}
       data-curr-month={isCurrentMonth}
       data-today={isToday}
+      data-has-dot={Boolean(hasDot)}
       data-value={day.format(format)}
       key={day.toISOString()}
       className={styles.dayCell}
@@ -219,7 +246,10 @@ const Cell = ({ day, dense, value, cursor, onClick }: CellProps) => {
       <div className={styles.dayCellWeek}>
         {dense ? label.slice(0, 1) : label}
       </div>
-      <div className={styles.dayCellDate}>{day.format('D')}</div>
+      <div className={styles.dayCellDate}>
+        <span>{day.format('D')}</span>
+        {hasDot ? <span className={styles.dayCellDot} /> : null}
+      </div>
     </button>
   );
 };

@@ -101,6 +101,85 @@ export function saveHrmCache(
   return cache;
 }
 
+export function isWaitingHrmScheduleStatus(status?: string | null): boolean {
+  const normalized = (status || '').trim().toLowerCase();
+  if (!normalized) return false;
+  return (
+    normalized !== 'closed' &&
+    normalized !== 'cancelled' &&
+    normalized !== 'canceled' &&
+    normalized !== 'rejected' &&
+    normalized !== 'done' &&
+    normalized !== 'completed'
+  );
+}
+
+export function getWaitingScheduleDateSet(
+  items: HrmScheduleItem[]
+): Set<string> {
+  const dates = new Set<string>();
+  for (const item of items) {
+    if (!item.startTime || !isWaitingHrmScheduleStatus(item.status)) {
+      continue;
+    }
+    const start = dayjs(item.startTime);
+    if (!start.isValid()) continue;
+    const end = item.endTime ? dayjs(item.endTime) : start;
+    dates.add(start.format('YYYY-MM-DD'));
+    if (end.isValid() && end.isAfter(start, 'day')) {
+      let cur = start.startOf('day').add(1, 'day');
+      const last = end.startOf('day');
+      let guard = 0;
+      while (
+        (cur.isBefore(last, 'day') || cur.isSame(last, 'day')) &&
+        guard < 31
+      ) {
+        dates.add(cur.format('YYYY-MM-DD'));
+        cur = cur.add(1, 'day');
+        guard++;
+      }
+    }
+  }
+  return dates;
+}
+
+export function useWaitingHrmScheduleDates(): ReadonlySet<string> {
+  const [items, setItems] = useState<HrmScheduleItem[]>(
+    () => loadHrmCache()?.items ?? []
+  );
+
+  useEffect(() => {
+    const handleCacheUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent<HrmRentScheduleCache>;
+      if (customEvent.detail && Array.isArray(customEvent.detail.items)) {
+        setItems(customEvent.detail.items);
+      } else {
+        setItems(loadHrmCache()?.items ?? []);
+      }
+    };
+    const handleConfigChange = () => {
+      const cfg = loadHrmConfig();
+      const hasConfig = Boolean(
+        (cfg.baseUrl.trim() && cfg.token.trim()) || cfg.customEndpoint.trim()
+      );
+      if (!hasConfig) {
+        setItems([]);
+      } else {
+        preloadHrmRentSchedule(true).catch(() => {});
+      }
+    };
+    window.addEventListener(UPDATE_EVENT, handleCacheUpdate);
+    window.addEventListener(CONFIG_EVENT, handleConfigChange);
+    preloadHrmRentSchedule(false).catch(() => {});
+    return () => {
+      window.removeEventListener(UPDATE_EVENT, handleCacheUpdate);
+      window.removeEventListener(CONFIG_EVENT, handleConfigChange);
+    };
+  }, []);
+
+  return useMemo(() => getWaitingScheduleDateSet(items), [items]);
+}
+
 export async function preloadHrmRentSchedule(
   force = false
 ): Promise<HrmScheduleItem[] | null> {
@@ -128,8 +207,8 @@ export async function preloadHrmRentSchedule(
   inflightPreloadPromise = (async () => {
     try {
       const center = dayjs();
-      const from = center.subtract(30, 'day').format('YYYY-MM-DD');
-      const to = center.add(60, 'day').format('YYYY-MM-DD');
+      const from = center.subtract(90, 'day').format('YYYY-MM-DD');
+      const to = center.add(90, 'day').format('YYYY-MM-DD');
 
       const res = await fetch('/api/auth/open-app/hrm-rent-schedule', {
         method: 'POST',
@@ -461,7 +540,32 @@ export const HrmRentScheduleSection = ({
   } | null>(() => initialCache?.userProfile ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [viewScope, setViewScope] = useState<'day' | 'range'>('day');
+  const [viewScope, setViewScope] = useState<'day' | 'week'>('day');
+  const [weekCursor, setWeekCursor] = useState<string>(() => dateString);
+
+  useEffect(() => {
+    setWeekCursor(dateString);
+  }, [dateString]);
+
+  useEffect(() => {
+    const handleWeekCursor = (e: Event) => {
+      const custom = e as CustomEvent<{
+        cursorDate?: string;
+        weekStart?: string;
+        weekEnd?: string;
+      }>;
+      const nextCursor = custom.detail?.cursorDate;
+      if (nextCursor && dayjs(nextCursor).isValid()) {
+        setWeekCursor(nextCursor);
+        if (!dayjs(dateString).isSame(dayjs(nextCursor), 'week')) {
+          setViewScope('week');
+        }
+      }
+    };
+    window.addEventListener('aevum:journal-week-cursor', handleWeekCursor);
+    return () =>
+      window.removeEventListener('aevum:journal-week-cursor', handleWeekCursor);
+  }, [dateString]);
 
   useEffect(() => {
     const syncConfig = () => setConfig(loadHrmConfig());
@@ -532,6 +636,16 @@ export const HrmRentScheduleSection = ({
     }
   }, [hasConfigured, config, fetchSchedules, items.length]);
 
+  const weekRange = useMemo(() => {
+    const base = dayjs(weekCursor).isValid()
+      ? dayjs(weekCursor)
+      : dayjs(dateString);
+    return {
+      start: base.startOf('week').startOf('day'),
+      end: base.endOf('week').endOf('day'),
+    };
+  }, [weekCursor, dateString]);
+
   const dayItems = useMemo(() => {
     const targetDay = dayjs(dateString);
     return items.filter(item => {
@@ -546,7 +660,20 @@ export const HrmRentScheduleSection = ({
     });
   }, [dateString, items]);
 
-  const displayedItems = viewScope === 'day' ? dayItems : items;
+  const weekItems = useMemo(() => {
+    return items.filter(item => {
+      if (!item.startTime) return false;
+      const start = dayjs(item.startTime);
+      if (!start.isValid()) return false;
+      const end = item.endTime ? dayjs(item.endTime) : start;
+      return (
+        !end.isBefore(weekRange.start, 'day') &&
+        !start.isAfter(weekRange.end, 'day')
+      );
+    });
+  }, [items, weekRange]);
+
+  const displayedItems = viewScope === 'day' ? dayItems : weekItems;
 
   return (
     <div className={styles.card}>
@@ -604,12 +731,13 @@ export const HrmRentScheduleSection = ({
                 <button
                   type="button"
                   role="tab"
-                  aria-selected={viewScope === 'range'}
-                  data-state={viewScope === 'range' ? 'active' : 'inactive'}
+                  aria-selected={viewScope === 'week'}
+                  data-state={viewScope === 'week' ? 'active' : 'inactive'}
                   className={styles.tabsTrigger}
-                  onClick={() => setViewScope('range')}
+                  onClick={() => setViewScope('week')}
                 >
-                  Tất cả ({items.length})
+                  Tuần {weekRange.start.format('DD/MM')} -{' '}
+                  {weekRange.end.format('DD/MM')} ({weekItems.length})
                 </button>
               </div>
               <button
@@ -667,15 +795,17 @@ export const HrmRentScheduleSection = ({
               ? 'Đang đồng bộ dữ liệu lịch...'
               : viewScope === 'day'
                 ? `Không có lịch thuê tài sản / cuộc họp nào liên quan tới bạn trong ngày ${dayjs(dateString).format('DD/MM/YYYY')}.`
-                : 'Không có lịch nào trong khoảng 30 ngày gần đây.'}
+                : `Không có lịch nào trong tuần ${weekRange.start.format('DD/MM/YYYY')} - ${weekRange.end.format('DD/MM/YYYY')}.`}
           </span>
-          {viewScope === 'day' && items.length > 0 ? (
+          {viewScope === 'day' && weekItems.length > 0 ? (
             <button
               type="button"
-              onClick={() => setViewScope('range')}
+              onClick={() => setViewScope('week')}
               className={styles.textLinkButton}
             >
-              Xem {items.length} lịch ở các ngày khác
+              Xem {weekItems.length} lịch trong tuần (
+              {weekRange.start.format('DD/MM')} -{' '}
+              {weekRange.end.format('DD/MM')})
             </button>
           ) : null}
         </div>
@@ -718,7 +848,7 @@ export const HrmRentScheduleSection = ({
                         <DateTimeIcon width={13} height={13} />
                       </span>
                       <span>
-                        {viewScope === 'range' && dateLabel
+                        {viewScope === 'week' && dateLabel
                           ? `${dateLabel} · ${timeLabel}`
                           : timeLabel}
                       </span>

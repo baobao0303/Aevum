@@ -83,8 +83,8 @@ export const dayCell = style({
 });
 export const dayCellWeek = style({
   width: '100%',
-  height: 16,
-  lineHeight: '16px',
+  height: 14,
+  lineHeight: '14px',
   textAlign: 'center',
 
   textOverflow: 'clip',
@@ -94,9 +94,26 @@ export const dayCellWeek = style({
 });
 export const dayCellDate = style({
   width: '100%',
-  height: 20,
-  lineHeight: '20px',
+  height: 18,
+  lineHeight: '18px',
   textAlign: 'center',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 4,
 
   color: 'var(--cell-color, var(--affine-text-primary-color))',
+});
+export const dayCellDot = style({
+  width: 6,
+  height: 6,
+  borderRadius: '50%',
+  backgroundColor: '#f59e0b',
+  flexShrink: 0,
+  boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.25)',
+  selectors: {
+    [`${dayCell}[data-active="true"] &`]: {
+      boxShadow: '0 0 0 1.5px rgba(255, 255, 255, 0.95)',
+    },
+  },
 });

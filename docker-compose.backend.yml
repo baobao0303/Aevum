@@ -1,7 +1,7 @@
 name: aevum
 
 services:
-  # Aevum Backend Server API & WebSocket Service
+  # Aevum All-in-One Server (Serves Frontend Web/Admin/Mobile UI + Backend API & WebSocket on port 3010)
   aevum_server:
     image: ${AEVUM_IMAGE:-ghcr.io/your-username/aevum-backend:latest}
     container_name: aevum_server
@@ -26,6 +26,11 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-aevum}:${POSTGRES_PASSWORD:-aevum_password}@postgres:5432/${POSTGRES_DB:-aevum}
       - AFFINE_SERVER_HOST=${AEVUM_SERVER_HOST:-0.0.0.0}
       - AFFINE_SERVER_PORT=3010
+      - FLOCI_ENDPOINT=${FLOCI_ENDPOINT:-}
+      - FLOCI_S3_BUCKET=${FLOCI_S3_BUCKET:-harness-data}
+      - FLOCI_REGION=${FLOCI_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
 
   # Automatic Database & Data Migration Runner
   aevum_migration:

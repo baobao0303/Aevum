@@ -1,120 +1,71 @@
-import { notify } from '@affine/component';
+import { Menu, MenuItem, MenuSeparator, notify } from '@affine/component';
 import { AuthService } from '@affine/core/modules/cloud';
-import { DocsService } from '@affine/core/modules/doc';
 import {
   ViewBody,
   ViewHeader,
   ViewIcon,
   ViewTitle,
-  WorkbenchService,
 } from '@affine/core/modules/workbench';
 import { WorkspaceService } from '@affine/core/modules/workspace';
 import {
+  ArrowDownSmallIcon,
   ArrowLeftSmallIcon,
+  ArrowRightSmallIcon,
+  CheckBoxCheckSolidIcon,
+  CopyIcon,
   DatabaseKanbanViewIcon,
   DatabaseTableViewIcon,
+  DateTimeIcon,
   DeleteIcon,
+  EditIcon,
+  MoreVerticalIcon,
   PlusIcon,
-  SettingsIcon,
+  ResetIcon,
+  SearchIcon,
+  UserIcon,
 } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { cssVarV2 } from '@toeverything/theme/v2';
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 import { AllDocSidebarTabs } from '../layouts/all-doc-sidebar-tabs';
 import * as styles from './index.css';
 
-const ALLOWED_BOT_PROFILES = [
-  'Supervisor',
-  'Lead',
-  'Peer',
-  'QC',
-  'Lead BA',
-  'Peer BA',
-  'Lead design',
-  'Peer Design',
-  'Lead Dev',
-  'Peer Dev',
-] as const;
-
-const HARNESS_STATES = [
-  'New',
-  'Accepted',
-  'Active',
-  'Blocked',
-  'Resolved',
-  'Closed',
-] as const;
-
-const WORK_ITEM_TYPES = [
-  'Epic',
-  'Feature',
-  'Task',
-  'Bug',
-  'User Story',
-  'Technical Story',
-  'Testcase',
-] as const;
-
-const STATE_COLORS: Record<string, { bg: string; fg: string; dot: string }> = {
-  New: { bg: 'rgba(148, 163, 184, 0.16)', fg: '#94a3b8', dot: '#94a3b8' },
-  Accepted: { bg: 'rgba(56, 189, 248, 0.16)', fg: '#38bdf8', dot: '#38bdf8' },
-  Active: { bg: 'rgba(59, 130, 246, 0.18)', fg: '#60a5fa', dot: '#3b82f6' },
-  Blocked: { bg: 'rgba(239, 68, 68, 0.18)', fg: '#f87171', dot: '#ef4444' },
-  Resolved: { bg: 'rgba(245, 158, 11, 0.18)', fg: '#fbbf24', dot: '#f59e0b' },
-  Closed: { bg: 'rgba(34, 197, 94, 0.18)', fg: '#4ade80', dot: '#22c55e' },
-};
-
-const TYPE_COLORS: Record<string, { bg: string; fg: string }> = {
-  Epic: { bg: 'rgba(168, 85, 247, 0.18)', fg: '#c084fc' },
-  Feature: { bg: 'rgba(59, 130, 246, 0.18)', fg: '#60a5fa' },
-  Task: { bg: 'rgba(16, 185, 129, 0.18)', fg: '#34d399' },
-  Bug: { bg: 'rgba(239, 68, 68, 0.18)', fg: '#f87171' },
-  Testcase: { bg: 'rgba(148, 163, 184, 0.16)', fg: '#94a3b8' },
-};
-
-export interface HarnessWorkItem {
-  id: number;
-  type: string;
-  title: string;
-  description?: string;
-  state: string;
-  priority: string;
-  assigned_to_profile: string;
-  created_by_profile?: string;
-  parent_item_id?: number;
-  updated_at: string;
-}
-
-export interface PersonalTaskCard {
-  id: string;
-  title: string;
-  status: string;
-  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
-  dueDate: string;
-  progress: number;
-  notes?: string;
-}
-
 export type TableRowStatus = 'In Process' | 'Done' | 'Planned';
 
-export interface PersonalBoard {
+export interface KanbanSubtask {
   id: string;
-  name: string;
-  description?: string;
-  sectionType: string;
-  tableStatus: TableRowStatus;
-  target: number;
-  limit: number;
-  reviewer: string;
-  category?: 'personal' | 'bot';
-  columns: string[];
-  cards: PersonalTaskCard[];
-  linkedDocId?: string;
-  updatedAt?: string;
+  title: string;
+  done: boolean;
 }
 
-export interface BotBoardDefinition {
+export interface KanbanCardItem {
   id: string;
+  code: string;
+  title: string;
+  description: string;
+  acceptanceCriteria?: string;
+  status: string;
+  type: 'Epic' | 'Feature' | 'Task' | 'Bug' | 'Testcase';
+  priority: 'Urgent' | 'High' | 'Medium' | 'Low';
+  assignee: string;
+  dueDate: string;
+  progress: number;
+  tags: string[];
+  subtasks: KanbanSubtask[];
+  updatedAt: string;
+}
+
+export interface KanbanBoardSummary {
+  id: string;
+  workspaceId: string;
+  kind: 'personal' | 'bot';
   name: string;
   description: string;
   sectionType: string;
@@ -122,1954 +73,2389 @@ export interface BotBoardDefinition {
   target: number;
   limit: number;
   reviewer: string;
-  defaultTypeFilter: string;
-  defaultGroupBy: 'state' | 'profile';
+  columns: string[];
+  cardCount: number;
+  completedCount: number;
+  inProgressCount: number;
+  completionRate: number;
+  columnCounts: Record<string, number>;
+  linkedDocId?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-const DEFAULT_BOT_HARNESS_BOARDS: BotBoardDefinition[] = [
-  {
-    id: 'bot-master-backlog',
-    name: 'SLPC Master Harness Board (10 Bot Profiles)',
-    description:
-      'Bảng điều phối tổng thể các Epic, Feature, Task của 10 Agent Profiles (Supervisor, Lead, Peer, QC...)',
-    sectionType: 'SLPC Harness',
-    tableStatus: 'In Process',
-    target: 41,
-    limit: 25,
-    reviewer: 'Supervisor',
-    defaultTypeFilter: 'MAIN',
-    defaultGroupBy: 'state',
-  },
-  {
-    id: 'bot-profile-allocation',
-    name: 'Bot Profile Allocation Matrix (10 Agents)',
-    description:
-      'Gom cột trực tiếp theo từng Agent Profile để theo dõi và bàn giao task giữa các Bot',
-    sectionType: '10 Bot Profiles',
-    tableStatus: 'In Process',
-    target: 30,
-    limit: 15,
-    reviewer: 'Lead',
-    defaultTypeFilter: 'MAIN',
-    defaultGroupBy: 'profile',
-  },
-  {
-    id: 'bot-qc-testcases',
-    name: 'QC ISTQB 5-Stage Verification & Testcases',
-    description:
-      'Bảng quản lý và nghiệm thu độc lập các Testcase ISTQB 5-Stage của Role QC',
-    sectionType: 'ISTQB 5-Stage',
-    tableStatus: 'Done',
-    target: 20,
-    limit: 20,
-    reviewer: 'QC',
-    defaultTypeFilter: 'Testcase',
-    defaultGroupBy: 'state',
-  },
+export interface KanbanBoardDetail extends KanbanBoardSummary {
+  cards: KanbanCardItem[];
+  stats: {
+    totalCards: number;
+    completedCards: number;
+    inProgressCards: number;
+    blockedCards: number;
+    completionRate: number;
+    byColumn: Record<string, number>;
+    byPriority: Record<string, number>;
+    byAssignee: Record<string, number>;
+  };
+}
+
+const WORK_ITEM_TYPES: Array<KanbanCardItem['type']> = [
+  'Feature',
+  'Task',
+  'Bug',
+  'Epic',
+  'Testcase',
 ];
 
-const REVIEWER_OPTIONS = [
-  'Assign reviewer',
-  'Eddie Lake',
-  'Jamik Tashpulatov',
-  'Emily Whalen',
+const CARD_PRIORITIES: Array<KanbanCardItem['priority']> = [
+  'Urgent',
+  'High',
+  'Medium',
+  'Low',
+];
+
+const TABLE_STATUS_OPTIONS: TableRowStatus[] = [
+  'In Process',
+  'Done',
+  'Planned',
+];
+
+const DEFAULT_REVIEWER_OPTIONS: string[] = [
   'Supervisor',
-  'Lead',
-  'Peer',
-  'QC',
-  'Lead BA',
-  'Lead design',
-  'Lead Dev',
+  'Bảo Bảo',
+  'Team User',
+];
+
+function resolveCreatorDisplayName(
+  email?: string | null,
+  name?: string | null
+): string {
+  const normalizedEmail = (email || '').trim().toLowerCase();
+  if (normalizedEmail === 'admin@aevum.io') return 'Supervisor';
+  if (normalizedEmail === 'baoltb@aevum.app') return 'Bảo Bảo';
+  if (normalizedEmail === 'team@affine.pro') return 'Team User';
+  const trimmedName = (name || '').trim();
+  if (
+    trimmedName === 'Supervisor' ||
+    trimmedName === 'Bảo Bảo' ||
+    trimmedName === 'Team User'
+  ) {
+    return trimmedName;
+  }
+  return 'Supervisor';
+}
+
+const SECTION_TYPE_OPTIONS = [
+  'Product Sprint',
+  'Architecture',
+  'Technical Approach',
+  'Design System',
+  'QA & Testing',
+  'Operations',
 ] as const;
 
-interface AdminKanbanConfig {
-  enabledUsers: Record<string, boolean>;
-  simulateStandardUser: boolean;
+function getStatusDotColor(status: TableRowStatus): string {
+  if (status === 'Done') return '#10b981';
+  if (status === 'In Process') return '#f59e0b';
+  return '#94a3b8';
 }
 
-const ADMIN_CONFIG_STORAGE_KEY = 'aevum_kanban_admin_config_v1';
+function getPriorityTone(priority: KanbanCardItem['priority']): {
+  dot: string;
+  label: string;
+} {
+  switch (priority) {
+    case 'Urgent':
+      return { dot: '#ef4444', label: 'Urgent' };
+    case 'High':
+      return { dot: '#f59e0b', label: 'High' };
+    case 'Medium':
+      return { dot: '#3b82f6', label: 'Medium' };
+    case 'Low':
+    default:
+      return { dot: '#94a3b8', label: 'Low' };
+  }
+}
 
-const DEFAULT_ADMIN_EMAILS = new Set([
-  'admin@aevum.io',
-  'baoltb@aevum.app',
-  'admin@aevum.local',
-  'lcho332002@gmail.com',
-]);
+interface SelectOption<T extends string = string> {
+  value: T;
+  label: string;
+  prefix?: ReactNode;
+}
 
-function normalizeProfileName(raw: string | undefined): string {
-  if (!raw) return 'Peer';
-  const match = ALLOWED_BOT_PROFILES.find(
-    p => p.toLowerCase() === raw.trim().toLowerCase()
+interface KanbanSelectProps<T extends string = string> {
+  value: T;
+  options: Array<SelectOption<T>>;
+  onChange: (next: T) => void;
+  size?: 'default' | 'modal' | 'mini';
+  minWidth?: number;
+  align?: 'start' | 'end';
+}
+
+function KanbanSelect<T extends string = string>({
+  value,
+  options,
+  onChange,
+  size = 'default',
+  minWidth = 140,
+  align = 'start',
+}: KanbanSelectProps<T>) {
+  const current = options.find(o => o.value === value) ?? {
+    value,
+    label: value,
+  };
+
+  return (
+    <Menu
+      contentOptions={{
+        align,
+        sideOffset: 4,
+        style: {
+          minWidth: `${minWidth}px`,
+          zIndex: 1200,
+        },
+      }}
+      items={
+        <>
+          {options.map(opt => (
+            <MenuItem
+              key={opt.value}
+              checked={opt.value === value}
+              prefix={opt.prefix}
+              onSelect={() => onChange(opt.value)}
+            >
+              {opt.label}
+            </MenuItem>
+          ))}
+        </>
+      }
+    >
+      <button
+        type="button"
+        className={styles.selectTrigger}
+        data-size={size === 'default' ? undefined : size}
+        style={
+          size === 'modal'
+            ? {
+                height: '36px',
+                minHeight: '36px',
+                width: '100%',
+                fontSize: '13px',
+                padding: '0 10px',
+              }
+            : { minWidth: `${minWidth}px` }
+        }
+      >
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {current.prefix}
+          <span>{current.label}</span>
+        </span>
+        <ArrowDownSmallIcon
+          width={14}
+          height={14}
+          style={{ color: cssVarV2('text/secondary'), flexShrink: 0 }}
+        />
+      </button>
+    </Menu>
   );
-  return match ?? raw;
 }
 
-function loadAdminConfig(currentEmail: string): AdminKanbanConfig {
-  try {
-    const raw = localStorage.getItem(ADMIN_CONFIG_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as AdminKanbanConfig;
-      return {
-        enabledUsers: parsed.enabledUsers ?? {},
-        simulateStandardUser: Boolean(parsed.simulateStandardUser),
-      };
-    }
-  } catch (e) {
-    console.error(e);
-  }
-  const initialUsers: Record<string, boolean> = {
-    'admin@aevum.io': true,
-    'baoltb@aevum.app': true,
-    'dev.member@aevum.io': false,
-    'guest.viewer@aevum.io': false,
-  };
-  if (currentEmail) {
-    initialUsers[currentEmail] = true;
-  }
+const PAGE_SIZE_OPTIONS: Array<SelectOption<string>> = [
+  { value: '5', label: '5 dòng' },
+  { value: '10', label: '10 dòng' },
+  { value: '20', label: '20 dòng' },
+  { value: '50', label: '50 dòng' },
+];
+
+const FLOCI_HARNESS_BOARD_ID = 'board-floci-harness';
+const FLOCI_DEFAULT_COLUMNS = [
+  'New',
+  'Accepted',
+  'Active',
+  'Blocked',
+  'Resolved',
+  'Closed',
+];
+
+const memoryBoardsCache = new Map<string, KanbanBoardSummary[]>();
+const memoryDetailsCache = new Map<string, KanbanBoardDetail>();
+
+function buildDefaultFlociSummary(workspaceId: string): KanbanBoardSummary {
+  const columnCounts: Record<string, number> = {};
+  for (const col of FLOCI_DEFAULT_COLUMNS) columnCounts[col] = 0;
   return {
-    enabledUsers: initialUsers,
-    simulateStandardUser: false,
+    id: FLOCI_HARNESS_BOARD_ID,
+    workspaceId: workspaceId || 'default',
+    kind: 'bot',
+    name: 'SLPC Harness — Floci DynamoDB (harness-data)',
+    description:
+      'Đồng bộ trực tiếp bảng harness_work_items trên Floci Cloud (harness-data) — Chỉ hiển thị cho Admin.',
+    sectionType: 'SLPC Harness',
+    tableStatus: 'In Process',
+    target: 0,
+    limit: 25,
+    reviewer: 'Supervisor',
+    columns: FLOCI_DEFAULT_COLUMNS,
+    cardCount: 0,
+    completedCount: 0,
+    inProgressCount: 0,
+    completionRate: 0,
+    columnCounts,
+    createdAt: '2026-10-08',
+    updatedAt: '2026-10-18',
   };
 }
 
-function buildDefaultCardsForSection(sectionTitle: string): PersonalTaskCard[] {
-  return [
-    {
-      id: `card-${sectionTitle}-1`,
-      title: `Soạn thảo nội dung & cấu trúc cho "${sectionTitle}"`,
-      status: 'Done',
-      priority: 'High',
-      dueDate: '2026-10-18',
-      progress: 100,
+function summaryToPlaceholderDetail(
+  summary: KanbanBoardSummary
+): KanbanBoardDetail {
+  return {
+    ...summary,
+    cards: [],
+    stats: {
+      totalCards: summary.cardCount,
+      completedCards: summary.completedCount,
+      inProgressCards: summary.inProgressCount,
+      blockedCards: 0,
+      completionRate: summary.completionRate,
+      byColumn: summary.columnCounts,
+      byPriority: {},
+      byAssignee: {},
     },
-    {
-      id: `card-${sectionTitle}-2`,
-      title: `Rà soát tiêu chuẩn thiết kế & dữ liệu thực thi "${sectionTitle}"`,
-      status: 'In Progress',
-      priority: 'Urgent',
-      dueDate: '2026-10-19',
-      progress: 65,
-    },
-    {
-      id: `card-${sectionTitle}-3`,
-      title: `Kiểm thử nghiệm thu & phê duyệt "${sectionTitle}"`,
-      status: 'In Review',
-      priority: 'Medium',
-      dueDate: '2026-10-21',
-      progress: 40,
-    },
-    {
-      id: `card-${sectionTitle}-4`,
-      title: `Hoàn thiện tài liệu bàn giao "${sectionTitle}"`,
-      status: 'To Do',
-      priority: 'Low',
-      dueDate: '2026-10-24',
-      progress: 0,
-    },
-  ];
+  };
 }
 
-function getDefaultPersonalBoards(): PersonalBoard[] {
-  const defaultRows: Array<{
-    id: string;
-    name: string;
-    sectionType: string;
-    tableStatus: TableRowStatus;
-    target: number;
-    limit: number;
-    reviewer: string;
-  }> = [
-    {
-      id: 'section-cover-page',
-      name: 'Cover page',
-      sectionType: 'Cover page',
-      tableStatus: 'In Process',
-      target: 18,
-      limit: 5,
-      reviewer: 'Eddie Lake',
-    },
-    {
-      id: 'section-toc',
-      name: 'Table of contents',
-      sectionType: 'Table of contents',
-      tableStatus: 'Done',
-      target: 29,
-      limit: 24,
-      reviewer: 'Eddie Lake',
-    },
-    {
-      id: 'section-exec-summary',
-      name: 'Executive summary',
-      sectionType: 'Narrative',
-      tableStatus: 'Done',
-      target: 10,
-      limit: 13,
-      reviewer: 'Eddie Lake',
-    },
-    {
-      id: 'section-tech-approach',
-      name: 'Technical approach',
-      sectionType: 'Narrative',
-      tableStatus: 'Done',
-      target: 27,
-      limit: 23,
-      reviewer: 'Jamik Tashpulatov',
-    },
-    {
-      id: 'section-design',
-      name: 'Design',
-      sectionType: 'Narrative',
-      tableStatus: 'In Process',
-      target: 2,
-      limit: 16,
-      reviewer: 'Jamik Tashpulatov',
-    },
-    {
-      id: 'section-capabilities',
-      name: 'Capabilities',
-      sectionType: 'Narrative',
-      tableStatus: 'In Process',
-      target: 20,
-      limit: 8,
-      reviewer: 'Jamik Tashpulatov',
-    },
-    {
-      id: 'section-integration',
-      name: 'Integration with existing systems',
-      sectionType: 'Narrative',
-      tableStatus: 'In Process',
-      target: 19,
-      limit: 21,
-      reviewer: 'Jamik Tashpulatov',
-    },
-    {
-      id: 'section-innovation',
-      name: 'Innovation and Advantages',
-      sectionType: 'Narrative',
-      tableStatus: 'Done',
-      target: 25,
-      limit: 26,
-      reviewer: 'Assign reviewer',
-    },
-  ];
+function readInitialKanbanBoards(
+  workspaceId: string,
+  role: 'admin' | 'member'
+): KanbanBoardSummary[] {
+  const key = `${workspaceId}:${role}`;
+  const mem = memoryBoardsCache.get(key);
+  if (mem) {
+    return role === 'admin'
+      ? mem
+      : mem.filter(b => b.id !== FLOCI_HARNESS_BOARD_ID);
+  }
 
-  return defaultRows.map(r => ({
-    id: r.id,
-    name: r.name,
-    description: `Bảng Kanban quản lý chi tiết cho hạng mục "${r.name}" (${r.sectionType})`,
-    sectionType: r.sectionType,
-    tableStatus: r.tableStatus,
-    target: r.target,
-    limit: r.limit,
-    reviewer: r.reviewer,
-    category: 'personal',
-    updatedAt: '2026-10-18',
-    columns: ['To Do', 'In Progress', 'In Review', 'Done'],
-    cards: buildDefaultCardsForSection(r.name),
-  }));
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = window.localStorage.getItem(`aevum:kanban:boards:v4:${key}`);
+      if (raw) {
+        const parsed = JSON.parse(raw) as KanbanBoardSummary[];
+        if (Array.isArray(parsed)) {
+          const filtered =
+            role === 'admin'
+              ? parsed
+              : parsed.filter(b => b.id !== FLOCI_HARNESS_BOARD_ID);
+          memoryBoardsCache.set(key, filtered);
+          return filtered;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const fallback =
+    role === 'admin' ? [buildDefaultFlociSummary(workspaceId)] : [];
+  memoryBoardsCache.set(key, fallback);
+  return fallback;
 }
 
-type SelectedBoardTarget =
-  | { kind: 'bot'; boardId: string }
-  | { kind: 'personal'; boardId: string }
-  | null;
+function writeCachedKanbanBoards(
+  workspaceId: string,
+  role: 'admin' | 'member',
+  boards: KanbanBoardSummary[]
+) {
+  const key = `${workspaceId}:${role}`;
+  const filtered =
+    role === 'admin'
+      ? boards
+      : boards.filter(b => b.id !== FLOCI_HARNESS_BOARD_ID);
+  memoryBoardsCache.set(key, filtered);
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(
+        `aevum:kanban:boards:v4:${key}`,
+        JSON.stringify(filtered)
+      );
+    } catch {
+      // ignore
+    }
+  }
+}
+
+function readInitialKanbanDetail(
+  workspaceId: string,
+  boardId: string,
+  boards: KanbanBoardSummary[]
+): KanbanBoardDetail | null {
+  const key = `${workspaceId}:${boardId}`;
+  const mem = memoryDetailsCache.get(key);
+  if (mem) return mem;
+
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = window.localStorage.getItem(`aevum:kanban:detail:v4:${key}`);
+      if (raw) {
+        const parsed = JSON.parse(raw) as KanbanBoardDetail;
+        if (parsed && parsed.id === boardId) {
+          memoryDetailsCache.set(key, parsed);
+          return parsed;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const summary =
+    boards.find(b => b.id === boardId) ||
+    (boardId === FLOCI_HARNESS_BOARD_ID
+      ? buildDefaultFlociSummary(workspaceId)
+      : null);
+  return summary ? summaryToPlaceholderDetail(summary) : null;
+}
+
+function writeCachedKanbanDetail(
+  workspaceId: string,
+  boardId: string,
+  detail: KanbanBoardDetail
+) {
+  const key = `${workspaceId}:${boardId}`;
+  memoryDetailsCache.set(key, detail);
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(
+        `aevum:kanban:detail:v4:${key}`,
+        JSON.stringify(detail)
+      );
+    } catch {
+      // ignore
+    }
+  }
+}
 
 export const WorkspaceKanbanPage = () => {
-  const authService = useService(AuthService);
   const workspaceService = useService(WorkspaceService);
-  const docsService = useService(DocsService);
-  const workbench = useService(WorkbenchService).workbench;
-
+  const authService = useService(AuthService);
   const account = useLiveData(authService.session.account$);
   const workspaceId = workspaceService.workspace.id;
-  const currentUserEmail = (
-    account?.email ||
-    account?.label ||
-    'admin@aevum.io'
-  )
-    .trim()
-    .toLowerCase();
 
-  const isOwnerAdmin = useMemo(() => {
-    if (!account) return true;
-    return (
-      DEFAULT_ADMIN_EMAILS.has(currentUserEmail) ||
-      currentUserEmail.includes('admin') ||
-      currentUserEmail.includes('bao')
-    );
-  }, [account, currentUserEmail]);
+  const userEmail = (account?.email || '').trim().toLowerCase();
+  const userRole: 'admin' | 'member' =
+    userEmail === 'admin@aevum.io' ? 'admin' : 'member';
+  const creatorName = resolveCreatorDisplayName(account?.email, account?.name);
 
-  const [adminConfig, setAdminConfig] = useState<AdminKanbanConfig>(() =>
-    loadAdminConfig(currentUserEmail)
+  // Level 1: API List state — preloaded synchronously on frame 0 so there is zero flash!
+  const [boards, setBoards] = useState<KanbanBoardSummary[]>(() =>
+    readInitialKanbanBoards(workspaceId, userRole)
   );
-  const [adminModalOpen, setAdminModalOpen] = useState(false);
-  const [newUserEmailInput, setNewUserEmailInput] = useState('');
+  const [reviewerOptions, setReviewerOptions] = useState<string[]>(
+    DEFAULT_REVIEWER_OPTIONS
+  );
+  const [loadingList, setLoadingList] = useState(false);
+  const [listSearch, setListSearch] = useState('');
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [boardPage, setBoardPage] = useState<number>(1);
+  const [boardPageSize, setBoardPageSize] = useState<number>(5);
 
-  const saveAdminConfig = useCallback((next: AdminKanbanConfig) => {
-    setAdminConfig(next);
-    try {
-      localStorage.setItem(ADMIN_CONFIG_STORAGE_KEY, JSON.stringify(next));
-    } catch (e) {
-      console.error(e);
-    }
-  }, []);
-
-  const canViewBotHarnessBoard = useMemo(() => {
-    if (adminConfig.simulateStandardUser) {
-      return false;
-    }
-    if (adminConfig.enabledUsers[currentUserEmail] !== undefined) {
-      return adminConfig.enabledUsers[currentUserEmail];
-    }
-    return isOwnerAdmin;
-  }, [adminConfig, currentUserEmail, isOwnerAdmin]);
-
-  // ========================================================================
-  // NAVIGATION STATE: null = Shadcn Data Table, non-null = Kanban Board
-  // ========================================================================
-  const [selectedBoardTarget, setSelectedBoardTarget] =
-    useState<SelectedBoardTarget>(null);
-  const [listFilterCategory, setListFilterCategory] = useState<
-    'all' | 'bot' | 'personal'
-  >('all');
-  const [listSearchQuery, setListSearchQuery] = useState('');
-
-  // Table selection, action menu, and row drag-and-drop
-  const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
-  const [openMenuRowId, setOpenMenuRowId] = useState<string | null>(null);
-  const [draggedTableRowId, setDraggedTableRowId] = useState<string | null>(
+  // Level 2: API Detail state
+  const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
+  const [boardDetail, setBoardDetail] = useState<KanbanBoardDetail | null>(
     null
   );
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [detailViewMode, setDetailViewMode] = useState<'kanban' | 'table'>(
+    'kanban'
+  );
+  const [cardSearch, setCardSearch] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('ALL');
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [cardPage, setCardPage] = useState<number>(1);
+  const [cardPageSize, setCardPageSize] = useState<number>(5);
 
-  // Add / Edit Row Modal State (supports both Add and Edit for Bot & Personal rows)
-  const [newBoardModalOpen, setNewBoardModalOpen] = useState(false);
-  const [editingRowTarget, setEditingRowTarget] = useState<{
-    kind: 'bot' | 'personal';
-    id: string;
-  } | null>(null);
-  const [newBoardNameInput, setNewBoardNameInput] = useState('');
-  const [newBoardDescInput, setNewBoardDescInput] = useState('');
-  const [newBoardSectionType, setNewBoardSectionType] = useState('Narrative');
-  const [newBoardStatus, setNewBoardStatus] =
+  // Board Create / Edit Modal
+  const [boardModalOpen, setBoardModalOpen] = useState(false);
+  const [editingBoardId, setEditingBoardId] = useState<string | null>(null);
+  const [boardFormName, setBoardFormName] = useState('');
+  const [boardFormDesc, setBoardFormDesc] = useState('');
+  const [boardFormType, setBoardFormType] = useState<string>('Product Sprint');
+  const [boardFormStatus, setBoardFormStatus] =
     useState<TableRowStatus>('In Process');
-  const [newBoardTargetNum, setNewBoardTargetNum] = useState<number>(20);
-  const [newBoardLimitNum, setNewBoardLimitNum] = useState<number>(15);
-  const [newBoardReviewer, setNewBoardReviewer] =
-    useState<string>('Assign reviewer');
-  const [newBoardCategory, setNewBoardCategory] = useState<'personal' | 'bot'>(
-    'personal'
+  const [boardFormTarget, setBoardFormTarget] = useState<number>(12);
+  const [boardFormLimit, setBoardFormLimit] = useState<number>(8);
+  const [boardFormReviewer, setBoardFormReviewer] =
+    useState<string>(creatorName);
+  const [boardFormColumns, setBoardFormColumns] = useState<string>(
+    'Backlog, To Do, In Progress, In Review, Done'
   );
 
-  // Close 3-dot row menu when clicking anywhere outside
-  useEffect(() => {
-    if (!openMenuRowId) return;
-    const close = () => setOpenMenuRowId(null);
-    window.addEventListener('click', close);
-    return () => window.removeEventListener('click', close);
-  }, [openMenuRowId]);
+  // Add Column Modal
+  const [columnModalOpen, setColumnModalOpen] = useState(false);
+  const [newColumnName, setNewColumnName] = useState('');
 
-  // If user loses Bot access while viewing a Bot board, return to Table page
-  useEffect(() => {
-    if (!canViewBotHarnessBoard && selectedBoardTarget?.kind === 'bot') {
-      setSelectedBoardTarget(null);
+  // Card Create / Detail Modal
+  const [cardModalOpen, setCardModalOpen] = useState(false);
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [cardFormCode, setCardFormCode] = useState('');
+  const [cardFormTitle, setCardFormTitle] = useState('');
+  const [cardFormDesc, setCardFormDesc] = useState('');
+  const [cardFormCriteria, setCardFormCriteria] = useState('');
+  const [cardFormStatus, setCardFormStatus] = useState('To Do');
+  const [cardFormType, setCardFormType] =
+    useState<KanbanCardItem['type']>('Task');
+  const [cardFormPriority, setCardFormPriority] =
+    useState<KanbanCardItem['priority']>('Medium');
+  const [cardFormAssignee, setCardFormAssignee] = useState(creatorName);
+  const [cardFormDueDate, setCardFormDueDate] = useState('2026-10-20');
+  const [cardFormProgress, setCardFormProgress] = useState(0);
+  const [cardFormSubtasks, setCardFormSubtasks] = useState<KanbanSubtask[]>([]);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+
+  // 1. Fetch API List: GET /api/auth/open-app/kanban/boards (with background detail preload)
+  const fetchBoardsList = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/auth/open-app/kanban/boards?workspaceId=${encodeURIComponent(workspaceId)}&role=${encodeURIComponent(userRole)}&userEmail=${encodeURIComponent(userEmail)}`,
+        { credentials: 'include' }
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (Array.isArray(data?.reviewers) && data.reviewers.length > 0) {
+        setReviewerOptions(data.reviewers as string[]);
+      }
+      if (Array.isArray(data?.boards)) {
+        const rawBoards = data.boards as KanbanBoardSummary[];
+        const fetchedBoards =
+          userRole === 'admin'
+            ? rawBoards
+            : rawBoards.filter(b => b.id !== FLOCI_HARNESS_BOARD_ID);
+        setBoards(fetchedBoards);
+        writeCachedKanbanBoards(workspaceId, userRole, fetchedBoards);
+
+        // Preload Detail Kanban in the background so clicking a row opens in 0ms
+        for (const b of fetchedBoards.slice(0, 3)) {
+          void fetch(
+            `/api/auth/open-app/kanban/boards/${encodeURIComponent(b.id)}?workspaceId=${encodeURIComponent(workspaceId)}&role=${encodeURIComponent(userRole)}&userEmail=${encodeURIComponent(userEmail)}`,
+            { credentials: 'include' }
+          )
+            .then(r => (r.ok ? r.json() : null))
+            .then(d => {
+              if (d?.board) {
+                writeCachedKanbanDetail(
+                  workspaceId,
+                  b.id,
+                  d.board as KanbanBoardDetail
+                );
+              }
+            })
+            .catch(() => undefined);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch Kanban boards list:', err);
+    } finally {
+      setLoadingList(false);
     }
-    if (!canViewBotHarnessBoard && listFilterCategory === 'bot') {
-      setListFilterCategory('all');
-    }
-  }, [canViewBotHarnessBoard, listFilterCategory, selectedBoardTarget]);
+  }, [workspaceId, userRole, userEmail]);
 
-  // ========================================================================
-  // ZONE 1 STATE: BOT / HARNESS BOARD (Table & Kanban, 10 Agent Profiles)
-  // ========================================================================
-  const harnessStorageKey = `aevum_bot_harness_items_${workspaceId}`;
-  const [botItems, setBotItems] = useState<HarnessWorkItem[]>([]);
-  const [botViewMode, setBotViewMode] = useState<'kanban' | 'table'>('kanban');
-  const [botGroupBy, setBotGroupBy] = useState<'state' | 'profile'>('state');
-  const [botProfileFilter, setBotProfileFilter] = useState<string>('ALL');
-  const [botTypeFilter, setBotTypeFilter] = useState<string>('MAIN');
-  const [botSearchQuery, setBotSearchQuery] = useState<string>('');
-  const [draggedBotItemId, setDraggedBotItemId] = useState<number | null>(null);
-  const [dragOverBotCol, setDragOverBotCol] = useState<string | null>(null);
-
-  const [newBotTaskModalOpen, setNewBotTaskModalOpen] = useState(false);
-  const [newBotTaskTitle, setNewBotTaskTitle] = useState('');
-  const [newBotTaskType, setNewBotTaskType] = useState<string>('Task');
-  const [newBotTaskState, setNewBotTaskState] = useState<string>('New');
-  const [newBotTaskProfile, setNewBotTaskProfile] =
-    useState<string>('Supervisor');
-  const [newBotTaskPriority, setNewBotTaskPriority] = useState<string>('P1');
-
-  const fetchHarnessBacklog = useCallback(
-    async (forceReset = false) => {
+  // 2. Fetch API Detail: GET /api/auth/open-app/kanban/boards/:boardId
+  const fetchBoardDetail = useCallback(
+    async (boardId: string, showSpinner = false) => {
+      if (showSpinner) setLoadingDetail(true);
       try {
-        if (!forceReset) {
-          const cached = localStorage.getItem(harnessStorageKey);
-          if (cached) {
-            const parsed = JSON.parse(cached) as HarnessWorkItem[];
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setBotItems(parsed);
-              return;
-            }
+        const res = await fetch(
+          `/api/auth/open-app/kanban/boards/${encodeURIComponent(boardId)}?workspaceId=${encodeURIComponent(workspaceId)}&role=${encodeURIComponent(userRole)}&userEmail=${encodeURIComponent(userEmail)}`,
+          { credentials: 'include' }
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (Array.isArray(data?.reviewers) && data.reviewers.length > 0) {
+          setReviewerOptions(data.reviewers as string[]);
+        }
+        if (data?.board) {
+          const detail = data.board as KanbanBoardDetail;
+          setBoardDetail(detail);
+          writeCachedKanbanDetail(workspaceId, boardId, detail);
+        }
+      } catch (err) {
+        console.error('Failed to fetch Kanban board detail:', err);
+        notify.error({
+          title: 'Không thể tải chi tiết bảng Kanban',
+          message: 'Vui lòng thử lại.',
+        });
+      } finally {
+        setLoadingDetail(false);
+      }
+    },
+    [workspaceId, userRole, userEmail]
+  );
+
+  useEffect(() => {
+    setBoards(readInitialKanbanBoards(workspaceId, userRole));
+    if (userRole !== 'admin' && activeBoardId === FLOCI_HARNESS_BOARD_ID) {
+      setActiveBoardId(null);
+      setBoardDetail(null);
+    }
+    fetchBoardsList().catch(console.error);
+  }, [workspaceId, userRole, activeBoardId, fetchBoardsList]);
+
+  const handleOpenBoardDetail = useCallback(
+    (boardId: string) => {
+      const cachedDetail = readInitialKanbanDetail(
+        workspaceId,
+        boardId,
+        boards
+      );
+      setActiveBoardId(boardId);
+      setBoardDetail(cachedDetail);
+      setCardSearch('');
+      setPriorityFilter('ALL');
+      setAssigneeFilter('ALL');
+      setCardPage(1);
+      fetchBoardDetail(boardId, !cachedDetail).catch(console.error);
+    },
+    [workspaceId, boards, fetchBoardDetail]
+  );
+
+  const handleBackToList = useCallback(() => {
+    setActiveBoardId(null);
+    setBoardDetail(null);
+    fetchBoardsList().catch(console.error);
+  }, [fetchBoardsList]);
+
+  // Inline update board metadata (status, target, limit, reviewer)
+  const handlePatchBoardMeta = useCallback(
+    async (boardId: string, patch: Record<string, unknown>) => {
+      try {
+        const res = await fetch(
+          `/api/auth/open-app/kanban/boards/${encodeURIComponent(boardId)}`,
+          {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workspaceId,
+              role: userRole,
+              userEmail,
+              action: 'update-board',
+              ...patch,
+            }),
+          }
+        );
+        const data = await res.json();
+        if (data?.board) {
+          const updated: KanbanBoardDetail = data.board;
+          setBoards(prev => {
+            const next = prev.map(b =>
+              b.id === boardId ? { ...b, ...updated } : b
+            );
+            writeCachedKanbanBoards(workspaceId, userRole, next);
+            return next;
+          });
+          writeCachedKanbanDetail(workspaceId, boardId, updated);
+          if (activeBoardId === boardId) {
+            setBoardDetail(updated);
           }
         }
-        const res = await fetch('/harness-backlog.json');
-        if (!res.ok) return;
-        const data = (await res.json()) as {
-          items?: HarnessWorkItem[];
-          testcases?: HarnessWorkItem[];
-        };
-        const merged = [...(data.items ?? []), ...(data.testcases ?? [])].map(
-          item => ({
-            ...item,
-            assigned_to_profile: normalizeProfileName(item.assigned_to_profile),
-            state: item.state || 'New',
-            priority: item.priority || 'P1',
-          })
-        );
-        setBotItems(merged);
-        localStorage.setItem(harnessStorageKey, JSON.stringify(merged));
       } catch (err) {
-        console.error('Failed to load harness backlog:', err);
+        console.error('Failed to update board metadata:', err);
       }
     },
-    [harnessStorageKey]
+    [workspaceId, userRole, userEmail, activeBoardId]
   );
 
-  useEffect(() => {
-    fetchHarnessBacklog(false).catch(console.error);
-  }, [fetchHarnessBacklog]);
+  // Open Create Board Modal
+  const openCreateBoardModal = useCallback(() => {
+    setEditingBoardId(null);
+    setBoardFormName('');
+    setBoardFormDesc('');
+    setBoardFormType('Product Sprint');
+    setBoardFormStatus('In Process');
+    setBoardFormTarget(12);
+    setBoardFormLimit(8);
+    setBoardFormReviewer(creatorName);
+    setBoardFormColumns('Backlog, To Do, In Progress, In Review, Done');
+    setBoardModalOpen(true);
+  }, [creatorName]);
 
-  const updateBotItems = useCallback(
-    (updater: (prev: HarnessWorkItem[]) => HarnessWorkItem[]) => {
-      setBotItems(prev => {
-        const next = updater(prev);
-        try {
-          localStorage.setItem(harnessStorageKey, JSON.stringify(next));
-        } catch (e) {
-          console.error(e);
+  // Open Edit Board Modal
+  const openEditBoardModal = useCallback(
+    (board: KanbanBoardSummary) => {
+      setEditingBoardId(board.id);
+      setBoardFormName(board.name);
+      setBoardFormDesc(board.description || '');
+      setBoardFormType(board.sectionType || 'Product Sprint');
+      setBoardFormStatus(board.tableStatus || 'In Process');
+      setBoardFormTarget(board.target ?? 12);
+      setBoardFormLimit(board.limit ?? 8);
+      setBoardFormReviewer(board.reviewer || creatorName);
+      setBoardFormColumns(
+        (board.columns || ['To Do', 'In Progress', 'In Review', 'Done']).join(
+          ', '
+        )
+      );
+      setBoardModalOpen(true);
+    },
+    [creatorName]
+  );
+
+  const handleSaveBoardModal = useCallback(async () => {
+    const trimmedName = boardFormName.trim();
+    if (!trimmedName) {
+      notify.error({ title: 'Vui lòng nhập tên bảng Kanban' });
+      return;
+    }
+    const parsedColumns = boardFormColumns
+      .split(',')
+      .map(c => c.trim())
+      .filter(Boolean);
+    const columns =
+      parsedColumns.length > 0
+        ? parsedColumns
+        : ['To Do', 'In Progress', 'In Review', 'Done'];
+
+    try {
+      if (editingBoardId) {
+        await handlePatchBoardMeta(editingBoardId, {
+          name: trimmedName,
+          description: boardFormDesc.trim(),
+          sectionType: boardFormType.trim() || 'Product Sprint',
+          tableStatus: boardFormStatus,
+          target: boardFormTarget,
+          limit: boardFormLimit,
+          reviewer: boardFormReviewer,
+          columns,
+        });
+        notify.success({ title: 'Đã cập nhật bảng Kanban' });
+      } else {
+        const res = await fetch('/api/auth/open-app/kanban/boards', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspaceId,
+            role: userRole,
+            userEmail,
+            action: 'create',
+            name: trimmedName,
+            description: boardFormDesc.trim(),
+            sectionType: boardFormType.trim() || 'Product Sprint',
+            tableStatus: boardFormStatus,
+            target: boardFormTarget,
+            limit: boardFormLimit,
+            reviewer: boardFormReviewer || creatorName,
+            columns,
+          }),
+        });
+        const data = await res.json();
+        if (data?.board) {
+          await fetchBoardsList();
+          notify.success({ title: 'Đã tạo bảng Kanban mới' });
         }
-        return next;
-      });
+      }
+      setBoardModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      notify.error({ title: 'Không thể lưu bảng Kanban' });
+    }
+  }, [
+    boardFormName,
+    boardFormColumns,
+    boardFormDesc,
+    boardFormType,
+    boardFormStatus,
+    boardFormTarget,
+    boardFormLimit,
+    boardFormReviewer,
+    creatorName,
+    editingBoardId,
+    handlePatchBoardMeta,
+    workspaceId,
+    userRole,
+    userEmail,
+    fetchBoardsList,
+  ]);
+
+  const handleDuplicateBoard = useCallback(
+    async (board: KanbanBoardSummary) => {
+      try {
+        const detailRes = await fetch(
+          `/api/auth/open-app/kanban/boards/${encodeURIComponent(board.id)}?workspaceId=${encodeURIComponent(workspaceId)}`
+        );
+        const detailData = await detailRes.json();
+        const sourceCards: KanbanCardItem[] = detailData?.board?.cards ?? [];
+
+        await fetch('/api/auth/open-app/kanban/boards', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspaceId,
+            role: userRole,
+            userEmail,
+            action: 'create',
+            name: `${board.name} (Bản sao)`,
+            description: board.description,
+            sectionType: board.sectionType,
+            tableStatus: board.tableStatus,
+            target: board.target,
+            limit: board.limit,
+            reviewer: creatorName,
+            columns: board.columns,
+            cards: sourceCards.map((c, idx) => ({
+              ...c,
+              id: `dup-${Date.now()}-${idx}`,
+            })),
+          }),
+        });
+        await fetchBoardsList();
+        notify.success({ title: 'Đã nhân bản bảng Kanban' });
+      } catch (err) {
+        console.error(err);
+      }
     },
-    [harnessStorageKey]
+    [workspaceId, userRole, userEmail, creatorName, fetchBoardsList]
   );
 
-  const filteredBotItems = useMemo(() => {
-    return botItems.filter(item => {
-      if (botTypeFilter === 'MAIN' && item.type === 'Testcase') {
+  const handleDeleteBoards = useCallback(
+    async (boardIds: string[]) => {
+      if (boardIds.length === 0) return;
+      try {
+        const res = await fetch('/api/auth/open-app/kanban/boards', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspaceId,
+            action: 'delete',
+            boardIds,
+          }),
+        });
+        const data = await res.json();
+        if (Array.isArray(data?.boards)) {
+          setBoards(data.boards);
+          setSelectedRowIds(new Set());
+          notify.success({
+            title: `Đã xóa ${boardIds.length} bảng Kanban`,
+          });
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    [workspaceId]
+  );
+
+  // Add / Remove column in Detail Kanban
+  const handleAddColumn = useCallback(async () => {
+    if (!boardDetail) return;
+    const col = newColumnName.trim();
+    if (!col) return;
+    if (boardDetail.columns.includes(col)) {
+      notify.error({ title: 'Cột này đã tồn tại trong bảng' });
+      return;
+    }
+    const nextCols = [...boardDetail.columns, col];
+    await handlePatchBoardMeta(boardDetail.id, { columns: nextCols });
+    setNewColumnName('');
+    setColumnModalOpen(false);
+    notify.success({ title: `Đã thêm cột "${col}"` });
+  }, [boardDetail, newColumnName, handlePatchBoardMeta]);
+
+  const handleDeleteColumn = useCallback(
+    async (colName: string) => {
+      if (!boardDetail) return;
+      if (boardDetail.columns.length <= 1) {
+        notify.error({ title: 'Bảng Kanban cần tối thiểu 1 cột' });
+        return;
+      }
+      const nextCols = boardDetail.columns.filter(c => c !== colName);
+      await handlePatchBoardMeta(boardDetail.id, { columns: nextCols });
+    },
+    [boardDetail, handlePatchBoardMeta]
+  );
+
+  // Open Card Create / Detail Modal
+  const openCreateCardModal = useCallback(
+    (defaultColumn?: string) => {
+      if (!boardDetail) return;
+      const nextIndex = boardDetail.cards.length + 1;
+      setEditingCardId(null);
+      setCardFormCode(`AEV-${100 + nextIndex}`);
+      setCardFormTitle('');
+      setCardFormDesc('');
+      setCardFormCriteria('');
+      setCardFormStatus(defaultColumn || boardDetail.columns[0] || 'To Do');
+      setCardFormType('Task');
+      setCardFormPriority('Medium');
+      setCardFormAssignee(creatorName);
+      setCardFormDueDate(new Date().toISOString().slice(0, 10));
+      setCardFormProgress(0);
+      setCardFormSubtasks([
+        {
+          id: `sub-${Date.now()}-1`,
+          title: 'Thực hiện & kiểm tra tiêu chí nghiệm thu',
+          done: false,
+        },
+      ]);
+      setNewSubtaskTitle('');
+      setCardModalOpen(true);
+    },
+    [boardDetail, creatorName]
+  );
+
+  const openEditCardModal = useCallback(
+    (card: KanbanCardItem) => {
+      setEditingCardId(card.id);
+      setCardFormCode(card.code || 'TASK-01');
+      setCardFormTitle(card.title);
+      setCardFormDesc(card.description || '');
+      setCardFormCriteria(card.acceptanceCriteria || '');
+      setCardFormStatus(card.status);
+      setCardFormType(card.type || 'Task');
+      setCardFormPriority(card.priority || 'Medium');
+      setCardFormAssignee(card.assignee || creatorName);
+      setCardFormDueDate(card.dueDate || '2026-10-20');
+      setCardFormProgress(card.progress ?? 0);
+      setCardFormSubtasks(card.subtasks ? [...card.subtasks] : []);
+      setNewSubtaskTitle('');
+      setCardModalOpen(true);
+    },
+    [creatorName]
+  );
+
+  const handleSaveCardModal = useCallback(async () => {
+    if (!boardDetail) return;
+    const trimmedTitle = cardFormTitle.trim();
+    if (!trimmedTitle) {
+      notify.error({ title: 'Vui lòng nhập tiêu đề thẻ công việc' });
+      return;
+    }
+    try {
+      const res = await fetch(
+        `/api/auth/open-app/kanban/boards/${encodeURIComponent(boardDetail.id)}`,
+        {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspaceId,
+            role: userRole,
+            userEmail,
+            action: 'upsert-card',
+            card: {
+              id: editingCardId || undefined,
+              code: cardFormCode.trim() || 'TASK-01',
+              title: trimmedTitle,
+              description: cardFormDesc.trim(),
+              acceptanceCriteria: cardFormCriteria.trim(),
+              status: cardFormStatus,
+              type: cardFormType,
+              priority: cardFormPriority,
+              assignee: cardFormAssignee,
+              dueDate: cardFormDueDate,
+              progress: cardFormProgress,
+              subtasks: cardFormSubtasks,
+            },
+          }),
+        }
+      );
+      const data = await res.json();
+      if (data?.board) {
+        const updated = data.board as KanbanBoardDetail;
+        setBoardDetail(updated);
+        writeCachedKanbanDetail(workspaceId, boardDetail.id, updated);
+        if (Array.isArray(data?.boards)) {
+          setBoards(data.boards);
+          writeCachedKanbanBoards(workspaceId, userRole, data.boards);
+        }
+        setCardModalOpen(false);
+        notify.success({
+          title: editingCardId
+            ? 'Đã lưu chi tiết thẻ công việc'
+            : 'Đã thêm thẻ công việc mới',
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      notify.error({ title: 'Không thể lưu thẻ công việc' });
+    }
+  }, [
+    boardDetail,
+    cardFormTitle,
+    workspaceId,
+    userRole,
+    userEmail,
+    editingCardId,
+    cardFormCode,
+    cardFormDesc,
+    cardFormCriteria,
+    cardFormStatus,
+    cardFormType,
+    cardFormPriority,
+    cardFormAssignee,
+    cardFormDueDate,
+    cardFormProgress,
+    cardFormSubtasks,
+  ]);
+
+  const handleQuickMoveCard = useCallback(
+    async (cardId: string, nextColumn: string) => {
+      if (!boardDetail) return;
+      try {
+        const res = await fetch(
+          `/api/auth/open-app/kanban/boards/${encodeURIComponent(boardDetail.id)}`,
+          {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workspaceId,
+              role: userRole,
+              userEmail,
+              action: 'upsert-card',
+              card: {
+                id: cardId,
+                status: nextColumn,
+              },
+            }),
+          }
+        );
+        const data = await res.json();
+        if (data?.board) {
+          const updated = data.board as KanbanBoardDetail;
+          setBoardDetail(updated);
+          writeCachedKanbanDetail(workspaceId, boardDetail.id, updated);
+          if (Array.isArray(data?.boards)) {
+            setBoards(data.boards);
+            writeCachedKanbanBoards(workspaceId, userRole, data.boards);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    [boardDetail, workspaceId, userRole, userEmail]
+  );
+
+  const handleDeleteCard = useCallback(
+    async (cardId: string) => {
+      if (!boardDetail) return;
+      try {
+        const res = await fetch(
+          `/api/auth/open-app/kanban/boards/${encodeURIComponent(boardDetail.id)}`,
+          {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workspaceId,
+              role: userRole,
+              userEmail,
+              action: 'delete-card',
+              cardId,
+            }),
+          }
+        );
+        const data = await res.json();
+        if (data?.board) {
+          const updated = data.board as KanbanBoardDetail;
+          setBoardDetail(updated);
+          writeCachedKanbanDetail(workspaceId, boardDetail.id, updated);
+          if (Array.isArray(data?.boards)) {
+            setBoards(data.boards);
+            writeCachedKanbanBoards(workspaceId, userRole, data.boards);
+          }
+          setCardModalOpen(false);
+          notify.success({ title: 'Đã xóa thẻ công việc' });
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    [boardDetail, workspaceId, userRole, userEmail]
+  );
+
+  // Filtered boards for Level 1 Table
+  const filteredBoards = useMemo(() => {
+    const q = listSearch.trim().toLowerCase();
+    if (!q) return boards;
+    return boards.filter(
+      b =>
+        b.name.toLowerCase().includes(q) ||
+        b.description.toLowerCase().includes(q) ||
+        b.sectionType.toLowerCase().includes(q) ||
+        b.reviewer.toLowerCase().includes(q)
+    );
+  }, [boards, listSearch]);
+
+  const totalBoardPages = Math.max(
+    1,
+    Math.ceil(filteredBoards.length / boardPageSize)
+  );
+  const safeBoardPage = Math.min(boardPage, totalBoardPages);
+  const paginatedBoards = useMemo(() => {
+    const start = (safeBoardPage - 1) * boardPageSize;
+    return filteredBoards.slice(start, start + boardPageSize);
+  }, [filteredBoards, safeBoardPage, boardPageSize]);
+  const boardStartIdx =
+    filteredBoards.length === 0 ? 0 : (safeBoardPage - 1) * boardPageSize + 1;
+  const boardEndIdx = Math.min(
+    filteredBoards.length,
+    safeBoardPage * boardPageSize
+  );
+
+  // Filtered cards for Level 2 Detail Kanban
+  const filteredCards = useMemo(() => {
+    if (!boardDetail) return [];
+    const q = cardSearch.trim().toLowerCase();
+    return boardDetail.cards.filter(card => {
+      if (priorityFilter !== 'ALL' && card.priority !== priorityFilter) {
         return false;
       }
-      if (
-        botTypeFilter !== 'ALL' &&
-        botTypeFilter !== 'MAIN' &&
-        item.type !== botTypeFilter
-      ) {
+      if (assigneeFilter !== 'ALL' && card.assignee !== assigneeFilter) {
         return false;
       }
-      if (
-        botProfileFilter !== 'ALL' &&
-        normalizeProfileName(item.assigned_to_profile) !== botProfileFilter
-      ) {
-        return false;
-      }
-      if (botSearchQuery.trim()) {
-        const q = botSearchQuery.trim().toLowerCase();
-        const matchTitle = item.title.toLowerCase().includes(q);
-        const matchId = `#${item.id}`.includes(q) || String(item.id) === q;
-        const matchProfile = (item.assigned_to_profile || '')
-          .toLowerCase()
-          .includes(q);
-        return matchTitle || matchId || matchProfile;
+      if (q) {
+        const hay =
+          `${card.code} ${card.title} ${card.description} ${card.assignee}`.toLowerCase();
+        if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [botItems, botProfileFilter, botSearchQuery, botTypeFilter]);
+  }, [boardDetail, cardSearch, priorityFilter, assigneeFilter]);
 
-  const botColumns = useMemo(() => {
-    return botGroupBy === 'state'
-      ? [...HARNESS_STATES]
-      : [...ALLOWED_BOT_PROFILES];
-  }, [botGroupBy]);
-
-  const handleBotDropOnColumn = useCallback(
-    (targetColumn: string) => {
-      if (draggedBotItemId === null) return;
-      const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-      updateBotItems(prev =>
-        prev.map(item => {
-          if (item.id !== draggedBotItemId) return item;
-          return botGroupBy === 'state'
-            ? { ...item, state: targetColumn, updated_at: now }
-            : {
-                ...item,
-                assigned_to_profile: targetColumn,
-                updated_at: now,
-              };
-        })
-      );
-      setDraggedBotItemId(null);
-      setDragOverBotCol(null);
-    },
-    [botGroupBy, draggedBotItemId, updateBotItems]
+  const totalCardPages = Math.max(
+    1,
+    Math.ceil(filteredCards.length / cardPageSize)
+  );
+  const safeCardPage = Math.min(cardPage, totalCardPages);
+  const paginatedCards = useMemo(() => {
+    const start = (safeCardPage - 1) * cardPageSize;
+    return filteredCards.slice(start, start + cardPageSize);
+  }, [filteredCards, safeCardPage, cardPageSize]);
+  const cardStartIdx =
+    filteredCards.length === 0 ? 0 : (safeCardPage - 1) * cardPageSize + 1;
+  const cardEndIdx = Math.min(
+    filteredCards.length,
+    safeCardPage * cardPageSize
   );
 
-  const handleCreateBotTask = useCallback(() => {
-    const trimmed = newBotTaskTitle.trim();
-    if (!trimmed) return;
-    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    updateBotItems(prev => {
-      const maxId = prev.reduce((acc, it) => Math.max(acc, it.id), 313);
-      const nextItem: HarnessWorkItem = {
-        id: maxId + 1,
-        title: trimmed,
-        type: newBotTaskType,
-        state: newBotTaskState,
-        priority: newBotTaskPriority,
-        assigned_to_profile: newBotTaskProfile,
-        created_by_profile: 'Supervisor',
-        updated_at: now,
-      };
-      return [nextItem, ...prev];
-    });
-    setNewBotTaskTitle('');
-    setNewBotTaskModalOpen(false);
-    notify.success({
-      title: 'Đã tạo Task mới cho Bot',
-      message: `Đã giao "${trimmed}" cho profile ${newBotTaskProfile}.`,
-    });
-  }, [
-    newBotTaskPriority,
-    newBotTaskProfile,
-    newBotTaskState,
-    newBotTaskTitle,
-    newBotTaskType,
-    updateBotItems,
-  ]);
-
-  // ========================================================================
-  // PERSISTED BOT BOARD ROWS & PERSONAL BOARD ROWS FOR SHADCN TABLE
-  // ========================================================================
-  const botBoardsStorageKey = `aevum_bot_boards_v2_${workspaceId}`;
-  const [botBoards, setBotBoards] = useState<BotBoardDefinition[]>(() => {
-    try {
-      const saved = localStorage.getItem(botBoardsStorageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved) as BotBoardDefinition[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error(e);
+  const uniqueAssignees = useMemo(() => {
+    if (!boardDetail) return [];
+    const set = new Set<string>();
+    for (const c of boardDetail.cards) {
+      if (c.assignee) set.add(c.assignee);
     }
-    return DEFAULT_BOT_HARNESS_BOARDS;
-  });
+    return Array.from(set);
+  }, [boardDetail]);
 
-  const updateBotBoards = useCallback(
-    (updater: (prev: BotBoardDefinition[]) => BotBoardDefinition[]) => {
-      setBotBoards(prev => {
-        const next = updater(prev);
-        try {
-          localStorage.setItem(botBoardsStorageKey, JSON.stringify(next));
-        } catch (e) {
-          console.error(e);
-        }
-        return next;
-      });
-    },
-    [botBoardsStorageKey]
-  );
+  const allSelected =
+    paginatedBoards.length > 0 &&
+    paginatedBoards.every(b => selectedRowIds.has(b.id));
 
-  const personalStorageKey = `aevum_personal_boards_v2_${workspaceId}`;
-  const [personalBoards, setPersonalBoards] = useState<PersonalBoard[]>(() => {
-    try {
-      const saved = localStorage.getItem(personalStorageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved) as PersonalBoard[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return getDefaultPersonalBoards();
-  });
-
-  const [personalViewMode, setPersonalViewMode] = useState<'kanban' | 'table'>(
-    'kanban'
-  );
-  const [personalSearch, setPersonalSearch] = useState('');
-  const [draggedPersonalCardId, setDraggedPersonalCardId] = useState<
-    string | null
-  >(null);
-  const [dragOverPersonalCol, setDragOverPersonalCol] = useState<string | null>(
-    null
-  );
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(personalStorageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved) as PersonalBoard[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setPersonalBoards(parsed);
-          return;
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    setPersonalBoards(getDefaultPersonalBoards());
-  }, [personalStorageKey]);
-
-  const updatePersonalBoards = useCallback(
-    (updater: (prev: PersonalBoard[]) => PersonalBoard[]) => {
-      setPersonalBoards(prev => {
-        const next = updater(prev);
-        try {
-          localStorage.setItem(personalStorageKey, JSON.stringify(next));
-        } catch (e) {
-          console.error(e);
-        }
-        return next;
-      });
-    },
-    [personalStorageKey]
-  );
-
-  const currentPersonalBoard = useMemo(() => {
-    if (selectedBoardTarget?.kind === 'personal') {
-      return (
-        personalBoards.find(b => b.id === selectedBoardTarget.boardId) ??
-        personalBoards[0]
-      );
-    }
-    return personalBoards[0];
-  }, [personalBoards, selectedBoardTarget]);
-
-  const currentBotBoardDef = useMemo(() => {
-    if (selectedBoardTarget?.kind === 'bot') {
-      return (
-        botBoards.find(b => b.id === selectedBoardTarget.boardId) ??
-        botBoards[0] ??
-        DEFAULT_BOT_HARNESS_BOARDS[0]
-      );
-    }
-    return botBoards[0] ?? DEFAULT_BOT_HARNESS_BOARDS[0];
-  }, [botBoards, selectedBoardTarget]);
-
-  const handleOpenBotBoard = useCallback((boardDef: BotBoardDefinition) => {
-    setBotTypeFilter(boardDef.defaultTypeFilter);
-    setBotGroupBy(boardDef.defaultGroupBy);
-    setBotViewMode('kanban');
-    setSelectedBoardTarget({ kind: 'bot', boardId: boardDef.id });
-  }, []);
-
-  const handleOpenPersonalBoard = useCallback((boardId: string) => {
-    setPersonalViewMode('kanban');
-    setSelectedBoardTarget({ kind: 'personal', boardId });
-  }, []);
-
-  // Open Modal for Creating a New Row
-  const handleOpenAddRowModal = useCallback(() => {
-    setEditingRowTarget(null);
-    setNewBoardNameInput('');
-    setNewBoardDescInput('');
-    setNewBoardSectionType('Narrative');
-    setNewBoardStatus('In Process');
-    setNewBoardTargetNum(18);
-    setNewBoardLimitNum(10);
-    setNewBoardReviewer('Assign reviewer');
-    setNewBoardCategory(listFilterCategory === 'bot' ? 'bot' : 'personal');
-    setNewBoardModalOpen(true);
-  }, [listFilterCategory]);
-
-  // Open Modal for Editing an Existing Row (Bot or Personal)
-  const handleOpenEditRowModal = useCallback(
-    (row: {
-      kind: 'bot' | 'personal';
-      id: string;
-      name: string;
-      description: string;
-      sectionType: string;
-      tableStatus: TableRowStatus;
-      target: number;
-      limit: number;
-      reviewer: string;
-    }) => {
-      setEditingRowTarget({ kind: row.kind, id: row.id });
-      setNewBoardNameInput(row.name);
-      setNewBoardDescInput(row.description);
-      setNewBoardSectionType(row.sectionType);
-      setNewBoardStatus(row.tableStatus);
-      setNewBoardTargetNum(row.target);
-      setNewBoardLimitNum(row.limit);
-      setNewBoardReviewer(row.reviewer);
-      setNewBoardCategory(row.kind);
-      setNewBoardModalOpen(true);
-      setOpenMenuRowId(null);
-    },
-    []
-  );
-
-  // Submit Add or Edit Row in the Shadcn Table
-  const handleCreatePersonalBoardSubmit = useCallback(() => {
-    const trimmed = newBoardNameInput.trim();
-    if (!trimmed) return;
-
-    if (editingRowTarget) {
-      if (editingRowTarget.kind === 'bot') {
-        updateBotBoards(prev =>
-          prev.map(b =>
-            b.id === editingRowTarget.id
-              ? {
-                  ...b,
-                  name: trimmed,
-                  description: newBoardDescInput.trim() || b.description,
-                  sectionType: newBoardSectionType.trim() || 'SLPC Harness',
-                  tableStatus: newBoardStatus,
-                  target: Number(newBoardTargetNum) || 0,
-                  limit: Number(newBoardLimitNum) || 0,
-                  reviewer: newBoardReviewer,
-                }
-              : b
-          )
-        );
-      } else {
-        updatePersonalBoards(prev =>
-          prev.map(b =>
-            b.id === editingRowTarget.id
-              ? {
-                  ...b,
-                  name: trimmed,
-                  description: newBoardDescInput.trim() || b.description,
-                  sectionType: newBoardSectionType.trim() || 'Narrative',
-                  tableStatus: newBoardStatus,
-                  target: Number(newBoardTargetNum) || 0,
-                  limit: Number(newBoardLimitNum) || 0,
-                  reviewer: newBoardReviewer,
-                }
-              : b
-          )
-        );
-      }
-      setNewBoardModalOpen(false);
-      setEditingRowTarget(null);
-      notify.success({
-        title: 'Đã cập nhật dòng dữ liệu',
-        message: `Đã lưu thay đổi cho "${trimmed}".`,
-      });
-      return;
-    }
-
-    if (newBoardCategory === 'bot' && canViewBotHarnessBoard) {
-      const newBotRow: BotBoardDefinition = {
-        id: `bot-custom-${Date.now()}`,
-        name: trimmed,
-        description:
-          newBoardDescInput.trim() || 'Bảng điều phối công việc Bot / Harness',
-        sectionType: newBoardSectionType.trim() || 'SLPC Harness',
-        tableStatus: newBoardStatus,
-        target: Number(newBoardTargetNum) || 20,
-        limit: Number(newBoardLimitNum) || 10,
-        reviewer:
-          newBoardReviewer === 'Assign reviewer'
-            ? 'Supervisor'
-            : newBoardReviewer,
-        defaultTypeFilter: 'MAIN',
-        defaultGroupBy: 'state',
-      };
-      updateBotBoards(prev => [newBotRow, ...prev]);
-      setNewBoardModalOpen(false);
-      notify.success({
-        title: 'Đã thêm mục Bot / Harness mới',
-        message: `Đã thêm "${newBotRow.name}" vào bảng.`,
-      });
-      return;
-    }
-
-    const newBoard: PersonalBoard = {
-      id: `board-${Date.now()}`,
-      name: trimmed,
-      description:
-        newBoardDescInput.trim() ||
-        `Bảng Kanban quản lý công việc cho "${trimmed}"`,
-      sectionType: newBoardSectionType.trim() || 'Narrative',
-      tableStatus: newBoardStatus,
-      target: Number(newBoardTargetNum) || 18,
-      limit: Number(newBoardLimitNum) || 10,
-      reviewer: newBoardReviewer,
-      category: 'personal',
-      updatedAt: new Date().toISOString().slice(0, 10),
-      columns: ['To Do', 'In Progress', 'In Review', 'Done'],
-      cards: buildDefaultCardsForSection(trimmed),
-    };
-    updatePersonalBoards(prev => [newBoard, ...prev]);
-    setNewBoardModalOpen(false);
-    notify.success({
-      title: 'Đã thêm mục mới vào Table',
-      message: `Click vào "${newBoard.name}" để mở Kanban Board.`,
-    });
-  }, [
-    canViewBotHarnessBoard,
-    editingRowTarget,
-    newBoardCategory,
-    newBoardDescInput,
-    newBoardLimitNum,
-    newBoardNameInput,
-    newBoardReviewer,
-    newBoardSectionType,
-    newBoardStatus,
-    newBoardTargetNum,
-    updateBotBoards,
-    updatePersonalBoards,
-  ]);
-
-  // Inline Update for any Row in the Shadcn Table
-  const handleInlineUpdateRow = useCallback(
-    (
-      kind: 'bot' | 'personal',
-      id: string,
-      patch: Partial<{
-        name: string;
-        sectionType: string;
-        tableStatus: TableRowStatus;
-        target: number;
-        limit: number;
-        reviewer: string;
-      }>
-    ) => {
-      if (kind === 'bot') {
-        updateBotBoards(prev =>
-          prev.map(b => (b.id === id ? { ...b, ...patch } : b))
-        );
-      } else {
-        updatePersonalBoards(prev =>
-          prev.map(b => (b.id === id ? { ...b, ...patch } : b))
-        );
-      }
-    },
-    [updateBotBoards, updatePersonalBoards]
-  );
-
-  // Duplicate Row in the Shadcn Table
-  const handleDuplicateRow = useCallback(
-    (kind: 'bot' | 'personal', id: string) => {
-      if (kind === 'bot') {
-        const found = botBoards.find(b => b.id === id);
-        if (!found) return;
-        const copy: BotBoardDefinition = {
-          ...found,
-          id: `bot-copy-${Date.now()}`,
-          name: `${found.name} (Copy)`,
-        };
-        updateBotBoards(prev => [copy, ...prev]);
-      } else {
-        const found = personalBoards.find(b => b.id === id);
-        if (!found) return;
-        const copy: PersonalBoard = {
-          ...found,
-          id: `board-copy-${Date.now()}`,
-          name: `${found.name} (Copy)`,
-        };
-        updatePersonalBoards(prev => [copy, ...prev]);
-      }
-      setOpenMenuRowId(null);
-      notify.success({ title: 'Đã nhân bản dòng dữ liệu' });
-    },
-    [botBoards, personalBoards, updateBotBoards, updatePersonalBoards]
-  );
-
-  // Delete single Row in the Shadcn Table
-  const handleDeleteTableRow = useCallback(
-    (kind: 'bot' | 'personal', id: string) => {
-      if (kind === 'bot') {
-        updateBotBoards(prev => prev.filter(b => b.id !== id));
-      } else {
-        updatePersonalBoards(prev => prev.filter(b => b.id !== id));
-      }
+  const toggleSelectAll = useCallback(() => {
+    if (allSelected) {
       setSelectedRowIds(prev => {
         const next = new Set(prev);
-        next.delete(id);
+        for (const b of paginatedBoards) next.delete(b.id);
         return next;
       });
-      setOpenMenuRowId(null);
-      notify.success({ title: 'Đã xóa mục khỏi bảng' });
-    },
-    [updateBotBoards, updatePersonalBoards]
-  );
-
-  // Bulk Delete Selected Rows
-  const handleBulkDeleteSelected = useCallback(() => {
-    if (selectedRowIds.size === 0) return;
-    const count = selectedRowIds.size;
-    updateBotBoards(prev => prev.filter(b => !selectedRowIds.has(b.id)));
-    updatePersonalBoards(prev => prev.filter(b => !selectedRowIds.has(b.id)));
-    setSelectedRowIds(new Set());
-    notify.success({
-      title: `Đã xóa ${count} mục đã chọn`,
-    });
-  }, [selectedRowIds, updateBotBoards, updatePersonalBoards]);
-
-  const handleAddPersonalColumn = useCallback(() => {
-    if (!currentPersonalBoard) return;
-    const colName = window.prompt('Nhập tên cột trạng thái mới:', 'Backlog');
-    if (!colName || !colName.trim()) return;
-    const trimmed = colName.trim();
-    if (currentPersonalBoard.columns.includes(trimmed)) return;
-    updatePersonalBoards(prev =>
-      prev.map(b =>
-        b.id === currentPersonalBoard.id
-          ? { ...b, columns: [...b.columns, trimmed] }
-          : b
-      )
-    );
-  }, [currentPersonalBoard, updatePersonalBoards]);
-
-  const handleAddPersonalCard = useCallback(
-    (statusCol: string) => {
-      if (!currentPersonalBoard) return;
-      const newCard: PersonalTaskCard = {
-        id: `card-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        title: 'Thẻ công việc mới (Bấm để sửa)',
-        status: statusCol,
-        priority: 'Medium',
-        dueDate: new Date().toISOString().slice(0, 10),
-        progress: 0,
-      };
-      updatePersonalBoards(prev =>
-        prev.map(b =>
-          b.id === currentPersonalBoard.id
-            ? { ...b, cards: [...b.cards, newCard] }
-            : b
-        )
-      );
-    },
-    [currentPersonalBoard, updatePersonalBoards]
-  );
-
-  const handleUpdatePersonalCard = useCallback(
-    (cardId: string, patch: Partial<PersonalTaskCard>) => {
-      if (!currentPersonalBoard) return;
-      updatePersonalBoards(prev =>
-        prev.map(b =>
-          b.id === currentPersonalBoard.id
-            ? {
-                ...b,
-                cards: b.cards.map(c =>
-                  c.id === cardId ? { ...c, ...patch } : c
-                ),
-              }
-            : b
-        )
-      );
-    },
-    [currentPersonalBoard, updatePersonalBoards]
-  );
-
-  const handleDeletePersonalCard = useCallback(
-    (cardId: string) => {
-      if (!currentPersonalBoard) return;
-      updatePersonalBoards(prev =>
-        prev.map(b =>
-          b.id === currentPersonalBoard.id
-            ? { ...b, cards: b.cards.filter(c => c.id !== cardId) }
-            : b
-        )
-      );
-    },
-    [currentPersonalBoard, updatePersonalBoards]
-  );
-
-  const handleOpenInBlockSuiteDoc = useCallback(() => {
-    if (!currentPersonalBoard) return;
-    if (currentPersonalBoard.linkedDocId) {
-      const existing = docsService.list.doc$(
-        currentPersonalBoard.linkedDocId
-      ).value;
-      if (existing && !existing.trash$.value) {
-        workbench.openDoc(currentPersonalBoard.linkedDocId);
-        return;
-      }
-    }
-    const newDoc = docsService.createDoc({
-      title: currentPersonalBoard.name,
-      primaryMode: 'page',
-    });
-    docsService.list.doc$(newDoc.id).value?.setProperty('fullWidth', true);
-    updatePersonalBoards(prev =>
-      prev.map(b =>
-        b.id === currentPersonalBoard.id ? { ...b, linkedDocId: newDoc.id } : b
-      )
-    );
-    workbench.openDoc(newDoc.id);
-  }, [currentPersonalBoard, docsService, updatePersonalBoards, workbench]);
-
-  const filteredPersonalCards = useMemo(() => {
-    if (!currentPersonalBoard) return [];
-    if (!personalSearch.trim()) return currentPersonalBoard.cards;
-    const q = personalSearch.trim().toLowerCase();
-    return currentPersonalBoard.cards.filter(
-      c =>
-        c.title.toLowerCase().includes(q) ||
-        c.status.toLowerCase().includes(q) ||
-        c.priority.toLowerCase().includes(q)
-    );
-  }, [currentPersonalBoard, personalSearch]);
-
-  // Unified Table Rows for Level 1 Shadcn Data Table
-  const unifiedTableRows = useMemo(() => {
-    const q = listSearchQuery.trim().toLowerCase();
-    const rows: Array<{
-      kind: 'bot' | 'personal';
-      id: string;
-      name: string;
-      description: string;
-      sectionType: string;
-      tableStatus: TableRowStatus;
-      target: number;
-      limit: number;
-      reviewer: string;
-      botDef?: BotBoardDefinition;
-    }> = [];
-
-    if (canViewBotHarnessBoard && listFilterCategory !== 'personal') {
-      for (const b of botBoards) {
-        if (
-          !q ||
-          b.name.toLowerCase().includes(q) ||
-          b.sectionType.toLowerCase().includes(q) ||
-          b.reviewer.toLowerCase().includes(q)
-        ) {
-          rows.push({
-            kind: 'bot',
-            id: b.id,
-            name: b.name,
-            description: b.description,
-            sectionType: b.sectionType || 'SLPC Harness',
-            tableStatus: b.tableStatus || 'In Process',
-            target: b.target ?? 41,
-            limit: b.limit ?? 20,
-            reviewer: b.reviewer || 'Supervisor',
-            botDef: b,
-          });
-        }
-      }
-    }
-
-    if (listFilterCategory !== 'bot') {
-      for (const p of personalBoards) {
-        const sType = p.sectionType || 'Narrative';
-        const rev = p.reviewer || 'Assign reviewer';
-        if (
-          !q ||
-          p.name.toLowerCase().includes(q) ||
-          sType.toLowerCase().includes(q) ||
-          rev.toLowerCase().includes(q)
-        ) {
-          rows.push({
-            kind: 'personal',
-            id: p.id,
-            name: p.name,
-            description: p.description ?? '',
-            sectionType: sType,
-            tableStatus: p.tableStatus || 'In Process',
-            target: p.target ?? p.cards.length,
-            limit: p.limit ?? 15,
-            reviewer: rev,
-          });
-        }
-      }
-    }
-
-    return rows;
-  }, [
-    botBoards,
-    canViewBotHarnessBoard,
-    listFilterCategory,
-    listSearchQuery,
-    personalBoards,
-  ]);
-
-  const allVisibleSelected =
-    unifiedTableRows.length > 0 &&
-    unifiedTableRows.every(r => selectedRowIds.has(r.id));
-
-  const handleToggleSelectAll = useCallback(() => {
-    if (allVisibleSelected) {
-      setSelectedRowIds(new Set());
     } else {
-      setSelectedRowIds(new Set(unifiedTableRows.map(r => r.id)));
+      setSelectedRowIds(prev => {
+        const next = new Set(prev);
+        for (const b of paginatedBoards) next.add(b.id);
+        return next;
+      });
     }
-  }, [allVisibleSelected, unifiedTableRows]);
+  }, [allSelected, paginatedBoards]);
 
-  const handleToggleSelectRow = useCallback((id: string) => {
+  const toggleSelectRow = useCallback((id: string) => {
     setSelectedRowIds(prev => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }, []);
 
-  const handleCycleRowStatus = useCallback(
-    (kind: 'bot' | 'personal', id: string, current: TableRowStatus) => {
-      const order: TableRowStatus[] = ['In Process', 'Done', 'Planned'];
-      const nextStatus = order[(order.indexOf(current) + 1) % order.length];
-      handleInlineUpdateRow(kind, id, { tableStatus: nextStatus });
-    },
-    [handleInlineUpdateRow]
+  // Reusable options for KanbanSelect
+  const statusSelectOptions = useMemo<Array<SelectOption<TableRowStatus>>>(
+    () =>
+      TABLE_STATUS_OPTIONS.map(st => ({
+        value: st,
+        label: st,
+        prefix: (
+          <span
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '999px',
+              backgroundColor: getStatusDotColor(st),
+            }}
+          />
+        ),
+      })),
+    []
   );
 
-  const handleDropTableRow = useCallback(
-    (targetRowId: string) => {
-      if (!draggedTableRowId || draggedTableRowId === targetRowId) {
-        setDraggedTableRowId(null);
-        return;
-      }
-      updatePersonalBoards(prev => {
-        const fromIdx = prev.findIndex(b => b.id === draggedTableRowId);
-        const toIdx = prev.findIndex(b => b.id === targetRowId);
-        if (fromIdx === -1 || toIdx === -1) return prev;
-        const copy = [...prev];
-        const [moved] = copy.splice(fromIdx, 1);
-        copy.splice(toIdx, 0, moved);
-        return copy;
-      });
-      updateBotBoards(prev => {
-        const fromIdx = prev.findIndex(b => b.id === draggedTableRowId);
-        const toIdx = prev.findIndex(b => b.id === targetRowId);
-        if (fromIdx === -1 || toIdx === -1) return prev;
-        const copy = [...prev];
-        const [moved] = copy.splice(fromIdx, 1);
-        copy.splice(toIdx, 0, moved);
-        return copy;
-      });
-      setDraggedTableRowId(null);
-    },
-    [draggedTableRowId, updateBotBoards, updatePersonalBoards]
+  const reviewerSelectOptions = useMemo<Array<SelectOption<string>>>(
+    () =>
+      reviewerOptions.map(r => ({
+        value: r,
+        label: r,
+      })),
+    [reviewerOptions]
+  );
+
+  const sectionTypeSelectOptions = useMemo<Array<SelectOption<string>>>(
+    () =>
+      SECTION_TYPE_OPTIONS.map(t => ({
+        value: t,
+        label: t,
+      })),
+    []
+  );
+
+  const priorityFilterOptions = useMemo<Array<SelectOption<string>>>(
+    () => [
+      { value: 'ALL', label: 'Tất cả mức ưu tiên' },
+      ...CARD_PRIORITIES.map(p => ({
+        value: p,
+        label: `Ưu tiên: ${p}`,
+        prefix: (
+          <span
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '999px',
+              backgroundColor: getPriorityTone(p).dot,
+            }}
+          />
+        ),
+      })),
+    ],
+    []
+  );
+
+  const assigneeFilterOptions = useMemo<Array<SelectOption<string>>>(
+    () => [
+      { value: 'ALL', label: 'Tất cả người phụ trách' },
+      ...uniqueAssignees.map(a => ({
+        value: a,
+        label: `Phụ trách: ${a}`,
+      })),
+    ],
+    [uniqueAssignees]
   );
 
   return (
     <>
       <ViewTitle
-        title={
-          selectedBoardTarget === null
-            ? 'Kanban'
-            : selectedBoardTarget.kind === 'bot'
-              ? currentBotBoardDef.name
-              : (currentPersonalBoard?.name ?? 'Kanban Board')
-        }
+        title={boardDetail ? `Kanban · ${boardDetail.name}` : 'Kanban'}
       />
       <ViewIcon icon="allDocs" />
       <ViewHeader>
         <div className={styles.headerBar}>
-          {/* Left Header: Either Table Overview Title or Back-to-Table Breadcrumb */}
-          {selectedBoardTarget === null ? (
-            <div className={styles.breadcrumbBar}>
-              <DatabaseTableViewIcon width={18} height={18} />
-              <span>
-                Quản lý Hạng mục & Bảng Kanban (Click vào mục để mở Kanban)
-              </span>
-            </div>
-          ) : (
-            <div className={styles.breadcrumbBar}>
-              <button
-                type="button"
-                data-testid="back-to-kanban-list"
-                className={styles.actionButton}
-                onClick={() => setSelectedBoardTarget(null)}
+          <div className={styles.breadcrumbBar}>
+            {activeBoardId ? (
+              <>
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  onClick={handleBackToList}
+                >
+                  <ArrowLeftSmallIcon width={14} height={14} />
+                  <span>Danh sách bảng</span>
+                </button>
+                <span
+                  style={{
+                    color: cssVarV2('text/secondary'),
+                    flexShrink: 0,
+                  }}
+                >
+                  /
+                </span>
+                <span
+                  style={{
+                    fontWeight: 600,
+                    color: cssVarV2('text/primary'),
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    minWidth: 0,
+                  }}
+                  title={boardDetail?.name || ''}
+                >
+                  {boardDetail?.name || 'Đang tải...'}
+                </span>
+                {boardDetail ? (
+                  <span
+                    className={styles.outlinePill}
+                    style={{ flexShrink: 0 }}
+                  >
+                    {boardDetail.sectionType}
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
               >
-                <ArrowLeftSmallIcon width={16} height={16} />
-                <span>Quay lại Bảng (Table)</span>
-              </button>
-              <span style={{ opacity: 0.4 }}>/</span>
-              <span>
-                {selectedBoardTarget.kind === 'bot'
-                  ? `🤖 ${currentBotBoardDef.name}`
-                  : `📋 ${currentPersonalBoard?.name ?? ''}`}
-              </span>
-              <span className={styles.outlinePill}>
-                {selectedBoardTarget.kind === 'bot'
-                  ? currentBotBoardDef.sectionType
-                  : currentPersonalBoard?.sectionType}
-              </span>
-            </div>
-          )}
+                <DatabaseKanbanViewIcon width={16} height={16} />
+                <span>Bảng Kanban</span>
+                <span className={styles.countBadge}>{boards.length}</span>
+              </div>
+            )}
+          </div>
 
-          {/* Right Header Controls: Admin Config & Add Section */}
           <div className={styles.toolbarGroup}>
-            {isOwnerAdmin && adminConfig.simulateStandardUser && (
-              <button
-                type="button"
-                className={styles.actionButton}
-                style={{
-                  borderColor: '#f59e0b',
-                  color: '#fbbf24',
-                }}
-                onClick={() =>
-                  saveAdminConfig({
-                    ...adminConfig,
-                    simulateStandardUser: false,
-                  })
-                }
-              >
-                👁️ Đang xem như User thường (Bấm để bật lại Admin)
-              </button>
+            {activeBoardId && boardDetail ? (
+              <>
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  onClick={() => openEditBoardModal(boardDetail)}
+                >
+                  <EditIcon width={14} height={14} />
+                  <span>Cấu hình bảng</span>
+                </button>
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  onClick={() => setColumnModalOpen(true)}
+                >
+                  <PlusIcon width={14} height={14} />
+                  <span>Thêm cột</span>
+                </button>
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  data-primary="true"
+                  onClick={() => openCreateCardModal()}
+                >
+                  <PlusIcon width={14} height={14} />
+                  <span>Thêm thẻ công việc</span>
+                </button>
+              </>
+            ) : (
+              <>
+                {userRole === 'admin' ? (
+                  <span
+                    className={styles.outlinePill}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      height: '28px',
+                      padding: '0 10px',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '999px',
+                        backgroundColor: '#10b981',
+                      }}
+                    />
+                    <span>Admin · Floci Harness</span>
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  onClick={() => void fetchBoardsList()}
+                  title="Làm mới danh sách từ API"
+                >
+                  <ResetIcon width={14} height={14} />
+                  <span>Làm mới</span>
+                </button>
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  data-primary="true"
+                  onClick={openCreateBoardModal}
+                >
+                  <PlusIcon width={14} height={14} />
+                  <span>Tạo bảng Kanban</span>
+                </button>
+              </>
             )}
-            {isOwnerAdmin && (
-              <button
-                type="button"
-                data-testid="kanban-admin-config-button"
-                className={styles.actionButton}
-                onClick={() => setAdminModalOpen(true)}
-              >
-                <SettingsIcon width={15} height={15} />
-                <span>Admin Config</span>
-              </button>
-            )}
-            <button
-              type="button"
-              data-primary="true"
-              data-testid="kanban-add-section-btn"
-              className={styles.actionButton}
-              onClick={handleOpenAddRowModal}
-            >
-              <PlusIcon width={14} height={14} />
-              <span>Add Section / Thêm mới</span>
-            </button>
           </div>
         </div>
       </ViewHeader>
 
       <ViewBody>
         <div className={styles.pageContainer}>
-          {/* ============================================================== */}
-          {/* LEVEL 1: SHADCN DASHBOARD-01 DATA TABLE (Add / Edit / Delete)  */}
-          {/* Click any row's Header to open its Kanban Board!               */}
-          {/* ============================================================== */}
-          {selectedBoardTarget === null ? (
-            <>
-              <div className={styles.toolbarContainer}>
-                <div className={styles.toolbarGroup}>
-                  <div className={styles.zoneTabsWrapper}>
-                    <button
-                      type="button"
-                      data-active={listFilterCategory === 'all'}
-                      className={styles.zoneTabButton}
-                      onClick={() => setListFilterCategory('all')}
+          {/* ========================================================= */}
+          {/* LEVEL 1: TABLE OF CREATED KANBAN BOARDS (API LIST)        */}
+          {/* ========================================================= */}
+          {!activeBoardId ? (
+            <div className={styles.contentArea}>
+              <div
+                style={{
+                  width: '100%',
+                  flex: 1,
+                  minHeight: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                }}
+              >
+                {/* Clean Top Filter Bar (All controls unified at 28px height) */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: 'relative',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                      }}
                     >
-                      <span>Outline (Tất cả)</span>
-                      <span className={styles.countBadge}>
-                        {(canViewBotHarnessBoard ? botBoards.length : 0) +
-                          personalBoards.length}
-                      </span>
-                    </button>
-                    {canViewBotHarnessBoard && (
+                      <SearchIcon
+                        width={14}
+                        height={14}
+                        style={{
+                          position: 'absolute',
+                          left: '9px',
+                          color: cssVarV2('text/secondary'),
+                          pointerEvents: 'none',
+                        }}
+                      />
+                      <input
+                        type="text"
+                        className={styles.controlInput}
+                        style={{ width: '260px', paddingLeft: '28px' }}
+                        placeholder="Tìm kiếm bảng Kanban..."
+                        value={listSearch}
+                        onChange={e => {
+                          setListSearch(e.target.value);
+                          setBoardPage(1);
+                        }}
+                      />
+                    </div>
+
+                    {selectedRowIds.size > 0 ? (
                       <button
                         type="button"
-                        data-active={listFilterCategory === 'bot'}
-                        className={styles.zoneTabButton}
-                        onClick={() => setListFilterCategory('bot')}
+                        className={styles.actionButton}
+                        style={{
+                          color: '#ef4444',
+                          borderColor: 'rgba(239, 68, 68, 0.35)',
+                        }}
+                        onClick={() =>
+                          void handleDeleteBoards(Array.from(selectedRowIds))
+                        }
                       >
-                        <span>🤖 Bot / Harness</span>
-                        <span className={styles.countBadge}>
-                          {botBoards.length}
-                        </span>
+                        <DeleteIcon width={14} height={14} />
+                        <span>Xóa {selectedRowIds.size} bảng đã chọn</span>
                       </button>
-                    )}
-                    <button
-                      type="button"
-                      data-active={listFilterCategory === 'personal'}
-                      className={styles.zoneTabButton}
-                      onClick={() => setListFilterCategory('personal')}
-                    >
-                      <span>👤 Cá nhân (Sections)</span>
-                      <span className={styles.countBadge}>
-                        {personalBoards.length}
-                      </span>
-                    </button>
+                    ) : null}
                   </div>
 
-                  <input
-                    type="text"
-                    placeholder="Tìm kiếm Header, Section Type, Reviewer..."
-                    className={styles.controlInput}
-                    style={{ minWidth: 240 }}
-                    value={listSearchQuery}
-                    onChange={e => setListSearchQuery(e.target.value)}
-                  />
-                </div>
-
-                <div className={styles.toolbarGroup}>
-                  {selectedRowIds.size > 0 && (
-                    <button
-                      type="button"
-                      data-testid="kanban-bulk-delete-btn"
-                      className={styles.actionButton}
-                      style={{
-                        borderColor: 'rgba(239, 68, 68, 0.5)',
-                        backgroundColor: 'rgba(239, 68, 68, 0.14)',
-                        color: '#f87171',
-                      }}
-                      onClick={handleBulkDeleteSelected}
-                    >
-                      <DeleteIcon width={14} height={14} />
-                      <span>Xóa ({selectedRowIds.size}) mục đã chọn</span>
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className={styles.actionButton}
-                    onClick={handleOpenAddRowModal}
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      color: cssVarV2('text/secondary'),
+                    }}
                   >
-                    <PlusIcon width={14} height={14} />
-                    <span>Add Section</span>
-                  </button>
+                    Click vào bất kỳ hàng nào để mở chi tiết bảng Kanban
+                  </div>
                 </div>
-              </div>
 
-              <div className={styles.contentArea}>
+                {/* Fixed-Height Shadcn Data Table + Sticky Header + Pinned Pagination */}
                 <div className={styles.shadcnTableContainer}>
-                  <table className={styles.shadcnTable}>
-                    <thead>
-                      <tr className={styles.shadcnTheadTr}>
-                        <th className={styles.shadcnTh} aria-label="Drag" />
-                        <th className={styles.shadcnTh}>
-                          <input
-                            type="checkbox"
-                            aria-label="Select all rows"
-                            className={styles.shadcnCheckbox}
-                            checked={allVisibleSelected}
-                            onChange={handleToggleSelectAll}
-                          />
-                        </th>
-                        <th className={styles.shadcnTh}>Header</th>
-                        <th className={styles.shadcnTh}>Section Type</th>
-                        <th className={styles.shadcnTh}>Status</th>
-                        <th
-                          className={styles.shadcnTh}
-                          style={{ textAlign: 'right', width: '90px' }}
-                        >
-                          Target
-                        </th>
-                        <th
-                          className={styles.shadcnTh}
-                          style={{ textAlign: 'right', width: '90px' }}
-                        >
-                          Limit
-                        </th>
-                        <th className={styles.shadcnTh}>Reviewer</th>
-                        <th className={styles.shadcnTh} aria-label="Actions" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {unifiedTableRows.map(row => {
-                        const isSelected = selectedRowIds.has(row.id);
-                        const isDragging = draggedTableRowId === row.id;
-                        const isUnassigned =
-                          !row.reviewer || row.reviewer === 'Assign reviewer';
-
-                        return (
-                          <tr
-                            key={row.id}
-                            data-testid={`kanban-table-row-${row.id}`}
-                            data-selected={isSelected}
-                            data-dragging={isDragging}
-                            className={styles.shadcnTr}
-                            draggable
-                            onDragStart={() => setDraggedTableRowId(row.id)}
-                            onDragOver={e => e.preventDefault()}
-                            onDrop={() => handleDropTableRow(row.id)}
+                  <div className={styles.shadcnTableScroll}>
+                    <table className={styles.shadcnTable}>
+                      <thead>
+                        <tr className={styles.shadcnTheadTr}>
+                          <th
+                            className={styles.shadcnTh}
+                            style={{ width: '36px' }}
                           >
-                            {/* 1. Six-dot Grip Handle */}
-                            <td className={styles.shadcnTd}>
-                              <span
-                                className={styles.gripHandle}
-                                title="Kéo thả để sắp xếp thứ tự dòng"
-                              >
-                                ⋮⋮
-                              </span>
-                            </td>
-
-                            {/* 2. Row Checkbox */}
-                            <td className={styles.shadcnTd}>
-                              <input
-                                type="checkbox"
-                                aria-label={`Select ${row.name}`}
-                                className={styles.shadcnCheckbox}
-                                checked={isSelected}
-                                onChange={() => handleToggleSelectRow(row.id)}
-                              />
-                            </td>
-
-                            {/* 3. Header (Click to Open Kanban Board!) */}
-                            <td className={styles.shadcnTd}>
-                              <button
-                                type="button"
-                                data-testid={`open-kanban-${row.id}`}
-                                className={styles.headerCellLink}
-                                title="Click để mở Bảng Kanban của mục này"
-                                onClick={() => {
-                                  if (row.kind === 'bot' && row.botDef) {
-                                    handleOpenBotBoard(row.botDef);
-                                  } else {
-                                    handleOpenPersonalBoard(row.id);
-                                  }
-                                }}
-                              >
-                                {row.kind === 'bot' && (
-                                  <span title="Bảng Bot / Harness">🤖</span>
-                                )}
-                                <span>{row.name}</span>
-                              </button>
-                            </td>
-
-                            {/* 4. Section Type (Rounded Outline Pill) */}
-                            <td className={styles.shadcnTd}>
-                              <span className={styles.outlinePill}>
-                                {row.sectionType}
-                              </span>
-                            </td>
-
-                            {/* 5. Status (Clickable Pill with Icon: Done / In Process / Planned) */}
-                            <td className={styles.shadcnTd}>
-                              <button
-                                type="button"
-                                title="Bấm để đổi trạng thái (In Process / Done / Planned)"
-                                className={styles.statusPillBtn}
-                                onClick={() =>
-                                  handleCycleRowStatus(
-                                    row.kind,
-                                    row.id,
-                                    row.tableStatus
-                                  )
-                                }
-                              >
-                                {row.tableStatus === 'Done' ? (
-                                  <span
-                                    style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      width: 14,
-                                      height: 14,
-                                      borderRadius: '50%',
-                                      backgroundColor: '#22c55e',
-                                      color: '#052e16',
-                                      fontSize: 9,
-                                      fontWeight: 800,
-                                    }}
-                                  >
-                                    ✓
-                                  </span>
-                                ) : row.tableStatus === 'In Process' ? (
-                                  <span
-                                    style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      color: '#a1a1aa',
-                                      fontSize: 12,
-                                    }}
-                                  >
-                                    ✻
-                                  </span>
-                                ) : (
-                                  <span
-                                    style={{
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      color: '#60a5fa',
-                                      fontSize: 11,
-                                    }}
-                                  >
-                                    ○
-                                  </span>
-                                )}
-                                <span>{row.tableStatus}</span>
-                              </button>
-                            </td>
-
-                            {/* 6. Target (Inline Editable Number Input) */}
+                            <input
+                              type="checkbox"
+                              className={styles.shadcnCheckbox}
+                              checked={allSelected}
+                              onChange={toggleSelectAll}
+                            />
+                          </th>
+                          <th className={styles.shadcnTh}>Tên bảng Kanban</th>
+                          <th className={styles.shadcnTh}>Phân loại</th>
+                          <th className={styles.shadcnTh}>Trạng thái</th>
+                          <th className={styles.shadcnTh}>
+                            Cấu trúc & Tiến độ
+                          </th>
+                          <th
+                            className={styles.shadcnTh}
+                            style={{ textAlign: 'right', width: '76px' }}
+                          >
+                            Target
+                          </th>
+                          <th
+                            className={styles.shadcnTh}
+                            style={{ textAlign: 'right', width: '76px' }}
+                          >
+                            Limit
+                          </th>
+                          <th className={styles.shadcnTh}>Reviewer</th>
+                          <th className={styles.shadcnTh} />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {loadingList ? (
+                          <tr>
                             <td
+                              colSpan={9}
                               className={styles.shadcnTd}
-                              style={{ textAlign: 'right' }}
+                              style={{
+                                height: '350px',
+                                borderBottom: 'none',
+                                textAlign: 'center',
+                                color: cssVarV2('text/secondary'),
+                              }}
                             >
-                              <input
-                                type="number"
-                                aria-label={`${row.name} Target`}
-                                className={styles.inlineNumInput}
-                                value={row.target}
-                                onChange={e =>
-                                  handleInlineUpdateRow(row.kind, row.id, {
-                                    target: Number(e.target.value) || 0,
-                                  })
-                                }
-                              />
-                            </td>
-
-                            {/* 7. Limit (Inline Editable Number Input) */}
-                            <td
-                              className={styles.shadcnTd}
-                              style={{ textAlign: 'right' }}
-                            >
-                              <input
-                                type="number"
-                                aria-label={`${row.name} Limit`}
-                                className={styles.inlineNumInput}
-                                value={row.limit}
-                                onChange={e =>
-                                  handleInlineUpdateRow(row.kind, row.id, {
-                                    limit: Number(e.target.value) || 0,
-                                  })
-                                }
-                              />
-                            </td>
-
-                            {/* 8. Reviewer (Inline Select Dropdown matching Shadcn screenshot) */}
-                            <td className={styles.shadcnTd}>
-                              <select
-                                aria-label={`${row.name} Reviewer`}
-                                data-Assigned={!isUnassigned}
-                                className={styles.reviewerSelect}
-                                style={
-                                  isUnassigned
-                                    ? { opacity: 0.75 }
-                                    : { fontWeight: 400 }
-                                }
-                                value={row.reviewer}
-                                onChange={e =>
-                                  handleInlineUpdateRow(row.kind, row.id, {
-                                    reviewer: e.target.value,
-                                  })
-                                }
-                              >
-                                {REVIEWER_OPTIONS.map(opt => (
-                                  <option key={opt} value={opt}>
-                                    {opt}
-                                  </option>
-                                ))}
-                              </select>
-                            </td>
-
-                            {/* 9. Three-dot Action Menu (Open Kanban / Edit / Duplicate / Delete) */}
-                            <td className={styles.shadcnTd}>
-                              <button
-                                type="button"
-                                data-testid={`row-menu-btn-${row.id}`}
-                                className={styles.rowMenuBtn}
-                                title="Thêm thao tác (Sửa / Mở Kanban / Xóa)"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  setOpenMenuRowId(prev =>
-                                    prev === row.id ? null : row.id
-                                  );
-                                }}
-                              >
-                                ⋮
-                              </button>
-
-                              {openMenuRowId === row.id && (
-                                <div
-                                  className={styles.rowDropdownMenu}
-                                  onClick={e => e.stopPropagation()}
-                                >
-                                  <button
-                                    type="button"
-                                    className={styles.rowDropdownItem}
-                                    onClick={() => {
-                                      setOpenMenuRowId(null);
-                                      if (row.kind === 'bot' && row.botDef) {
-                                        handleOpenBotBoard(row.botDef);
-                                      } else {
-                                        handleOpenPersonalBoard(row.id);
-                                      }
-                                    }}
-                                  >
-                                    <span>📋 Mở Kanban Board</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={styles.rowDropdownItem}
-                                    onClick={() => handleOpenEditRowModal(row)}
-                                  >
-                                    <span>✏️ Chỉnh sửa (Edit)</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={styles.rowDropdownItem}
-                                    onClick={() =>
-                                      handleDuplicateRow(row.kind, row.id)
-                                    }
-                                  >
-                                    <span>📑 Nhân bản (Make a copy)</span>
-                                  </button>
-                                  <div
-                                    style={{
-                                      height: 1,
-                                      backgroundColor:
-                                        'rgba(148, 163, 184, 0.15)',
-                                      margin: '3px 0',
-                                    }}
-                                  />
-                                  <button
-                                    type="button"
-                                    data-danger="true"
-                                    className={styles.rowDropdownItem}
-                                    onClick={() =>
-                                      handleDeleteTableRow(row.kind, row.id)
-                                    }
-                                  >
-                                    <span>🗑️ Xóa dòng (Delete)</span>
-                                  </button>
-                                </div>
-                              )}
+                              Đang tải danh sách bảng Kanban...
                             </td>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                        ) : paginatedBoards.length === 0 ? (
+                          <tr>
+                            <td
+                              colSpan={9}
+                              className={styles.shadcnTd}
+                              style={{
+                                height: '350px',
+                                borderBottom: 'none',
+                                textAlign: 'center',
+                                color: cssVarV2('text/secondary'),
+                              }}
+                            >
+                              Chưa có bảng Kanban nào. Bấm{' '}
+                              <strong>Tạo bảng Kanban</strong> ở góc phải để
+                              khởi tạo.
+                            </td>
+                          </tr>
+                        ) : (
+                          paginatedBoards.map(row => {
+                            const isSelected = selectedRowIds.has(row.id);
 
-                {/* Shadcn Data Table Footer */}
-                <div className={styles.tableFooterBar}>
-                  <div>
-                    {selectedRowIds.size} of {unifiedTableRows.length} row(s)
-                    selected.
+                            return (
+                              <tr
+                                key={row.id}
+                                className={styles.shadcnTr}
+                                data-selected={isSelected}
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => handleOpenBoardDetail(row.id)}
+                              >
+                                {/* Checkbox */}
+                                <td
+                                  className={styles.shadcnTd}
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className={styles.shadcnCheckbox}
+                                    checked={isSelected}
+                                    onChange={() => toggleSelectRow(row.id)}
+                                  />
+                                </td>
+
+                                {/* Board Name + Description */}
+                                <td className={styles.shadcnTd}>
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '2px',
+                                    }}
+                                  >
+                                    <span className={styles.headerCellLink}>
+                                      <DatabaseKanbanViewIcon
+                                        width={14}
+                                        height={14}
+                                        style={{
+                                          color: cssVarV2('text/secondary'),
+                                          flexShrink: 0,
+                                        }}
+                                      />
+                                      <span>{row.name}</span>
+                                    </span>
+                                    {row.description ? (
+                                      <span
+                                        style={{
+                                          fontSize: '12px',
+                                          color: cssVarV2('text/secondary'),
+                                          paddingLeft: '22px',
+                                          lineHeight: '18px',
+                                        }}
+                                      >
+                                        {row.description}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                </td>
+
+                                {/* Section Type */}
+                                <td className={styles.shadcnTd}>
+                                  <span className={styles.outlinePill}>
+                                    {row.sectionType}
+                                  </span>
+                                </td>
+
+                                {/* Status (Radix Portal Dropdown — 28px) */}
+                                <td
+                                  className={styles.shadcnTd}
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <KanbanSelect
+                                    value={row.tableStatus}
+                                    options={statusSelectOptions}
+                                    minWidth={122}
+                                    onChange={next =>
+                                      void handlePatchBoardMeta(row.id, {
+                                        tableStatus: next,
+                                      })
+                                    }
+                                  />
+                                </td>
+
+                                {/* Structure Summary: Columns · Cards · Progress */}
+                                <td className={styles.shadcnTd}>
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '2px',
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        fontSize: '12px',
+                                        fontWeight: 500,
+                                        color: cssVarV2('text/primary'),
+                                      }}
+                                    >
+                                      {row.columns.length} cột · {row.cardCount}{' '}
+                                      thẻ
+                                    </span>
+                                    <span
+                                      style={{
+                                        fontSize: '11.5px',
+                                        color: cssVarV2('text/secondary'),
+                                      }}
+                                    >
+                                      Hoàn thành {row.completedCount}/
+                                      {row.cardCount} ({row.completionRate}%)
+                                    </span>
+                                  </div>
+                                </td>
+
+                                {/* Target (28px inline input) */}
+                                <td
+                                  className={styles.shadcnTd}
+                                  style={{ textAlign: 'right' }}
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <input
+                                    type="number"
+                                    className={styles.inlineNumInput}
+                                    defaultValue={row.target}
+                                    onBlur={e => {
+                                      const val = Number(e.target.value);
+                                      if (
+                                        !Number.isNaN(val) &&
+                                        val !== row.target
+                                      ) {
+                                        handlePatchBoardMeta(row.id, {
+                                          target: val,
+                                        }).catch(console.error);
+                                      }
+                                    }}
+                                  />
+                                </td>
+
+                                {/* Limit (28px inline input) */}
+                                <td
+                                  className={styles.shadcnTd}
+                                  style={{ textAlign: 'right' }}
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <input
+                                    type="number"
+                                    className={styles.inlineNumInput}
+                                    defaultValue={row.limit}
+                                    onBlur={e => {
+                                      const val = Number(e.target.value);
+                                      if (
+                                        !Number.isNaN(val) &&
+                                        val !== row.limit
+                                      ) {
+                                        handlePatchBoardMeta(row.id, {
+                                          limit: val,
+                                        }).catch(console.error);
+                                      }
+                                    }}
+                                  />
+                                </td>
+
+                                {/* Reviewer (Radix Portal Dropdown — 28px) */}
+                                <td
+                                  className={styles.shadcnTd}
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <KanbanSelect
+                                    value={row.reviewer}
+                                    options={reviewerSelectOptions}
+                                    minWidth={150}
+                                    onChange={next =>
+                                      void handlePatchBoardMeta(row.id, {
+                                        reviewer: next,
+                                      })
+                                    }
+                                  />
+                                </td>
+
+                                {/* Row Actions Menu (Radix Portal Menu — never overlaps!) */}
+                                <td
+                                  className={styles.shadcnTd}
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <Menu
+                                    contentOptions={{
+                                      align: 'end',
+                                      sideOffset: 4,
+                                    }}
+                                    items={
+                                      <>
+                                        <MenuItem
+                                          prefixIcon={
+                                            <DatabaseKanbanViewIcon />
+                                          }
+                                          onSelect={() =>
+                                            handleOpenBoardDetail(row.id)
+                                          }
+                                        >
+                                          Mở chi tiết Kanban
+                                        </MenuItem>
+                                        <MenuItem
+                                          prefixIcon={<EditIcon />}
+                                          onSelect={() =>
+                                            openEditBoardModal(row)
+                                          }
+                                        >
+                                          Chỉnh sửa bảng
+                                        </MenuItem>
+                                        <MenuItem
+                                          prefixIcon={<CopyIcon />}
+                                          onSelect={() =>
+                                            void handleDuplicateBoard(row)
+                                          }
+                                        >
+                                          Nhân bản
+                                        </MenuItem>
+                                        <MenuSeparator />
+                                        <MenuItem
+                                          type="danger"
+                                          prefixIcon={<DeleteIcon />}
+                                          onSelect={() =>
+                                            void handleDeleteBoards([row.id])
+                                          }
+                                        >
+                                          Xóa bảng
+                                        </MenuItem>
+                                      </>
+                                    }
+                                  >
+                                    <button
+                                      type="button"
+                                      className={styles.rowMenuBtn}
+                                      aria-label="Tùy chọn bảng"
+                                    >
+                                      <MoreVerticalIcon
+                                        width={15}
+                                        height={15}
+                                      />
+                                    </button>
+                                  </Menu>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
                   </div>
-                  <div
-                    style={{ display: 'flex', alignItems: 'center', gap: 16 }}
-                  >
-                    <span>
-                      Click trực tiếp vào cột <strong>Header</strong> để mở{' '}
-                      <strong>Kanban Board</strong> hoặc bấm <strong>⋮</strong>{' '}
-                      để Sửa / Xóa
-                    </span>
-                    <span style={{ fontWeight: 600 }}>
-                      Page 1 of 1 ({unifiedTableRows.length} mục)
-                    </span>
+
+                  {/* Pinned Shadcn Data Table Pagination Footer (28px controls) */}
+                  <div className={styles.paginationBar}>
+                    <div>
+                      Đã chọn {selectedRowIds.size} / {filteredBoards.length}{' '}
+                      hàng · Hiển thị {boardStartIdx}–{boardEndIdx} trên tổng{' '}
+                      {filteredBoards.length} bảng Kanban
+                    </div>
+
+                    <div className={styles.paginationControls}>
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}
+                      >
+                        <span>Số dòng / trang</span>
+                        <KanbanSelect
+                          value={String(boardPageSize)}
+                          options={PAGE_SIZE_OPTIONS}
+                          minWidth={86}
+                          align="end"
+                          onChange={val => {
+                            setBoardPageSize(Number(val));
+                            setBoardPage(1);
+                          }}
+                        />
+                      </div>
+
+                      <span
+                        style={{
+                          fontWeight: 500,
+                          color: cssVarV2('text/primary'),
+                          minWidth: '78px',
+                          textAlign: 'center',
+                        }}
+                      >
+                        Trang {safeBoardPage} / {totalBoardPages}
+                      </span>
+
+                      <div className={styles.pageBtnGroup}>
+                        <button
+                          type="button"
+                          className={styles.pageBtn}
+                          disabled={safeBoardPage <= 1}
+                          onClick={() => setBoardPage(1)}
+                          title="Trang đầu"
+                        >
+                          «
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.pageBtn}
+                          disabled={safeBoardPage <= 1}
+                          onClick={() => setBoardPage(p => Math.max(1, p - 1))}
+                          title="Trang trước"
+                        >
+                          <ArrowLeftSmallIcon width={14} height={14} />
+                        </button>
+
+                        {Array.from(
+                          { length: totalBoardPages },
+                          (_, i) => i + 1
+                        ).map(p => (
+                          <button
+                            key={p}
+                            type="button"
+                            className={styles.pageBtn}
+                            data-active={p === safeBoardPage}
+                            onClick={() => setBoardPage(p)}
+                          >
+                            {p}
+                          </button>
+                        ))}
+
+                        <button
+                          type="button"
+                          className={styles.pageBtn}
+                          disabled={safeBoardPage >= totalBoardPages}
+                          onClick={() =>
+                            setBoardPage(p => Math.min(totalBoardPages, p + 1))
+                          }
+                          title="Trang sau"
+                        >
+                          <ArrowRightSmallIcon width={14} height={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.pageBtn}
+                          disabled={safeBoardPage >= totalBoardPages}
+                          onClick={() => setBoardPage(totalBoardPages)}
+                          title="Trang cuối"
+                        >
+                          »
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </>
-          ) : selectedBoardTarget.kind === 'bot' && canViewBotHarnessBoard ? (
-            /* ============================================================== */
-            /* LEVEL 2A: BOT / HARNESS BOARD DETAIL (Kanban & Table)          */
-            /* ============================================================== */
+            </div>
+          ) : (
+            /* ========================================================= */
+            /* LEVEL 2: DETAIL KANBAN BOARD (API DETAIL)                 */
+            /* ========================================================= */
             <>
+              {/* Board Detail Summary Banner */}
+              {boardDetail ? (
+                <div
+                  style={{
+                    padding: '10px 16px',
+                    borderBottom: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+                    backgroundColor: cssVarV2('layer/background/secondary'),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '16px',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      minWidth: '260px',
+                      flex: 1,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          color: cssVarV2('text/primary'),
+                        }}
+                      >
+                        {boardDetail.name}
+                      </span>
+                      <span className={styles.outlinePill}>
+                        <span
+                          style={{
+                            width: '6px',
+                            height: '6px',
+                            borderRadius: '999px',
+                            backgroundColor: getStatusDotColor(
+                              boardDetail.tableStatus
+                            ),
+                          }}
+                        />
+                        <span>{boardDetail.tableStatus}</span>
+                      </span>
+                      <span className={styles.outlinePill}>
+                        <UserIcon width={12} height={12} />
+                        <span>Reviewer: {boardDetail.reviewer}</span>
+                      </span>
+                    </div>
+                    {boardDetail.description ? (
+                      <div
+                        style={{
+                          fontSize: '12px',
+                          color: cssVarV2('text/secondary'),
+                        }}
+                      >
+                        {boardDetail.description}
+                      </div>
+                    ) : null}
+                    <div
+                      style={{
+                        fontSize: '11.5px',
+                        color: cssVarV2('text/secondary'),
+                      }}
+                    >
+                      Luồng cột ({boardDetail.columns.length}):{' '}
+                      <strong style={{ color: cssVarV2('text/primary') }}>
+                        {boardDetail.columns.join(' → ')}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* 4 Summary Metric Pills */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+                        backgroundColor: cssVarV2('layer/background/primary'),
+                        minWidth: '88px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          color: cssVarV2('text/secondary'),
+                        }}
+                      >
+                        Tổng số thẻ
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '15px',
+                          fontWeight: 600,
+                          color: cssVarV2('text/primary'),
+                        }}
+                      >
+                        {boardDetail.stats.totalCards}
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+                        backgroundColor: cssVarV2('layer/background/primary'),
+                        minWidth: '88px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          color: cssVarV2('text/secondary'),
+                        }}
+                      >
+                        Đang thực hiện
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '15px',
+                          fontWeight: 600,
+                          color: cssVarV2('text/primary'),
+                        }}
+                      >
+                        {boardDetail.stats.inProgressCards}
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+                        backgroundColor: cssVarV2('layer/background/primary'),
+                        minWidth: '104px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          color: cssVarV2('text/secondary'),
+                        }}
+                      >
+                        Hoàn thành
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '15px',
+                          fontWeight: 600,
+                          color: cssVarV2('text/primary'),
+                        }}
+                      >
+                        {boardDetail.stats.completedCards}/
+                        {boardDetail.stats.totalCards} (
+                        {boardDetail.stats.completionRate}%)
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+                        backgroundColor: cssVarV2('layer/background/primary'),
+                        minWidth: '88px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          color: cssVarV2('text/secondary'),
+                        }}
+                      >
+                        Target / Limit
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '15px',
+                          fontWeight: 600,
+                          color: cssVarV2('text/primary'),
+                        }}
+                      >
+                        {boardDetail.target} / {boardDetail.limit}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Detail Toolbar: All controls unified at 28px height */}
               <div className={styles.toolbarContainer}>
                 <div className={styles.toolbarGroup}>
                   <div className={styles.viewSwitchGroup}>
                     <button
                       type="button"
-                      data-testid="bot-view-kanban"
-                      data-active={botViewMode === 'kanban'}
                       className={styles.viewSwitchBtn}
-                      onClick={() => setBotViewMode('kanban')}
+                      data-active={detailViewMode === 'kanban'}
+                      onClick={() => setDetailViewMode('kanban')}
                     >
-                      <DatabaseKanbanViewIcon width={14} height={14} />
+                      <DatabaseKanbanViewIcon width={13} height={13} />
                       <span>Kanban</span>
                     </button>
                     <button
                       type="button"
-                      data-testid="bot-view-table"
-                      data-active={botViewMode === 'table'}
                       className={styles.viewSwitchBtn}
-                      onClick={() => setBotViewMode('table')}
+                      data-active={detailViewMode === 'table'}
+                      onClick={() => setDetailViewMode('table')}
                     >
-                      <DatabaseTableViewIcon width={14} height={14} />
-                      <span>Table</span>
+                      <DatabaseTableViewIcon width={13} height={13} />
+                      <span>Danh sách thẻ</span>
                     </button>
                   </div>
 
-                  {botViewMode === 'kanban' && (
-                    <div className={styles.viewSwitchGroup}>
-                      <button
-                        type="button"
-                        data-active={botGroupBy === 'state'}
-                        className={styles.viewSwitchBtn}
-                        onClick={() => setBotGroupBy('state')}
-                      >
-                        Gom cột: Trạng thái (State)
-                      </button>
-                      <button
-                        type="button"
-                        data-active={botGroupBy === 'profile'}
-                        className={styles.viewSwitchBtn}
-                        onClick={() => setBotGroupBy('profile')}
-                      >
-                        Gom cột: 10 Bot Profiles
-                      </button>
-                    </div>
-                  )}
+                  <KanbanSelect
+                    value={priorityFilter}
+                    options={priorityFilterOptions}
+                    minWidth={145}
+                    onChange={setPriorityFilter}
+                  />
 
-                  <select
-                    className={styles.controlInput}
-                    value={botProfileFilter}
-                    onChange={e => setBotProfileFilter(e.target.value)}
-                  >
-                    <option value="ALL">Tất cả 10 Bot Profiles</option>
-                    {ALLOWED_BOT_PROFILES.map(profile => (
-                      <option key={profile} value={profile}>
-                        🤖 Profile: {profile}
-                      </option>
-                    ))}
-                  </select>
-
-                  <select
-                    className={styles.controlInput}
-                    value={botTypeFilter}
-                    onChange={e => setBotTypeFilter(e.target.value)}
-                  >
-                    <option value="MAIN">
-                      Epic / Feature / Task (Ẩn Testcase)
-                    </option>
-                    <option value="ALL">Tất cả (Gồm cả Testcase)</option>
-                    {WORK_ITEM_TYPES.map(t => (
-                      <option key={t} value={t}>
-                        Loại: {t}
-                      </option>
-                    ))}
-                  </select>
-
-                  <input
-                    type="text"
-                    placeholder="Tìm theo #ID, tiêu đề, Bot..."
-                    className={styles.controlInput}
-                    style={{ minWidth: 200 }}
-                    value={botSearchQuery}
-                    onChange={e => setBotSearchQuery(e.target.value)}
+                  <KanbanSelect
+                    value={assigneeFilter}
+                    options={assigneeFilterOptions}
+                    minWidth={165}
+                    onChange={setAssigneeFilter}
                   />
                 </div>
 
                 <div className={styles.toolbarGroup}>
-                  <button
-                    type="button"
-                    className={styles.actionButton}
-                    onClick={() => {
-                      fetchHarnessBacklog(true).catch(console.error);
-                      notify.success({
-                        title: 'Đã đồng bộ Harness DB',
-                        message:
-                          'Đã tải lại danh sách Work Items & 10 Profiles từ Harness.',
-                      });
+                  <div
+                    style={{
+                      position: 'relative',
+                      display: 'inline-flex',
+                      alignItems: 'center',
                     }}
                   >
-                    🔄 Đồng bộ Harness
-                  </button>
-                  <button
-                    type="button"
-                    data-primary="true"
-                    className={styles.actionButton}
-                    onClick={() => setNewBotTaskModalOpen(true)}
-                  >
-                    <PlusIcon width={14} height={14} />
-                    <span>Giao Task cho Bot</span>
-                  </button>
+                    <SearchIcon
+                      width={14}
+                      height={14}
+                      style={{
+                        position: 'absolute',
+                        left: '9px',
+                        color: cssVarV2('text/secondary'),
+                        pointerEvents: 'none',
+                      }}
+                    />
+                    <input
+                      type="text"
+                      className={styles.controlInput}
+                      style={{ width: '230px', paddingLeft: '28px' }}
+                      placeholder="Tìm mã thẻ, tiêu đề..."
+                      value={cardSearch}
+                      onChange={e => setCardSearch(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
 
+              {/* Detail Content */}
               <div className={styles.contentArea}>
-                {botViewMode === 'kanban' ? (
+                {loadingDetail || !boardDetail ? (
+                  <div
+                    style={{
+                      padding: '40px',
+                      textAlign: 'center',
+                      color: cssVarV2('text/secondary'),
+                    }}
+                  >
+                    Đang tải chi tiết bảng Kanban...
+                  </div>
+                ) : detailViewMode === 'kanban' ? (
                   <div className={styles.kanbanBoardRow}>
-                    {botColumns.map(colKey => {
-                      const colItems = filteredBotItems.filter(item =>
-                        botGroupBy === 'state'
-                          ? item.state === colKey
-                          : normalizeProfileName(item.assigned_to_profile) ===
-                            colKey
+                    {boardDetail.columns.map(col => {
+                      const colCards = filteredCards.filter(
+                        c => c.status === col
                       );
-                      const stateColor = STATE_COLORS[colKey];
+                      const colSelectOptions = boardDetail.columns.map(c => ({
+                        value: c,
+                        label: c,
+                      }));
+
                       return (
                         <div
-                          key={colKey}
+                          key={col}
                           className={styles.kanbanColumn}
-                          data-drag-over={dragOverBotCol === colKey}
+                          data-drag-over={dragOverColumn === col}
                           onDragOver={e => {
                             e.preventDefault();
-                            if (dragOverBotCol !== colKey) {
-                              setDragOverBotCol(colKey);
-                            }
+                            setDragOverColumn(col);
                           }}
-                          onDragLeave={() => {
-                            if (dragOverBotCol === colKey) {
-                              setDragOverBotCol(null);
-                            }
-                          }}
+                          onDragLeave={() => setDragOverColumn(null)}
                           onDrop={e => {
                             e.preventDefault();
-                            handleBotDropOnColumn(colKey);
+                            setDragOverColumn(null);
+                            const cardId = e.dataTransfer.getData('text/plain');
+                            if (cardId) {
+                              handleQuickMoveCard(cardId, col).catch(
+                                console.error
+                              );
+                            }
                           }}
                         >
                           <div className={styles.columnHeader}>
                             <div className={styles.columnTitleGroup}>
-                              <span
-                                style={{
-                                  width: 8,
-                                  height: 8,
-                                  borderRadius: '50%',
-                                  backgroundColor: stateColor?.dot ?? '#60a5fa',
-                                  flexShrink: 0,
-                                }}
-                              />
-                              <span>
-                                {botGroupBy === 'profile'
-                                  ? `🤖 ${colKey}`
-                                  : colKey}
+                              <span>{col}</span>
+                              <span className={styles.countBadge}>
+                                {colCards.length}
                               </span>
                             </div>
-                            <span className={styles.countBadge}>
-                              {colItems.length}
-                            </span>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                            >
+                              <button
+                                type="button"
+                                className={styles.rowMenuBtn}
+                                title={`Thêm thẻ vào cột ${col}`}
+                                onClick={() => openCreateCardModal(col)}
+                              >
+                                <PlusIcon width={14} height={14} />
+                              </button>
+                              {boardDetail.columns.length > 1 &&
+                              colCards.length === 0 ? (
+                                <button
+                                  type="button"
+                                  className={styles.rowMenuBtn}
+                                  title={`Xóa cột trống ${col}`}
+                                  onClick={() => void handleDeleteColumn(col)}
+                                >
+                                  <DeleteIcon width={13} height={13} />
+                                </button>
+                              ) : null}
+                            </div>
                           </div>
 
                           <div className={styles.columnCardsList}>
-                            {colItems.map(item => {
-                              const tColor = TYPE_COLORS[item.type] ?? {
-                                bg: 'rgba(148, 163, 184, 0.16)',
-                                fg: '#cbd5e1',
-                              };
+                            {colCards.map(card => {
+                              const prio = getPriorityTone(card.priority);
+                              const totalSubs = card.subtasks?.length ?? 0;
+                              const doneSubs =
+                                card.subtasks?.filter(s => s.done).length ?? 0;
+
                               return (
                                 <div
-                                  key={item.id}
-                                  draggable
-                                  onDragStart={() =>
-                                    setDraggedBotItemId(item.id)
-                                  }
-                                  onDragEnd={() => {
-                                    setDraggedBotItemId(null);
-                                    setDragOverBotCol(null);
-                                  }}
+                                  key={card.id}
                                   className={styles.kanbanCard}
+                                  draggable
+                                  onDragStart={e => {
+                                    e.dataTransfer.setData(
+                                      'text/plain',
+                                      card.id
+                                    );
+                                  }}
+                                  onClick={() => openEditCardModal(card)}
                                 >
+                                  {/* Top Row: Code + Type + Priority */}
                                   <div className={styles.cardTopRow}>
-                                    <span
-                                      className={styles.pillBadge}
-                                      style={{
-                                        backgroundColor: tColor.bg,
-                                        color: tColor.fg,
-                                      }}
-                                    >
-                                      #{item.id} · {item.type}
-                                    </span>
                                     <div
                                       style={{
                                         display: 'flex',
                                         alignItems: 'center',
-                                        gap: 4,
+                                        gap: '6px',
                                       }}
                                     >
                                       <span
-                                        className={styles.pillBadge}
                                         style={{
-                                          backgroundColor:
-                                            'rgba(245, 158, 11, 0.14)',
-                                          color: '#fbbf24',
+                                          fontSize: '11.5px',
+                                          fontWeight: 600,
+                                          color: cssVarV2('text/secondary'),
                                         }}
                                       >
-                                        {item.priority || 'P1'}
+                                        {card.code}
                                       </span>
-                                      <button
-                                        type="button"
-                                        title="Xóa Task này"
-                                        onClick={() =>
-                                          updateBotItems(prev =>
-                                            prev.filter(it => it.id !== item.id)
-                                          )
-                                        }
+                                      <span className={styles.outlinePill}>
+                                        {card.type}
+                                      </span>
+                                    </div>
+                                    <span className={styles.outlinePill}>
+                                      <span
                                         style={{
-                                          background: 'transparent',
-                                          border: 'none',
-                                          color: 'inherit',
-                                          opacity: 0.55,
-                                          cursor: 'pointer',
-                                          padding: 2,
+                                          width: '6px',
+                                          height: '6px',
+                                          borderRadius: '999px',
+                                          backgroundColor: prio.dot,
+                                        }}
+                                      />
+                                      <span>{prio.label}</span>
+                                    </span>
+                                  </div>
+
+                                  {/* Card Title */}
+                                  <div className={styles.cardTitle}>
+                                    {card.title}
+                                  </div>
+
+                                  {/* Card Description Preview */}
+                                  {card.description ? (
+                                    <div
+                                      style={{
+                                        fontSize: '12px',
+                                        color: cssVarV2('text/secondary'),
+                                        lineHeight: '18px',
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
+                                      }}
+                                    >
+                                      {card.description}
+                                    </div>
+                                  ) : null}
+
+                                  {/* Checklist & Progress */}
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '5px',
+                                      marginTop: '2px',
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        fontSize: '11px',
+                                        color: cssVarV2('text/secondary'),
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
                                         }}
                                       >
-                                        <DeleteIcon width={13} height={13} />
-                                      </button>
+                                        <CheckBoxCheckSolidIcon
+                                          width={12}
+                                          height={12}
+                                        />
+                                        <span>
+                                          {doneSubs}/{totalSubs} subtasks
+                                        </span>
+                                      </span>
+                                      <span>{card.progress}%</span>
+                                    </div>
+                                    <div
+                                      style={{
+                                        width: '100%',
+                                        height: '4px',
+                                        borderRadius: '999px',
+                                        backgroundColor: cssVarV2(
+                                          'layer/background/secondary'
+                                        ),
+                                        overflow: 'hidden',
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          width: `${Math.min(100, Math.max(0, card.progress))}%`,
+                                          height: '100%',
+                                          backgroundColor:
+                                            cssVarV2('button/primary'),
+                                          transition: 'width 160ms ease',
+                                        }}
+                                      />
                                     </div>
                                   </div>
 
-                                  <input
-                                    type="text"
-                                    value={item.title}
-                                    onChange={e => {
-                                      const val = e.target.value;
-                                      updateBotItems(prev =>
-                                        prev.map(it =>
-                                          it.id === item.id
-                                            ? { ...it, title: val }
-                                            : it
-                                        )
-                                      );
-                                    }}
-                                    className={styles.cardTitle}
-                                    style={{
-                                      background: 'transparent',
-                                      border: 'none',
-                                      outline: 'none',
-                                      width: '100%',
-                                    }}
-                                  />
-
-                                  <div className={styles.cardFooter}>
-                                    <select
-                                      className={styles.miniSelect}
-                                      title="Đổi trạng thái (State)"
-                                      value={item.state}
-                                      onChange={e => {
-                                        const nextState = e.target.value;
-                                        updateBotItems(prev =>
-                                          prev.map(it =>
-                                            it.id === item.id
-                                              ? { ...it, state: nextState }
-                                              : it
-                                          )
-                                        );
+                                  {/* Card Footer */}
+                                  <div
+                                    className={styles.cardFooter}
+                                    onClick={e => e.stopPropagation()}
+                                  >
+                                    <div
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        fontSize: '11.5px',
+                                        color: cssVarV2('text/secondary'),
                                       }}
                                     >
-                                      {HARNESS_STATES.map(st => (
-                                        <option key={st} value={st}>
-                                          {st}
-                                        </option>
-                                      ))}
-                                    </select>
+                                      <span
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                        }}
+                                      >
+                                        <UserIcon width={12} height={12} />
+                                        <span>{card.assignee}</span>
+                                      </span>
+                                      <span
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                        }}
+                                      >
+                                        <DateTimeIcon width={12} height={12} />
+                                        <span>{card.dueDate}</span>
+                                      </span>
+                                    </div>
 
-                                    <select
-                                      className={styles.miniSelect}
-                                      title="Đổi Bot Profile phụ trách"
-                                      value={normalizeProfileName(
-                                        item.assigned_to_profile
-                                      )}
-                                      onChange={e => {
-                                        const nextProfile = e.target.value;
-                                        updateBotItems(prev =>
-                                          prev.map(it =>
-                                            it.id === item.id
-                                              ? {
-                                                  ...it,
-                                                  assigned_to_profile:
-                                                    nextProfile,
-                                                }
-                                              : it
-                                          )
-                                        );
-                                      }}
-                                    >
-                                      {ALLOWED_BOT_PROFILES.map(prof => (
-                                        <option key={prof} value={prof}>
-                                          🤖 {prof}
-                                        </option>
-                                      ))}
-                                    </select>
+                                    <KanbanSelect
+                                      value={card.status}
+                                      options={colSelectOptions}
+                                      size="mini"
+                                      minWidth={102}
+                                      align="end"
+                                      onChange={next =>
+                                        void handleQuickMoveCard(card.id, next)
+                                      }
+                                    />
                                   </div>
                                 </div>
                               );
@@ -2079,547 +2465,244 @@ export const WorkspaceKanbanPage = () => {
                           <button
                             type="button"
                             className={styles.addCardBtn}
-                            onClick={() => {
-                              if (botGroupBy === 'state') {
-                                setNewBotTaskState(colKey);
-                              } else {
-                                setNewBotTaskProfile(colKey);
-                              }
-                              setNewBotTaskModalOpen(true);
-                            }}
+                            onClick={() => openCreateCardModal(col)}
                           >
                             <PlusIcon width={13} height={13} />
-                            <span>Thêm Task vào cột này</span>
+                            <span>Thêm thẻ</span>
                           </button>
                         </div>
                       );
                     })}
                   </div>
                 ) : (
-                  <div className={styles.tableWrapper}>
-                    <table className={styles.dataTable}>
-                      <thead>
-                        <tr>
-                          <th className={styles.tableTh}>ID</th>
-                          <th className={styles.tableTh}>Loại (Type)</th>
-                          <th className={styles.tableTh}>Tiêu đề công việc</th>
-                          <th className={styles.tableTh}>Trạng thái (State)</th>
-                          <th className={styles.tableTh}>
-                            Bot Profile (Harness)
-                          </th>
-                          <th className={styles.tableTh}>Ưu tiên</th>
-                          <th className={styles.tableTh}>Xóa</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredBotItems.map(item => {
-                          const tColor = TYPE_COLORS[item.type] ?? {
-                            bg: 'rgba(148, 163, 184, 0.16)',
-                            fg: '#cbd5e1',
-                          };
-                          return (
-                            <tr key={item.id} className={styles.tableRow}>
+                  /* Flat Table View of Cards inside this Board (Fixed-height + Pagination) */
+                  <div className={styles.shadcnTableContainer}>
+                    <div className={styles.shadcnTableScroll}>
+                      <table className={styles.shadcnTable}>
+                        <thead>
+                          <tr className={styles.shadcnTheadTr}>
+                            <th
+                              className={styles.shadcnTh}
+                              style={{ width: '90px' }}
+                            >
+                              Mã thẻ
+                            </th>
+                            <th className={styles.shadcnTh}>
+                              Tiêu đề & Mô tả công việc
+                            </th>
+                            <th className={styles.shadcnTh}>Loại</th>
+                            <th className={styles.shadcnTh}>Cột trạng thái</th>
+                            <th className={styles.shadcnTh}>Độ ưu tiên</th>
+                            <th className={styles.shadcnTh}>Phụ trách</th>
+                            <th className={styles.shadcnTh}>Checklist</th>
+                            <th className={styles.shadcnTh}>Hạn chót</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedCards.length === 0 ? (
+                            <tr>
                               <td
-                                className={styles.tableTd}
-                                style={{ fontWeight: 600 }}
+                                colSpan={8}
+                                className={styles.shadcnTd}
+                                style={{
+                                  height: '350px',
+                                  borderBottom: 'none',
+                                  textAlign: 'center',
+                                  color: cssVarV2('text/secondary'),
+                                }}
                               >
-                                #{item.id}
-                              </td>
-                              <td className={styles.tableTd}>
-                                <span
-                                  className={styles.pillBadge}
-                                  style={{
-                                    backgroundColor: tColor.bg,
-                                    color: tColor.fg,
-                                  }}
-                                >
-                                  {item.type}
-                                </span>
-                              </td>
-                              <td
-                                className={styles.tableTd}
-                                style={{ maxWidth: 480 }}
-                              >
-                                <input
-                                  type="text"
-                                  value={item.title}
-                                  onChange={e => {
-                                    const val = e.target.value;
-                                    updateBotItems(prev =>
-                                      prev.map(it =>
-                                        it.id === item.id
-                                          ? { ...it, title: val }
-                                          : it
-                                      )
-                                    );
-                                  }}
-                                  style={{
-                                    width: '100%',
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: 'inherit',
-                                    fontSize: '13px',
-                                    outline: 'none',
-                                  }}
-                                />
-                              </td>
-                              <td className={styles.tableTd}>
-                                <select
-                                  className={styles.miniSelect}
-                                  value={item.state}
-                                  onChange={e => {
-                                    const nextState = e.target.value;
-                                    updateBotItems(prev =>
-                                      prev.map(it =>
-                                        it.id === item.id
-                                          ? { ...it, state: nextState }
-                                          : it
-                                      )
-                                    );
-                                  }}
-                                >
-                                  {HARNESS_STATES.map(st => (
-                                    <option key={st} value={st}>
-                                      {st}
-                                    </option>
-                                  ))}
-                                </select>
-                              </td>
-                              <td className={styles.tableTd}>
-                                <select
-                                  className={styles.miniSelect}
-                                  value={normalizeProfileName(
-                                    item.assigned_to_profile
-                                  )}
-                                  onChange={e => {
-                                    const nextProf = e.target.value;
-                                    updateBotItems(prev =>
-                                      prev.map(it =>
-                                        it.id === item.id
-                                          ? {
-                                              ...it,
-                                              assigned_to_profile: nextProf,
-                                            }
-                                          : it
-                                      )
-                                    );
-                                  }}
-                                >
-                                  {ALLOWED_BOT_PROFILES.map(prof => (
-                                    <option key={prof} value={prof}>
-                                      🤖 {prof}
-                                    </option>
-                                  ))}
-                                </select>
-                              </td>
-                              <td className={styles.tableTd}>
-                                <select
-                                  className={styles.miniSelect}
-                                  value={item.priority || 'P1'}
-                                  onChange={e => {
-                                    const nextPrio = e.target.value;
-                                    updateBotItems(prev =>
-                                      prev.map(it =>
-                                        it.id === item.id
-                                          ? { ...it, priority: nextPrio }
-                                          : it
-                                      )
-                                    );
-                                  }}
-                                >
-                                  <option value="P0">P0</option>
-                                  <option value="P1">P1</option>
-                                  <option value="P2">P2</option>
-                                </select>
-                              </td>
-                              <td className={styles.tableTd}>
-                                <button
-                                  type="button"
-                                  className={styles.actionButton}
-                                  onClick={() =>
-                                    updateBotItems(prev =>
-                                      prev.filter(it => it.id !== item.id)
-                                    )
-                                  }
-                                >
-                                  <DeleteIcon width={14} height={14} />
-                                </button>
+                                Không có thẻ công việc nào phù hợp bộ lọc.
                               </td>
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            /* ============================================================== */
-            /* LEVEL 2B: PERSONAL BOARD DETAIL (Kanban & Table)               */
-            /* ============================================================== */
-            <>
-              <div className={styles.toolbarContainer}>
-                <div className={styles.toolbarGroup}>
-                  <div className={styles.viewSwitchGroup}>
-                    <button
-                      type="button"
-                      data-testid="personal-view-kanban"
-                      data-active={personalViewMode === 'kanban'}
-                      className={styles.viewSwitchBtn}
-                      onClick={() => setPersonalViewMode('kanban')}
-                    >
-                      <DatabaseKanbanViewIcon width={14} height={14} />
-                      <span>Kanban</span>
-                    </button>
-                    <button
-                      type="button"
-                      data-testid="personal-view-table"
-                      data-active={personalViewMode === 'table'}
-                      className={styles.viewSwitchBtn}
-                      onClick={() => setPersonalViewMode('table')}
-                    >
-                      <DatabaseTableViewIcon width={14} height={14} />
-                      <span>Table</span>
-                    </button>
-                  </div>
+                          ) : (
+                            paginatedCards.map(card => {
+                              const prio = getPriorityTone(card.priority);
+                              const totalSubs = card.subtasks?.length ?? 0;
+                              const doneSubs =
+                                card.subtasks?.filter(s => s.done).length ?? 0;
+                              const colSelectOptions = boardDetail.columns.map(
+                                c => ({
+                                  value: c,
+                                  label: c,
+                                })
+                              );
+                              return (
+                                <tr
+                                  key={card.id}
+                                  className={styles.shadcnTr}
+                                  style={{ cursor: 'pointer' }}
+                                  onClick={() => openEditCardModal(card)}
+                                >
+                                  <td className={styles.shadcnTd}>
+                                    <strong>{card.code}</strong>
+                                  </td>
+                                  <td className={styles.shadcnTd}>
+                                    <div
+                                      style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '2px',
+                                      }}
+                                    >
+                                      <span style={{ fontWeight: 500 }}>
+                                        {card.title}
+                                      </span>
+                                      {card.description ? (
+                                        <span
+                                          style={{
+                                            fontSize: '12px',
+                                            color: cssVarV2('text/secondary'),
+                                          }}
+                                        >
+                                          {card.description}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  </td>
+                                  <td className={styles.shadcnTd}>
+                                    <span className={styles.outlinePill}>
+                                      {card.type}
+                                    </span>
+                                  </td>
+                                  <td
+                                    className={styles.shadcnTd}
+                                    onClick={e => e.stopPropagation()}
+                                  >
+                                    <KanbanSelect
+                                      value={card.status}
+                                      options={colSelectOptions}
+                                      minWidth={128}
+                                      onChange={next =>
+                                        void handleQuickMoveCard(card.id, next)
+                                      }
+                                    />
+                                  </td>
+                                  <td className={styles.shadcnTd}>
+                                    <span className={styles.outlinePill}>
+                                      <span
+                                        style={{
+                                          width: '6px',
+                                          height: '6px',
+                                          borderRadius: '999px',
+                                          backgroundColor: prio.dot,
+                                        }}
+                                      />
+                                      <span>{prio.label}</span>
+                                    </span>
+                                  </td>
+                                  <td className={styles.shadcnTd}>
+                                    {card.assignee}
+                                  </td>
+                                  <td className={styles.shadcnTd}>
+                                    {doneSubs}/{totalSubs} ({card.progress}%)
+                                  </td>
+                                  <td className={styles.shadcnTd}>
+                                    {card.dueDate}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
 
-                  <input
-                    type="text"
-                    placeholder="Tìm kiếm thẻ công việc..."
-                    className={styles.controlInput}
-                    style={{ minWidth: 220 }}
-                    value={personalSearch}
-                    onChange={e => setPersonalSearch(e.target.value)}
-                  />
-                </div>
+                    {/* Pinned Shadcn Data Table Pagination Footer (28px controls) */}
+                    <div className={styles.paginationBar}>
+                      <div>
+                        Hiển thị {cardStartIdx}–{cardEndIdx} trên tổng{' '}
+                        {filteredCards.length} thẻ công việc
+                      </div>
 
-                <div className={styles.toolbarGroup}>
-                  {currentPersonalBoard && (
-                    <button
-                      type="button"
-                      className={styles.actionButton}
-                      onClick={() =>
-                        handleOpenEditRowModal({
-                          kind: 'personal',
-                          id: currentPersonalBoard.id,
-                          name: currentPersonalBoard.name,
-                          description: currentPersonalBoard.description ?? '',
-                          sectionType:
-                            currentPersonalBoard.sectionType || 'Narrative',
-                          tableStatus:
-                            currentPersonalBoard.tableStatus || 'In Process',
-                          target: currentPersonalBoard.target ?? 18,
-                          limit: currentPersonalBoard.limit ?? 10,
-                          reviewer:
-                            currentPersonalBoard.reviewer || 'Assign reviewer',
-                        })
-                      }
-                    >
-                      <span>✏️ Sửa thông tin mục này</span>
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className={styles.actionButton}
-                    onClick={handleAddPersonalColumn}
-                  >
-                    <PlusIcon width={13} height={13} />
-                    <span>Thêm cột trạng thái</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.actionButton}
-                    onClick={handleOpenInBlockSuiteDoc}
-                  >
-                    <span>Mở dưới dạng trang Doc</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className={styles.contentArea}>
-                {personalViewMode === 'kanban' ? (
-                  <div className={styles.kanbanBoardRow}>
-                    {(currentPersonalBoard?.columns ?? []).map(colName => {
-                      const colCards = filteredPersonalCards.filter(
-                        c => c.status === colName
-                      );
-                      return (
+                      <div className={styles.paginationControls}>
                         <div
-                          key={colName}
-                          className={styles.kanbanColumn}
-                          data-drag-over={dragOverPersonalCol === colName}
-                          onDragOver={e => {
-                            e.preventDefault();
-                            if (dragOverPersonalCol !== colName) {
-                              setDragOverPersonalCol(colName);
-                            }
-                          }}
-                          onDragLeave={() => {
-                            if (dragOverPersonalCol === colName) {
-                              setDragOverPersonalCol(null);
-                            }
-                          }}
-                          onDrop={e => {
-                            e.preventDefault();
-                            if (draggedPersonalCardId) {
-                              handleUpdatePersonalCard(draggedPersonalCardId, {
-                                status: colName,
-                              });
-                            }
-                            setDraggedPersonalCardId(null);
-                            setDragOverPersonalCol(null);
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
                           }}
                         >
-                          <div className={styles.columnHeader}>
-                            <div className={styles.columnTitleGroup}>
-                              <span
-                                style={{
-                                  width: 8,
-                                  height: 8,
-                                  borderRadius: '50%',
-                                  backgroundColor:
-                                    colName === 'Done'
-                                      ? '#22c55e'
-                                      : colName === 'In Progress' ||
-                                          colName === 'Doing'
-                                        ? '#3b82f6'
-                                        : '#94a3b8',
-                                }}
-                              />
-                              <span>{colName}</span>
-                            </div>
-                            <span className={styles.countBadge}>
-                              {colCards.length}
-                            </span>
-                          </div>
+                          <span>Số dòng / trang</span>
+                          <KanbanSelect
+                            value={String(cardPageSize)}
+                            options={PAGE_SIZE_OPTIONS}
+                            minWidth={86}
+                            align="end"
+                            onChange={val => {
+                              setCardPageSize(Number(val));
+                              setCardPage(1);
+                            }}
+                          />
+                        </div>
 
-                          <div className={styles.columnCardsList}>
-                            {colCards.map(card => (
-                              <div
-                                key={card.id}
-                                draggable
-                                onDragStart={() =>
-                                  setDraggedPersonalCardId(card.id)
-                                }
-                                onDragEnd={() => {
-                                  setDraggedPersonalCardId(null);
-                                  setDragOverPersonalCol(null);
-                                }}
-                                className={styles.kanbanCard}
-                              >
-                                <div className={styles.cardTopRow}>
-                                  <select
-                                    className={styles.miniSelect}
-                                    value={card.priority}
-                                    onChange={e =>
-                                      handleUpdatePersonalCard(card.id, {
-                                        priority: e.target
-                                          .value as PersonalTaskCard['priority'],
-                                      })
-                                    }
-                                  >
-                                    <option value="Low">Low</option>
-                                    <option value="Medium">Medium</option>
-                                    <option value="High">High</option>
-                                    <option value="Urgent">Urgent</option>
-                                  </select>
-                                  <button
-                                    type="button"
-                                    title="Xóa thẻ"
-                                    onClick={() =>
-                                      handleDeletePersonalCard(card.id)
-                                    }
-                                    style={{
-                                      background: 'transparent',
-                                      border: 'none',
-                                      color: 'inherit',
-                                      opacity: 0.55,
-                                      cursor: 'pointer',
-                                      padding: 2,
-                                    }}
-                                  >
-                                    <DeleteIcon width={14} height={14} />
-                                  </button>
-                                </div>
+                        <span
+                          style={{
+                            fontWeight: 500,
+                            color: cssVarV2('text/primary'),
+                            minWidth: '78px',
+                            textAlign: 'center',
+                          }}
+                        >
+                          Trang {safeCardPage} / {totalCardPages}
+                        </span>
 
-                                <input
-                                  type="text"
-                                  value={card.title}
-                                  onChange={e =>
-                                    handleUpdatePersonalCard(card.id, {
-                                      title: e.target.value,
-                                    })
-                                  }
-                                  className={styles.cardTitle}
-                                  style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    outline: 'none',
-                                    width: '100%',
-                                  }}
-                                />
+                        <div className={styles.pageBtnGroup}>
+                          <button
+                            type="button"
+                            className={styles.pageBtn}
+                            disabled={safeCardPage <= 1}
+                            onClick={() => setCardPage(1)}
+                            title="Trang đầu"
+                          >
+                            «
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.pageBtn}
+                            disabled={safeCardPage <= 1}
+                            onClick={() => setCardPage(p => Math.max(1, p - 1))}
+                            title="Trang trước"
+                          >
+                            <ArrowLeftSmallIcon width={14} height={14} />
+                          </button>
 
-                                <div className={styles.cardFooter}>
-                                  <input
-                                    type="date"
-                                    value={card.dueDate}
-                                    onChange={e =>
-                                      handleUpdatePersonalCard(card.id, {
-                                        dueDate: e.target.value,
-                                      })
-                                    }
-                                    className={styles.miniSelect}
-                                  />
-                                  <span style={{ fontSize: 11, opacity: 0.8 }}>
-                                    {card.progress}%
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                          {Array.from(
+                            { length: totalCardPages },
+                            (_, i) => i + 1
+                          ).map(p => (
+                            <button
+                              key={p}
+                              type="button"
+                              className={styles.pageBtn}
+                              data-active={p === safeCardPage}
+                              onClick={() => setCardPage(p)}
+                            >
+                              {p}
+                            </button>
+                          ))}
 
                           <button
                             type="button"
-                            className={styles.addCardBtn}
-                            onClick={() => handleAddPersonalCard(colName)}
+                            className={styles.pageBtn}
+                            disabled={safeCardPage >= totalCardPages}
+                            onClick={() =>
+                              setCardPage(p => Math.min(totalCardPages, p + 1))
+                            }
+                            title="Trang sau"
                           >
-                            <PlusIcon width={13} height={13} />
-                            <span>Thêm thẻ mới</span>
+                            <ArrowRightSmallIcon width={14} height={14} />
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.pageBtn}
+                            disabled={safeCardPage >= totalCardPages}
+                            onClick={() => setCardPage(totalCardPages)}
+                            title="Trang cuối"
+                          >
+                            »
                           </button>
                         </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className={styles.tableWrapper}>
-                    <table className={styles.dataTable}>
-                      <thead>
-                        <tr>
-                          <th className={styles.tableTh}>Tiêu đề công việc</th>
-                          <th className={styles.tableTh}>Trạng thái (Cột)</th>
-                          <th className={styles.tableTh}>Độ ưu tiên</th>
-                          <th className={styles.tableTh}>Hạn hoàn thành</th>
-                          <th className={styles.tableTh}>Tiến độ (%)</th>
-                          <th className={styles.tableTh}>Thao tác</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredPersonalCards.map(card => (
-                          <tr key={card.id} className={styles.tableRow}>
-                            <td className={styles.tableTd}>
-                              <input
-                                type="text"
-                                value={card.title}
-                                onChange={e =>
-                                  handleUpdatePersonalCard(card.id, {
-                                    title: e.target.value,
-                                  })
-                                }
-                                style={{
-                                  width: '100%',
-                                  background: 'transparent',
-                                  border: 'none',
-                                  color: 'inherit',
-                                  fontSize: '13px',
-                                  outline: 'none',
-                                }}
-                              />
-                            </td>
-                            <td className={styles.tableTd}>
-                              <select
-                                className={styles.miniSelect}
-                                value={card.status}
-                                onChange={e =>
-                                  handleUpdatePersonalCard(card.id, {
-                                    status: e.target.value,
-                                  })
-                                }
-                              >
-                                {(currentPersonalBoard?.columns ?? []).map(
-                                  col => (
-                                    <option key={col} value={col}>
-                                      {col}
-                                    </option>
-                                  )
-                                )}
-                              </select>
-                            </td>
-                            <td className={styles.tableTd}>
-                              <select
-                                className={styles.miniSelect}
-                                value={card.priority}
-                                onChange={e =>
-                                  handleUpdatePersonalCard(card.id, {
-                                    priority: e.target
-                                      .value as PersonalTaskCard['priority'],
-                                  })
-                                }
-                              >
-                                <option value="Low">Low</option>
-                                <option value="Medium">Medium</option>
-                                <option value="High">High</option>
-                                <option value="Urgent">Urgent</option>
-                              </select>
-                            </td>
-                            <td className={styles.tableTd}>
-                              <input
-                                type="date"
-                                className={styles.miniSelect}
-                                value={card.dueDate}
-                                onChange={e =>
-                                  handleUpdatePersonalCard(card.id, {
-                                    dueDate: e.target.value,
-                                  })
-                                }
-                              />
-                            </td>
-                            <td className={styles.tableTd}>
-                              <input
-                                type="range"
-                                min={0}
-                                max={100}
-                                step={5}
-                                value={card.progress}
-                                onChange={e =>
-                                  handleUpdatePersonalCard(card.id, {
-                                    progress: Number(e.target.value),
-                                  })
-                                }
-                              />{' '}
-                              <span style={{ fontSize: 12 }}>
-                                {card.progress}%
-                              </span>
-                            </td>
-                            <td className={styles.tableTd}>
-                              <button
-                                type="button"
-                                className={styles.actionButton}
-                                onClick={() =>
-                                  handleDeletePersonalCard(card.id)
-                                }
-                              >
-                                <DeleteIcon width={14} height={14} />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <div style={{ padding: 12 }}>
-                      <button
-                        type="button"
-                        className={styles.addCardBtn}
-                        style={{ width: '100%', marginTop: 0 }}
-                        onClick={() =>
-                          handleAddPersonalCard(
-                            currentPersonalBoard?.columns[0] ?? 'To Do'
-                          )
-                        }
-                      >
-                        <PlusIcon width={14} height={14} />
-                        <span>Thêm dòng công việc mới</span>
-                      </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -2629,478 +2712,905 @@ export const WorkspaceKanbanPage = () => {
         </div>
       </ViewBody>
 
-      {/* ==================================================================== */}
-      {/* MODAL 0: ADD / EDIT SECTION & KANBAN ROW (Shadcn Table CRUD)         */}
-      {/* ==================================================================== */}
-      {newBoardModalOpen && (
+      {/* ========================================================= */}
+      {/* MODAL 1: CREATE / EDIT KANBAN BOARD (32px modal inputs)   */}
+      {/* ========================================================= */}
+      {boardModalOpen ? (
         <div
           className={styles.modalBackdrop}
-          onClick={() => setNewBoardModalOpen(false)}
+          onClick={() => setBoardModalOpen(false)}
         >
           <div className={styles.modalCard} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
-              {editingRowTarget
-                ? '✏️ Chỉnh sửa mục & Bảng Kanban (Edit Section)'
-                : '➕ Thêm Mục & Bảng Kanban Mới (Add Section)'}
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <label style={{ fontSize: 12, fontWeight: 500 }}>
-                Header (Tên mục / Bảng Kanban)
-              </label>
-              <input
-                type="text"
-                placeholder="VD: Cover page, Technical approach, Sprint 10..."
-                className={styles.controlInput}
-                style={{ height: 34 }}
-                value={newBoardNameInput}
-                onChange={e => setNewBoardNameInput(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    handleCreatePersonalBoardSubmit();
-                  }
-                }}
-                autoFocus
-              />
-
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                paddingBottom: '12px',
+                borderBottom: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+              }}
+            >
               <div
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 10,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '15px',
+                  fontWeight: 600,
                 }}
               >
-                <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
-                >
-                  <label style={{ fontSize: 12, fontWeight: 500 }}>
-                    Section Type
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="VD: Narrative, Technical, SLPC Harness..."
-                    className={styles.controlInput}
-                    style={{ height: 34 }}
-                    value={newBoardSectionType}
-                    onChange={e => setNewBoardSectionType(e.target.value)}
-                  />
-                </div>
-
-                <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
-                >
-                  <label style={{ fontSize: 12, fontWeight: 500 }}>
-                    Status (Trạng thái)
-                  </label>
-                  <select
-                    className={styles.controlInput}
-                    style={{ height: 34 }}
-                    value={newBoardStatus}
-                    onChange={e =>
-                      setNewBoardStatus(e.target.value as TableRowStatus)
-                    }
-                  >
-                    <option value="In Process">✻ In Process</option>
-                    <option value="Done">✓ Done</option>
-                    <option value="Planned">○ Planned</option>
-                  </select>
-                </div>
-
-                <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
-                >
-                  <label style={{ fontSize: 12, fontWeight: 500 }}>
-                    Target
-                  </label>
-                  <input
-                    type="number"
-                    className={styles.controlInput}
-                    style={{ height: 34 }}
-                    value={newBoardTargetNum}
-                    onChange={e =>
-                      setNewBoardTargetNum(Number(e.target.value) || 0)
-                    }
-                  />
-                </div>
-
-                <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
-                >
-                  <label style={{ fontSize: 12, fontWeight: 500 }}>Limit</label>
-                  <input
-                    type="number"
-                    className={styles.controlInput}
-                    style={{ height: 34 }}
-                    value={newBoardLimitNum}
-                    onChange={e =>
-                      setNewBoardLimitNum(Number(e.target.value) || 0)
-                    }
-                  />
-                </div>
-
-                <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
-                >
-                  <label style={{ fontSize: 12, fontWeight: 500 }}>
-                    Reviewer
-                  </label>
-                  <select
-                    className={styles.controlInput}
-                    style={{ height: 34 }}
-                    value={newBoardReviewer}
-                    onChange={e => setNewBoardReviewer(e.target.value)}
-                  >
-                    {REVIEWER_OPTIONS.map(opt => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {!editingRowTarget && canViewBotHarnessBoard && (
-                  <div
-                    style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
-                  >
-                    <label style={{ fontSize: 12, fontWeight: 500 }}>
-                      Phân loại (Category)
-                    </label>
-                    <select
-                      className={styles.controlInput}
-                      style={{ height: 34 }}
-                      value={newBoardCategory}
-                      onChange={e =>
-                        setNewBoardCategory(
-                          e.target.value as 'personal' | 'bot'
-                        )
-                      }
-                    >
-                      <option value="personal">👤 Cá nhân (Section)</option>
-                      <option value="bot">🤖 Bot / Harness</option>
-                    </select>
-                  </div>
-                )}
+                <DatabaseKanbanViewIcon width={16} height={16} />
+                <span>
+                  {editingBoardId
+                    ? 'Chỉnh sửa Bảng Kanban'
+                    : 'Tạo Bảng Kanban mới'}
+                </span>
               </div>
-
-              <label style={{ fontSize: 12, fontWeight: 500 }}>
-                Mô tả ngắn (Tuỳ chọn)
-              </label>
-              <input
-                type="text"
-                placeholder="Mô tả mục tiêu của bảng công việc này..."
-                className={styles.controlInput}
-                style={{ height: 34 }}
-                value={newBoardDescInput}
-                onChange={e => setNewBoardDescInput(e.target.value)}
-              />
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: 8,
-                marginTop: 8,
-              }}
-            >
-              <button
-                type="button"
-                className={styles.actionButton}
-                onClick={() => setNewBoardModalOpen(false)}
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                data-primary="true"
-                className={styles.actionButton}
-                onClick={handleCreatePersonalBoardSubmit}
-              >
-                {editingRowTarget ? 'Lưu thay đổi' : 'Thêm vào Bảng (Table)'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ==================================================================== */}
-      {/* MODAL 1: ADMIN CONFIG GATE (Manage User Access to Bot/Harness Board) */}
-      {/* ==================================================================== */}
-      {adminModalOpen && (
-        <div
-          className={styles.modalBackdrop}
-          onClick={() => setAdminModalOpen(false)}
-        >
-          <div className={styles.modalCard} onClick={e => e.stopPropagation()}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
-                  👑 Admin Config — Phân quyền Bot / Harness Kanban
-                </h3>
-                <p
-                  style={{
-                    margin: '4px 0 0',
-                    fontSize: 12,
-                    opacity: 0.75,
-                  }}
-                >
-                  Chỉ những người dùng được bạn (Admin) bật công tắc dưới đây
-                  mới nhìn thấy các mục 🤖 Bot / Harness trong Bảng.
-                </p>
-              </div>
-            </div>
-
-            <div className={styles.userPermRow}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>
-                  👁️ Xem thử dưới góc nhìn User chưa được bật Config
-                </div>
-                <div style={{ fontSize: 11, opacity: 0.7 }}>
-                  Khi bật, các dòng 🤖 Bot / Harness sẽ ẩn khỏi Bảng để bạn kiểm
-                  tra giao diện của người dùng thường.
-                </div>
-              </div>
-              <input
-                type="checkbox"
-                checked={adminConfig.simulateStandardUser}
-                onChange={e =>
-                  saveAdminConfig({
-                    ...adminConfig,
-                    simulateStandardUser: e.target.checked,
-                  })
-                }
-                style={{ width: 18, height: 18, cursor: 'pointer' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                type="email"
-                placeholder="Nhập email người dùng (vd: member@aevum.io)..."
-                className={styles.controlInput}
-                style={{ flex: 1, height: 34 }}
-                value={newUserEmailInput}
-                onChange={e => setNewUserEmailInput(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && newUserEmailInput.trim()) {
-                    const emailKey = newUserEmailInput.trim().toLowerCase();
-                    saveAdminConfig({
-                      ...adminConfig,
-                      enabledUsers: {
-                        ...adminConfig.enabledUsers,
-                        [emailKey]: true,
-                      },
-                    });
-                    setNewUserEmailInput('');
-                  }
-                }}
-              />
-              <button
-                type="button"
-                data-primary="true"
-                className={styles.actionButton}
-                style={{ height: 34 }}
-                onClick={() => {
-                  if (!newUserEmailInput.trim()) return;
-                  const emailKey = newUserEmailInput.trim().toLowerCase();
-                  saveAdminConfig({
-                    ...adminConfig,
-                    enabledUsers: {
-                      ...adminConfig.enabledUsers,
-                      [emailKey]: true,
-                    },
-                  });
-                  setNewUserEmailInput('');
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: cssVarV2('text/secondary'),
                 }}
               >
-                + Cấp quyền
-              </button>
+                Thiết lập thông tin bảng và danh sách các cột trạng thái.
+              </div>
             </div>
 
             <div
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 8,
-                maxHeight: 240,
-                overflowY: 'auto',
+                gap: '12px',
               }}
             >
-              {Object.entries(adminConfig.enabledUsers).map(
-                ([emailKey, enabled]) => (
-                  <div key={emailKey} className={styles.userPermRow}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 500 }}>
-                        {emailKey}{' '}
-                        {emailKey === currentUserEmail && (
-                          <span
-                            style={{
-                              fontSize: 11,
-                              color: '#60a5fa',
-                              fontWeight: 600,
-                            }}
-                          >
-                            (Bạn)
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ fontSize: 11, opacity: 0.7 }}>
-                        {enabled
-                          ? '✅ Đã bật: Được phép thấy 🤖 Bot / Harness Kanban'
-                          : '🔒 Đã tắt: Chỉ thấy 👤 Cá Nhân (Sections)'}
-                      </div>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={enabled}
-                      onChange={e =>
-                        saveAdminConfig({
-                          ...adminConfig,
-                          enabledUsers: {
-                            ...adminConfig.enabledUsers,
-                            [emailKey]: e.target.checked,
-                          },
-                        })
-                      }
-                      style={{ width: 18, height: 18, cursor: 'pointer' }}
-                    />
-                  </div>
-                )
-              )}
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}
+              >
+                <label
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    color: cssVarV2('text/secondary'),
+                  }}
+                >
+                  Tên bảng Kanban
+                </label>
+                <input
+                  type="text"
+                  className={`${styles.controlInput} ${styles.modalInput ?? ''}`}
+                  style={{
+                    height: '36px',
+                    minHeight: '36px',
+                    fontSize: '13px',
+                    padding: '0 10px',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                  }}
+                  placeholder="VD: Sprint Phát triển Tính năng Aevum..."
+                  value={boardFormName}
+                  onChange={e => setBoardFormName(e.target.value)}
+                />
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '12px',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: cssVarV2('text/secondary'),
+                    }}
+                  >
+                    Phân loại
+                  </label>
+                  <KanbanSelect
+                    size="modal"
+                    value={boardFormType}
+                    options={sectionTypeSelectOptions}
+                    onChange={setBoardFormType}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: cssVarV2('text/secondary'),
+                    }}
+                  >
+                    Trạng thái
+                  </label>
+                  <KanbanSelect
+                    size="modal"
+                    value={boardFormStatus}
+                    options={statusSelectOptions}
+                    onChange={setBoardFormStatus}
+                  />
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 1.4fr',
+                  gap: '12px',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: cssVarV2('text/secondary'),
+                    }}
+                  >
+                    Target
+                  </label>
+                  <input
+                    type="number"
+                    className={`${styles.controlInput} ${styles.modalInput ?? ''}`}
+                    style={{
+                      height: '36px',
+                      minHeight: '36px',
+                      fontSize: '13px',
+                      padding: '0 10px',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                    }}
+                    value={boardFormTarget}
+                    onChange={e => setBoardFormTarget(Number(e.target.value))}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: cssVarV2('text/secondary'),
+                    }}
+                  >
+                    Limit
+                  </label>
+                  <input
+                    type="number"
+                    className={`${styles.controlInput} ${styles.modalInput ?? ''}`}
+                    style={{
+                      height: '36px',
+                      minHeight: '36px',
+                      fontSize: '13px',
+                      padding: '0 10px',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                    }}
+                    value={boardFormLimit}
+                    onChange={e => setBoardFormLimit(Number(e.target.value))}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: cssVarV2('text/secondary'),
+                    }}
+                  >
+                    Reviewer
+                  </label>
+                  <KanbanSelect
+                    size="modal"
+                    value={boardFormReviewer}
+                    options={reviewerSelectOptions}
+                    onChange={setBoardFormReviewer}
+                  />
+                </div>
+              </div>
+
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}
+              >
+                <label
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    color: cssVarV2('text/secondary'),
+                  }}
+                >
+                  Các cột trạng thái (ngăn cách bằng dấu phẩy)
+                </label>
+                <input
+                  type="text"
+                  className={`${styles.controlInput} ${styles.modalInput ?? ''}`}
+                  style={{
+                    height: '36px',
+                    minHeight: '36px',
+                    fontSize: '13px',
+                    padding: '0 10px',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                  }}
+                  value={boardFormColumns}
+                  onChange={e => setBoardFormColumns(e.target.value)}
+                />
+              </div>
+
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}
+              >
+                <label
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    color: cssVarV2('text/secondary'),
+                  }}
+                >
+                  Mô tả bảng Kanban
+                </label>
+                <textarea
+                  className={`${styles.controlInput} ${styles.modalInput ?? ''}`}
+                  style={{
+                    height: 'auto',
+                    minHeight: '68px',
+                    fontSize: '13px',
+                    lineHeight: '20px',
+                    padding: '8px 10px',
+                    width: '100%',
+                    resize: 'vertical',
+                    boxSizing: 'border-box',
+                  }}
+                  placeholder="Mô tả mục tiêu và phạm vi của bảng Kanban này..."
+                  value={boardFormDesc}
+                  onChange={e => setBoardFormDesc(e.target.value)}
+                />
+              </div>
             </div>
 
             <div
               style={{
                 display: 'flex',
                 justifyContent: 'flex-end',
-                gap: 8,
-                marginTop: 4,
+                gap: '8px',
+                paddingTop: '12px',
+                borderTop: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
               }}
             >
               <button
                 type="button"
-                data-primary="true"
                 className={styles.actionButton}
-                onClick={() => setAdminModalOpen(false)}
+                onClick={() => setBoardModalOpen(false)}
               >
-                Đóng & Lưu cấu hình
+                Hủy
+              </button>
+              <button
+                type="button"
+                className={styles.actionButton}
+                data-primary="true"
+                onClick={() => void handleSaveBoardModal()}
+              >
+                {editingBoardId ? 'Lưu thay đổi' : 'Tạo bảng Kanban'}
               </button>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {/* ==================================================================== */}
-      {/* MODAL 2: CREATE NEW BOT TASK IN HARNESS                              */}
-      {/* ==================================================================== */}
-      {newBotTaskModalOpen && (
+      {/* ========================================================= */}
+      {/* MODAL 2: ADD COLUMN MODAL                                 */}
+      {/* ========================================================= */}
+      {columnModalOpen ? (
         <div
           className={styles.modalBackdrop}
-          onClick={() => setNewBotTaskModalOpen(false)}
+          onClick={() => setColumnModalOpen(false)}
         >
-          <div className={styles.modalCard} onClick={e => e.stopPropagation()}>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
-              🤖 Giao Task mới cho Bot Profile (Harness)
-            </h3>
+          <div
+            className={styles.modalCard}
+            style={{ width: '400px' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '15px', fontWeight: 600 }}>
+              Thêm cột trạng thái mới
+            </div>
+            <input
+              type="text"
+              className={`${styles.controlInput} ${styles.modalInput ?? ''}`}
+              style={{
+                height: '36px',
+                minHeight: '36px',
+                fontSize: '13px',
+                padding: '0 10px',
+                width: '100%',
+                boxSizing: 'border-box',
+              }}
+              placeholder="VD: QA Testing, Blocked, Staging..."
+              value={newColumnName}
+              onChange={e => setNewColumnName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  handleAddColumn().catch(console.error);
+                }
+              }}
+            />
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '8px',
+              }}
+            >
+              <button
+                type="button"
+                className={styles.actionButton}
+                onClick={() => setColumnModalOpen(false)}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className={styles.actionButton}
+                data-primary="true"
+                onClick={() => void handleAddColumn()}
+              >
+                Thêm cột
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <label style={{ fontSize: 12, fontWeight: 500 }}>
-                Tiêu đề công việc
-              </label>
-              <input
-                type="text"
-                placeholder="Nhập tên Task / Feature / Epic giao cho Bot..."
-                className={styles.controlInput}
-                style={{ height: 34 }}
-                value={newBotTaskTitle}
-                onChange={e => setNewBotTaskTitle(e.target.value)}
-                autoFocus
-              />
+      {/* ========================================================= */}
+      {/* MODAL 3: CARD DETAIL & SUBTASKS MODAL                     */}
+      {/* ========================================================= */}
+      {cardModalOpen && boardDetail ? (
+        <div
+          className={styles.modalBackdrop}
+          onClick={() => setCardModalOpen(false)}
+        >
+          <div
+            className={styles.modalCard}
+            style={{ width: '580px' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingBottom: '12px',
+                borderBottom: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+              }}
+            >
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <span className={styles.outlinePill}>{cardFormCode}</span>
+                <span style={{ fontSize: '15px', fontWeight: 600 }}>
+                  {editingCardId
+                    ? 'Chi tiết Thẻ công việc'
+                    : 'Thêm Thẻ công việc mới'}
+                </span>
+              </div>
+              {editingCardId ? (
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  style={{
+                    color: '#ef4444',
+                    borderColor: 'rgba(239, 68, 68, 0.35)',
+                  }}
+                  onClick={() => void handleDeleteCard(editingCardId)}
+                >
+                  <DeleteIcon width={14} height={14} />
+                  <span>Xóa thẻ</span>
+                </button>
+              ) : null}
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+              }}
+            >
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '120px 1fr',
+                  gap: '10px',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: cssVarV2('text/secondary'),
+                    }}
+                  >
+                    Mã thẻ
+                  </label>
+                  <input
+                    type="text"
+                    className={`${styles.controlInput} ${styles.modalInput ?? ''}`}
+                    style={{
+                      height: '36px',
+                      minHeight: '36px',
+                      fontSize: '13px',
+                      padding: '0 10px',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                    }}
+                    value={cardFormCode}
+                    onChange={e => setCardFormCode(e.target.value)}
+                  />
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: cssVarV2('text/secondary'),
+                    }}
+                  >
+                    Tiêu đề công việc
+                  </label>
+                  <input
+                    type="text"
+                    className={`${styles.controlInput} ${styles.modalInput ?? ''}`}
+                    style={{
+                      height: '36px',
+                      minHeight: '36px',
+                      fontSize: '13px',
+                      padding: '0 10px',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                    }}
+                    placeholder="Nhập tiêu đề thẻ công việc..."
+                    value={cardFormTitle}
+                    onChange={e => setCardFormTitle(e.target.value)}
+                  />
+                </div>
+              </div>
 
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 10,
+                  gridTemplateColumns: '1fr 1fr 1fr',
+                  gap: '10px',
                 }}
               >
                 <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
                 >
-                  <label style={{ fontSize: 12, fontWeight: 500 }}>
-                    Giao cho Bot Profile
-                  </label>
-                  <select
-                    className={styles.controlInput}
-                    value={newBotTaskProfile}
-                    onChange={e => setNewBotTaskProfile(e.target.value)}
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: cssVarV2('text/secondary'),
+                    }}
                   >
-                    {ALLOWED_BOT_PROFILES.map(p => (
-                      <option key={p} value={p}>
-                        🤖 {p}
-                      </option>
-                    ))}
-                  </select>
+                    Cột trạng thái
+                  </label>
+                  <KanbanSelect
+                    size="modal"
+                    value={cardFormStatus}
+                    options={boardDetail.columns.map(c => ({
+                      value: c,
+                      label: c,
+                    }))}
+                    onChange={setCardFormStatus}
+                  />
                 </div>
 
                 <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
                 >
-                  <label style={{ fontSize: 12, fontWeight: 500 }}>
-                    Loại Work Item
-                  </label>
-                  <select
-                    className={styles.controlInput}
-                    value={newBotTaskType}
-                    onChange={e => setNewBotTaskType(e.target.value)}
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: cssVarV2('text/secondary'),
+                    }}
                   >
-                    {WORK_ITEM_TYPES.map(t => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
+                    Loại thẻ
+                  </label>
+                  <KanbanSelect
+                    size="modal"
+                    value={cardFormType}
+                    options={WORK_ITEM_TYPES.map(t => ({
+                      value: t,
+                      label: t,
+                    }))}
+                    onChange={setCardFormType}
+                  />
                 </div>
 
                 <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
                 >
-                  <label style={{ fontSize: 12, fontWeight: 500 }}>
-                    Trạng thái ban đầu
-                  </label>
-                  <select
-                    className={styles.controlInput}
-                    value={newBotTaskState}
-                    onChange={e => setNewBotTaskState(e.target.value)}
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: cssVarV2('text/secondary'),
+                    }}
                   >
-                    {HARNESS_STATES.map(st => (
-                      <option key={st} value={st}>
-                        {st}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
-                >
-                  <label style={{ fontSize: 12, fontWeight: 500 }}>
                     Độ ưu tiên
                   </label>
-                  <select
-                    className={styles.controlInput}
-                    value={newBotTaskPriority}
-                    onChange={e => setNewBotTaskPriority(e.target.value)}
+                  <KanbanSelect
+                    size="modal"
+                    value={cardFormPriority}
+                    options={CARD_PRIORITIES.map(p => ({
+                      value: p,
+                      label: p,
+                      prefix: (
+                        <span
+                          style={{
+                            width: '6px',
+                            height: '6px',
+                            borderRadius: '999px',
+                            backgroundColor: getPriorityTone(p).dot,
+                          }}
+                        />
+                      ),
+                    }))}
+                    onChange={setCardFormPriority}
+                  />
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 1fr',
+                  gap: '10px',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: cssVarV2('text/secondary'),
+                    }}
                   >
-                    <option value="P0">P0 (Khẩn cấp)</option>
-                    <option value="P1">P1 (Cao)</option>
-                    <option value="P2">P2 (Bình thường)</option>
-                  </select>
+                    Người phụ trách
+                  </label>
+                  <KanbanSelect
+                    size="modal"
+                    value={cardFormAssignee}
+                    options={reviewerSelectOptions}
+                    onChange={setCardFormAssignee}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: cssVarV2('text/secondary'),
+                    }}
+                  >
+                    Hạn chót
+                  </label>
+                  <input
+                    type="date"
+                    className={`${styles.controlInput} ${styles.modalInput ?? ''}`}
+                    style={{
+                      height: '36px',
+                      minHeight: '36px',
+                      fontSize: '13px',
+                      padding: '0 10px',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                    }}
+                    value={cardFormDueDate}
+                    onChange={e => setCardFormDueDate(e.target.value)}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: cssVarV2('text/secondary'),
+                    }}
+                  >
+                    Tiến độ ({cardFormProgress}%)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    className={`${styles.controlInput} ${styles.modalInput ?? ''}`}
+                    style={{
+                      height: '36px',
+                      minHeight: '36px',
+                      fontSize: '13px',
+                      padding: '0 10px',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                    }}
+                    value={cardFormProgress}
+                    onChange={e =>
+                      setCardFormProgress(
+                        Math.min(100, Math.max(0, Number(e.target.value)))
+                      )
+                    }
+                  />
+                </div>
+              </div>
+
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}
+              >
+                <label
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    color: cssVarV2('text/secondary'),
+                  }}
+                >
+                  Mô tả chi tiết
+                </label>
+                <textarea
+                  className={`${styles.controlInput} ${styles.modalInput ?? ''}`}
+                  style={{
+                    height: 'auto',
+                    minHeight: '64px',
+                    fontSize: '13px',
+                    lineHeight: '20px',
+                    padding: '8px 10px',
+                    width: '100%',
+                    resize: 'vertical',
+                    boxSizing: 'border-box',
+                  }}
+                  placeholder="Mô tả phạm vi và nội dung thực hiện..."
+                  value={cardFormDesc}
+                  onChange={e => setCardFormDesc(e.target.value)}
+                />
+              </div>
+
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}
+              >
+                <label
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    color: cssVarV2('text/secondary'),
+                  }}
+                >
+                  Tiêu chí nghiệm thu (Acceptance Criteria)
+                </label>
+                <textarea
+                  className={`${styles.controlInput} ${styles.modalInput ?? ''}`}
+                  style={{
+                    height: 'auto',
+                    minHeight: '60px',
+                    fontSize: '13px',
+                    lineHeight: '20px',
+                    padding: '8px 10px',
+                    width: '100%',
+                    resize: 'vertical',
+                    boxSizing: 'border-box',
+                  }}
+                  placeholder="Các điều kiện cần đạt để hoàn thành thẻ..."
+                  value={cardFormCriteria}
+                  onChange={e => setCardFormCriteria(e.target.value)}
+                />
+              </div>
+
+              {/* Subtasks / Checklist */}
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  border: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+                  backgroundColor: cssVarV2('layer/background/secondary'),
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: cssVarV2('text/primary'),
+                  }}
+                >
+                  Checklist công việc con (
+                  {cardFormSubtasks.filter(s => s.done).length}/
+                  {cardFormSubtasks.length})
+                </div>
+
+                {cardFormSubtasks.map(sub => (
+                  <div
+                    key={sub.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '8px',
+                    }}
+                  >
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '12.5px',
+                        cursor: 'pointer',
+                        textDecoration: sub.done ? 'line-through' : 'none',
+                        color: sub.done
+                          ? cssVarV2('text/secondary')
+                          : cssVarV2('text/primary'),
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        className={styles.shadcnCheckbox}
+                        checked={sub.done}
+                        onChange={() => {
+                          const next = cardFormSubtasks.map(s =>
+                            s.id === sub.id ? { ...s, done: !s.done } : s
+                          );
+                          setCardFormSubtasks(next);
+                          if (next.length > 0) {
+                            const doneCount = next.filter(s => s.done).length;
+                            setCardFormProgress(
+                              Math.round((doneCount / next.length) * 100)
+                            );
+                          }
+                        }}
+                      />
+                      <span>{sub.title}</span>
+                    </label>
+                    <button
+                      type="button"
+                      className={styles.rowMenuBtn}
+                      onClick={() =>
+                        setCardFormSubtasks(prev =>
+                          prev.filter(s => s.id !== sub.id)
+                        )
+                      }
+                    >
+                      <DeleteIcon width={13} height={13} />
+                    </button>
+                  </div>
+                ))}
+
+                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                  <input
+                    type="text"
+                    className={styles.controlInput}
+                    style={{
+                      flex: 1,
+                      height: '34px',
+                      minHeight: '34px',
+                      fontSize: '13px',
+                      padding: '0 10px',
+                    }}
+                    placeholder="Thêm công việc con (Subtask)..."
+                    value={newSubtaskTitle}
+                    onChange={e => setNewSubtaskTitle(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && newSubtaskTitle.trim()) {
+                        e.preventDefault();
+                        setCardFormSubtasks(prev => [
+                          ...prev,
+                          {
+                            id: `sub-${Date.now()}`,
+                            title: newSubtaskTitle.trim(),
+                            done: false,
+                          },
+                        ]);
+                        setNewSubtaskTitle('');
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className={styles.actionButton}
+                    onClick={() => {
+                      if (!newSubtaskTitle.trim()) return;
+                      setCardFormSubtasks(prev => [
+                        ...prev,
+                        {
+                          id: `sub-${Date.now()}`,
+                          title: newSubtaskTitle.trim(),
+                          done: false,
+                        },
+                      ]);
+                      setNewSubtaskTitle('');
+                    }}
+                  >
+                    <PlusIcon width={13} height={13} />
+                    <span>Thêm</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -3109,35 +3619,35 @@ export const WorkspaceKanbanPage = () => {
               style={{
                 display: 'flex',
                 justifyContent: 'flex-end',
-                gap: 8,
-                marginTop: 8,
+                gap: '8px',
+                paddingTop: '12px',
+                borderTop: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
               }}
             >
               <button
                 type="button"
                 className={styles.actionButton}
-                onClick={() => setNewBotTaskModalOpen(false)}
+                onClick={() => setCardModalOpen(false)}
               >
-                Hủy
+                Đóng
               </button>
               <button
                 type="button"
-                data-primary="true"
                 className={styles.actionButton}
-                onClick={handleCreateBotTask}
+                data-primary="true"
+                onClick={() => void handleSaveCardModal()}
               >
-                Tạo & Giao cho Bot
+                Lưu thẻ công việc
               </button>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
       <AllDocSidebarTabs />
     </>
   );
 };
 
-export const Component = () => {
-  return <WorkspaceKanbanPage />;
-};
+export const Component = WorkspaceKanbanPage;
+export default WorkspaceKanbanPage;

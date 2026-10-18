@@ -1,4 +1,4 @@
-name: Backend CI/CD
+name: Aevum Full-Stack CI/CD (Backend + Frontend Docker)
 
 on:
   push:
@@ -8,7 +8,10 @@ on:
       - master
     paths:
       - 'packages/backend/**'
+      - 'packages/frontend/**'
       - 'packages/common/**'
+      - 'blocksuite/**'
+      - 'tools/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
@@ -25,7 +28,10 @@ on:
       - master
     paths:
       - 'packages/backend/**'
+      - 'packages/frontend/**'
       - 'packages/common/**'
+      - 'blocksuite/**'
+      - 'tools/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
@@ -58,12 +64,140 @@ permissions:
   packages: write
 
 concurrency:
-  group: backend-cicd-${{ github.ref }}
+  group: aevum-fullstack-cicd-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  security-secret-scan:
+    name: Security Scan (Check Leaked Keys & APIs)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan Source Code for Hardcoded API Keys, Tokens & Internal Endpoints
+        run: |
+          echo "🔍 Scanning repository for leaked API keys, JWT tokens, private keys & internal endpoints..."
+          LEAK_FOUND=0
+
+          # 1. Check for hardcoded cloud/API keys (AWS AKIA, Google AIza, GitHub PAT, OpenAI sk-, Slack xox)
+          if git grep -nE '(AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|gh[pousr]_[A-Za-z0-9_]{36,}|sk-[A-Za-z0-9]{32,}|xox[baprs]-[0-9A-Za-z-]{10,})' -- \
+            ':!.yarn/**' ':!*.lock' ':!yarn.lock' ':!Cargo.lock' ':!.github/workflows/backend-cicd.yml' ':!**/__tests__/**' ':!**/__snapshots__/**' ':!tests/**'; then
+            echo "❌ ERROR: Detected hardcoded API Key or Token!"
+            LEAK_FOUND=1
+          fi
+
+          # 2. Check for hardcoded 3-part JWT Bearer tokens
+          if git grep -nE 'eyJ[A-Za-z0-9_-]{20,}\.eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}' -- \
+            ':!.yarn/**' ':!*.lock' ':!yarn.lock' ':!.github/workflows/backend-cicd.yml' ':!**/__tests__/**' ':!**/__snapshots__/**' ':!tests/**'; then
+            echo "❌ ERROR: Detected hardcoded JWT Bearer token!"
+            LEAK_FOUND=1
+          fi
+
+          # 3. Check for private Tailscale / internal infrastructure IPs or domains
+          if git grep -nE '(100\.74\.[0-9]+\.[0-9]+|tma\.com\.vn)' -- \
+            ':!.yarn/**' ':!*.lock' ':!yarn.lock' ':!.github/workflows/backend-cicd.yml'; then
+            echo "❌ ERROR: Detected internal IP address or private endpoint!"
+            LEAK_FOUND=1
+          fi
+
+          # 4. Check for committed .env files with real credentials
+          if git ls-files | grep -E '(^|/)\.env(\.local|\.production|\.development)?$' | grep -v '^blocksuite/playground/\.env$'; then
+            echo "❌ ERROR: Committed .env file detected in repository!"
+            LEAK_FOUND=1
+          fi
+
+          if [ "$LEAK_FOUND" -ne 0 ]; then
+            exit 1
+          fi
+          echo "✅ No leaked API keys, tokens, or internal endpoints found."
+
+      - name: TruffleHog Verified Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified
+
+  build-frontend:
+    name: Build Frontend (Web, Admin, Mobile)
+    needs: security-secret-scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Get Yarn Cache Directory
+        id: yarn-cache-dir
+        run: echo "dir=$(yarn config cacheFolder --json | jq -r .effective)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Yarn Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ${{ steps.yarn-cache-dir.outputs.dir }}
+          key: yarn-fe-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-fe-${{ runner.os }}-
+
+      - name: Install Workspace Dependencies
+        run: yarn install --immutable
+        env:
+          HUSKY: '0'
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+          SENTRYCLI_SKIP_DOWNLOAD: '1'
+
+      - name: Build @affine/web
+        run: yarn affine @affine/web build
+        env:
+          BUILD_TYPE: stable
+
+      - name: Build @affine/admin
+        run: yarn affine @affine/admin build
+        env:
+          BUILD_TYPE: stable
+
+      - name: Build @affine/mobile
+        run: yarn affine @affine/mobile build
+        env:
+          BUILD_TYPE: stable
+
+      - name: Upload Frontend Web Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: ./packages/frontend/apps/web/dist
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload Frontend Admin Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-dist
+          path: ./packages/frontend/admin/dist
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload Frontend Mobile Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-dist
+          path: ./packages/frontend/apps/mobile/dist
+          retention-days: 1
+          if-no-files-found: error
+
   build-backend:
     name: Build Backend & Native Module
+    needs: security-secret-scan
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -147,8 +281,10 @@ jobs:
           if-no-files-found: error
 
   docker-build-push:
-    name: Build & Push Docker Image
-    needs: build-backend
+    name: Build & Push Unified All-in-One Docker Image
+    needs:
+      - build-frontend
+      - build-backend
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.push_docker == true)
     runs-on: ubuntu-latest
     steps:
@@ -162,6 +298,24 @@ jobs:
         with:
           name: backend-package
           path: packages/backend/server
+
+      - name: Download Frontend Web Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: packages/frontend/apps/web/dist
+
+      - name: Download Frontend Admin Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: admin-dist
+          path: packages/frontend/admin/dist
+
+      - name: Download Frontend Mobile Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mobile-dist
+          path: packages/frontend/apps/mobile/dist
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -188,6 +342,7 @@ jobs:
         with:
           images: |
             ghcr.io/${{ github.repository_owner }}/aevum-backend
+            ghcr.io/${{ github.repository_owner }}/aevum
           tags: |
             type=ref,event=branch
             type=sha,format=short,prefix=sha-
@@ -209,13 +364,13 @@ jobs:
       - name: Publish Workflow Summary
         run: |
           {
-            echo "### 🚀 Aevum Backend Image Published!"
+            echo "### 🚀 Aevum All-in-One Image (Backend + Frontend) Published!"
             echo "**Published Tags:**"
             echo '```'
             echo "${{ steps.meta.outputs.tags }}"
             echo '```'
             echo ""
-            echo "Run on server with Docker Compose:"
+            echo "Run on server with Docker Compose (serves both Web UI & Backend API on port 3010):"
             echo '```bash'
             echo "AEVUM_IMAGE=ghcr.io/${{ github.repository_owner }}/aevum-backend:latest docker compose -f docker-compose.backend.yml up -d"
             echo '```'
@@ -235,7 +390,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT || 22 }}
           script: |
-            echo "🚀 Deploying latest Aevum backend..."
+            echo "🚀 Deploying latest Aevum All-in-One (Backend + Frontend)..."
             cd ${{ secrets.DEPLOY_PATH || '/opt/aevum' }}
             docker compose -f docker-compose.backend.yml pull aevum_server aevum_migration
             docker compose -f docker-compose.backend.yml up -d --remove-orphans

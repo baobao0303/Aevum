@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
 export type TableRowStatus = 'In Process' | 'Done' | 'Planned';
 
@@ -81,567 +81,315 @@ export interface KanbanBoardDetail extends KanbanBoardSummary {
   };
 }
 
-interface RawHarnessItem {
-  id: number;
-  type?: string;
-  title?: string;
-  description?: string;
-  acceptance_criteria?: string;
-  state?: string;
-  priority?: string;
-  assigned_to_profile?: string;
-  created_by_profile?: string;
-  parent_item_id?: number;
-  updated_at?: string;
+export interface KanbanAccessContext {
+  isAdmin?: boolean;
+  userEmail?: string;
+  userName?: string;
 }
 
-const STORE_FILE = join(tmpdir(), 'aevum-kanban-boards-store-v1.json');
-
-const ALLOWED_PROFILES = [
-  'Supervisor',
-  'Lead',
-  'Peer',
-  'QC',
-  'Lead BA',
-  'Peer BA',
-  'Lead design',
-  'Peer Design',
-  'Lead Dev',
-  'Peer Dev',
+export const FLOCI_HARNESS_BOARD_ID = 'board-floci-harness';
+const FLOCI_HARNESS_TABLE = 'harness_work_items';
+const FLOCI_HARNESS_DEFAULT_COLUMNS = [
+  'New',
+  'Accepted',
+  'Active',
+  'Blocked',
+  'Resolved',
+  'Closed',
 ];
 
-function normalizeProfile(raw?: string): string {
-  if (!raw) return 'Peer';
-  const match = ALLOWED_PROFILES.find(
-    p => p.toLowerCase() === raw.trim().toLowerCase()
+const STORE_FILE = join(tmpdir(), 'aevum-kanban-boards-store-v3.json');
+
+const LEGACY_SEED_BOARD_IDS = new Set([
+  'board-aevum-sprint',
+  'board-architecture-roadmap',
+]);
+
+function cleanHtml(raw: string | undefined | null): string {
+  if (!raw) return '';
+  return String(raw)
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getFlociConfig() {
+  const backend = (process.env.HARNESS_BACKEND || 'floci').trim().toLowerCase();
+  const endpoint = (
+    process.env.FLOCI_ENDPOINT ||
+    process.env.AWS_ENDPOINT_URL ||
+    ''
+  ).trim();
+  const s3Bucket = (process.env.FLOCI_S3_BUCKET || 'harness-data').trim();
+  const accessKeyId = (process.env.AWS_ACCESS_KEY_ID || 'test').trim();
+  const secretAccessKey = (process.env.AWS_SECRET_ACCESS_KEY || 'test').trim();
+  const region = (process.env.AWS_REGION || 'us-east-1').trim();
+
+  return {
+    enabled: backend === 'floci' && Boolean(endpoint),
+    backend,
+    endpoint,
+    s3Bucket,
+    accessKeyId,
+    secretAccessKey,
+    region,
+  };
+}
+
+interface DynamoAttributeValue {
+  S?: string;
+  N?: string;
+  BOOL?: boolean;
+  SS?: string[];
+  L?: DynamoAttributeValue[];
+}
+
+type DynamoItem = Record<string, DynamoAttributeValue>;
+
+let cachedFlociCards: { cards: KanbanCardItem[]; fetchedAt: number } | null =
+  null;
+const FLOCI_CACHE_TTL_MS = 5000;
+
+async function callFlociDynamo(
+  operation: string,
+  payload: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const cfg = getFlociConfig();
+  if (!cfg.enabled) {
+    throw new Error('Floci Harness backend is not configured in .env');
+  }
+  const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const isoTimestamp = `${dateStamp}T000000Z`;
+  const res = await fetch(cfg.endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-amz-json-1.0',
+      'X-Amz-Date': isoTimestamp,
+      'X-Amz-Target': `DynamoDB_20120810.${operation}`,
+      Authorization: `AWS4-HMAC-SHA256 Credential=${cfg.accessKeyId}/${dateStamp}/${cfg.region}/dynamodb/aws4_request, SignedHeaders=host;x-amz-date;x-amz-target, Signature=0000`,
+    },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(
+      `Floci DynamoDB ${operation} HTTP ${res.status}: ${errText}`
+    );
+  }
+  return (await res.json()) as Record<string, unknown>;
+}
+
+function mapHarnessStateToColumn(rawState: string): string {
+  const trimmed = rawState.trim();
+  const lower = trimmed.toLowerCase();
+  if (lower === 'new' || lower === 'open' || lower === 'to do') return 'New';
+  if (lower === 'accepted' || lower === 'approved') return 'Accepted';
+  if (
+    lower === 'active' ||
+    lower === 'in progress' ||
+    lower === 'doing' ||
+    lower === 'in review'
+  ) {
+    return 'Active';
+  }
+  if (lower === 'blocked') return 'Blocked';
+  if (lower === 'resolved' || lower === 'ready for qc') return 'Resolved';
+  if (lower === 'closed' || lower === 'done') return 'Closed';
+  return 'New';
+}
+
+function mapHarnessPriority(rawPriority: string): KanbanCardItem['priority'] {
+  const upper = rawPriority.trim().toUpperCase();
+  if (
+    upper === 'P0' ||
+    upper === '1' ||
+    upper === 'URGENT' ||
+    upper === 'CRITICAL'
+  ) {
+    return 'Urgent';
+  }
+  if (upper === 'P1' || upper === '2' || upper === 'HIGH') {
+    return 'High';
+  }
+  if (upper === 'P3' || upper === '4' || upper === 'LOW') {
+    return 'Low';
+  }
+  return 'Medium';
+}
+
+function mapPriorityToHarness(priority: KanbanCardItem['priority']): string {
+  switch (priority) {
+    case 'Urgent':
+      return 'P0';
+    case 'High':
+      return 'P1';
+    case 'Low':
+      return 'P3';
+    case 'Medium':
+    default:
+      return 'P2';
+  }
+}
+
+function mapHarnessType(rawType: string): KanbanCardItem['type'] {
+  const lower = rawType.trim().toLowerCase();
+  if (lower === 'epic') return 'Epic';
+  if (lower === 'feature') return 'Feature';
+  if (lower === 'bug') return 'Bug';
+  if (lower === 'testcase' || lower === 'test case') return 'Testcase';
+  return 'Task';
+}
+
+function mapDynamoItemToCard(item: DynamoItem): KanbanCardItem | null {
+  const rawId = item.id?.N || item.id?.S || '';
+  if (!rawId) return null;
+
+  const rawState = item.state?.S || 'New';
+  if (rawState.toLowerCase() === 'removed') return null;
+
+  const status = mapHarnessStateToColumn(rawState);
+  const rawType = item.type?.S || 'Task';
+  const type = mapHarnessType(rawType);
+  const priority = mapHarnessPriority(item.priority?.S || 'P2');
+  const title = cleanHtml(item.title?.S || `Work Item #${rawId}`);
+  const description = cleanHtml(item.description?.S || '');
+  const acceptanceCriteria = cleanHtml(item.acceptance_criteria?.S || '');
+  const assignee = cleanHtml(
+    item.assigned_to?.S ||
+      item.assigned_to_profile?.S ||
+      item.created_by_profile?.S ||
+      'Peer'
   );
-  return match ?? raw;
+  const updatedRaw = item.updated_at?.S || item.created_at?.S || '';
+  const updatedAt = updatedRaw
+    ? updatedRaw.slice(0, 10)
+    : new Date().toISOString().slice(0, 10);
+
+  const progress =
+    status === 'Closed'
+      ? 100
+      : status === 'Resolved'
+        ? 90
+        : status === 'Active'
+          ? 55
+          : status === 'Accepted'
+            ? 25
+            : status === 'Blocked'
+              ? 35
+              : 0;
+
+  const tags: string[] = [rawType];
+  if (item.source?.S) tags.push(item.source.S);
+  if (item.iteration_path?.S) {
+    const parts = item.iteration_path.S.split('\\');
+    const lastPart = parts[parts.length - 1];
+    if (lastPart) tags.push(lastPart);
+  }
+
+  // Parse numbered lines from acceptance_criteria into subtasks if present
+  const subtasks: KanbanSubtask[] = [];
+  if (acceptanceCriteria) {
+    const segments = acceptanceCriteria
+      .split(/(?:\r?\n|(?=\b\d+\.\s))/)
+      .map(s => s.trim())
+      .filter(Boolean)
+      .slice(0, 5);
+    segments.forEach((seg, idx) => {
+      subtasks.push({
+        id: `wi-${rawId}-sub-${idx + 1}`,
+        title: seg.replace(/^\d+\.\s*/, ''),
+        done: status === 'Closed' || status === 'Resolved',
+      });
+    });
+  }
+  if (subtasks.length === 0) {
+    subtasks.push({
+      id: `wi-${rawId}-sub-1`,
+      title: 'Thực thi và nghiệm thu theo chuẩn SLPC',
+      done: status === 'Closed' || status === 'Resolved',
+    });
+  }
+
+  return {
+    id: `wi-${rawId}`,
+    code: `WI-${rawId}`,
+    title,
+    description,
+    acceptanceCriteria,
+    status,
+    type,
+    priority,
+    assignee,
+    dueDate: updatedAt,
+    progress,
+    tags,
+    subtasks,
+    updatedAt,
+  };
 }
 
-function mapHarnessPriority(p?: string): KanbanCardItem['priority'] {
-  if (p === 'P0') return 'Urgent';
-  if (p === 'P1') return 'High';
-  if (p === 'P2') return 'Medium';
-  return 'Low';
-}
+async function fetchFlociHarnessCards(
+  forceRefresh = false
+): Promise<KanbanCardItem[]> {
+  if (
+    !forceRefresh &&
+    cachedFlociCards &&
+    Date.now() - cachedFlociCards.fetchedAt < FLOCI_CACHE_TTL_MS
+  ) {
+    return cachedFlociCards.cards;
+  }
 
-function computeProgressFromState(state: string): number {
-  if (state === 'Closed') return 100;
-  if (state === 'Resolved') return 85;
-  if (state === 'Active' || state === 'In Progress') return 55;
-  if (state === 'Accepted' || state === 'In Review') return 30;
-  return 0;
-}
+  const allItems: DynamoItem[] = [];
+  let exclusiveStartKey: Record<string, unknown> | undefined;
 
-function loadRawHarnessItems(): RawHarnessItem[] {
-  const candidates = [
-    resolve(
-      process.cwd(),
-      'packages/frontend/core/public/harness-backlog.json'
-    ),
-    resolve(process.cwd(), '../frontend/core/public/harness-backlog.json'),
-    resolve(process.cwd(), '../../frontend/core/public/harness-backlog.json'),
-  ];
-  for (const candidate of candidates) {
-    try {
-      if (existsSync(candidate)) {
-        const parsed = JSON.parse(readFileSync(candidate, 'utf8')) as {
-          items?: RawHarnessItem[];
-          testcases?: RawHarnessItem[];
-        };
-        return [...(parsed.items ?? []), ...(parsed.testcases ?? [])];
-      }
-    } catch {
-      // continue
+  do {
+    const payload: Record<string, unknown> = {
+      TableName: FLOCI_HARNESS_TABLE,
+      FilterExpression: '#t <> :tc',
+      ExpressionAttributeNames: { '#t': 'type' },
+      ExpressionAttributeValues: { ':tc': { S: 'Testcase' } },
+    };
+    if (exclusiveStartKey) {
+      payload.ExclusiveStartKey = exclusiveStartKey;
     }
-  }
-  return [];
-}
+    const data = await callFlociDynamo('Scan', payload);
+    if (Array.isArray(data.Items)) {
+      allItems.push(...(data.Items as DynamoItem[]));
+    }
+    exclusiveStartKey = data.LastEvaluatedKey as
+      | Record<string, unknown>
+      | undefined;
+  } while (exclusiveStartKey);
 
-function parseAcceptanceToSubtasks(
-  cardId: string,
-  acText?: string,
-  state?: string
-): KanbanSubtask[] {
-  const isDone = state === 'Closed' || state === 'Resolved';
-  if (!acText || !acText.trim()) {
-    return [
-      {
-        id: `${cardId}-sub-1`,
-        title: 'Phân tích yêu cầu & thiết kế kỹ thuật',
-        done: isDone || state === 'Active',
-      },
-      {
-        id: `${cardId}-sub-2`,
-        title: 'Hiện thực hóa mã nguồn & kiểm thử đơn vị (Unit Test)',
-        done: isDone,
-      },
-      {
-        id: `${cardId}-sub-3`,
-        title: 'Nghiệm thu độc lập & cập nhật tài liệu bàn giao',
-        done: state === 'Closed',
-      },
-    ];
-  }
-  const parts = acText
-    .split(/(?:\d+\.\s+|\n+)/)
-    .map(s => s.trim())
-    .filter(Boolean);
-  if (parts.length === 0) {
-    return [
-      {
-        id: `${cardId}-sub-1`,
-        title: acText.trim(),
-        done: isDone,
-      },
-    ];
-  }
-  return parts.slice(0, 6).map((text, idx) => ({
-    id: `${cardId}-sub-${idx + 1}`,
-    title: text,
-    done: isDone || (state === 'Active' && idx === 0),
-  }));
-}
-
-function buildSeedBoardsForWorkspace(workspaceId: string): KanbanBoardRecord[] {
-  const harnessItems = loadRawHarnessItems();
-  const epics = harnessItems.filter(it => it.type === 'Epic');
-  const botBoards: KanbanBoardRecord[] = [];
-
-  for (const epic of epics) {
-    const directChildren = harnessItems.filter(
-      it => it.parent_item_id === epic.id
-    );
-    const directIds = new Set(directChildren.map(c => c.id));
-    const grandChildren = harnessItems.filter(
-      it => it.parent_item_id && directIds.has(it.parent_item_id)
-    );
-    const grandIds = new Set(grandChildren.map(c => c.id));
-    const greatGrandChildren = harnessItems.filter(
-      it => it.parent_item_id && grandIds.has(it.parent_item_id)
-    );
-    const allRelated = [
-      epic,
-      ...directChildren,
-      ...grandChildren,
-      ...greatGrandChildren,
-    ];
-
-    const cards: KanbanCardItem[] = allRelated.map(item => {
-      const state = item.state || 'New';
-      const type = (
-        ['Epic', 'Feature', 'Task', 'Bug', 'Testcase'].includes(item.type || '')
-          ? item.type
-          : 'Task'
-      ) as KanbanCardItem['type'];
-      const cardId = `harness-${item.id}`;
-      return {
-        id: cardId,
-        code: `#${item.id}`,
-        title: item.title || `Work Item #${item.id}`,
-        description:
-          item.description ||
-          `Hạng mục thuộc bảng "${epic.title}" do ${normalizeProfile(item.assigned_to_profile)} phụ trách.`,
-        acceptanceCriteria: item.acceptance_criteria || '',
-        status: state,
-        type,
-        priority: mapHarnessPriority(item.priority),
-        assignee: normalizeProfile(item.assigned_to_profile),
-        dueDate: (item.updated_at || '2026-10-20').slice(0, 10),
-        progress: computeProgressFromState(state),
-        tags: [type, normalizeProfile(item.assigned_to_profile)],
-        subtasks: parseAcceptanceToSubtasks(
-          cardId,
-          item.acceptance_criteria,
-          state
-        ),
-        updatedAt: (item.updated_at || '2026-10-18').slice(0, 10),
-      };
-    });
-
-    const isAllClosed = cards.every(c => c.status === 'Closed');
-    botBoards.push({
-      id: `bot-epic-${epic.id}`,
-      workspaceId,
-      kind: 'bot',
-      name: epic.title || `Epic #${epic.id}`,
-      description:
-        epic.description ||
-        `Bảng Kanban điều phối các Feature, Task và Testcase thuộc ${epic.title}`,
-      sectionType: 'SLPC Harness Epic',
-      tableStatus: isAllClosed ? 'Done' : 'In Process',
-      target: cards.length,
-      limit: Math.max(10, cards.length),
-      reviewer: normalizeProfile(epic.assigned_to_profile),
-      columns: ['New', 'Accepted', 'Active', 'Blocked', 'Resolved', 'Closed'],
-      cards,
-      createdAt: (epic.updated_at || '2026-10-17').slice(0, 10),
-      updatedAt: (epic.updated_at || '2026-10-18').slice(0, 10),
-    });
+  const cards: KanbanCardItem[] = [];
+  for (const item of allItems) {
+    const mapped = mapDynamoItemToCard(item);
+    if (mapped) cards.push(mapped);
   }
 
-  // Also include a Master Bot Board if harnessItems exist
-  if (harnessItems.length > 0) {
-    const mainItems = harnessItems.filter(it => it.type !== 'Testcase');
-    const masterCards: KanbanCardItem[] = mainItems.map(item => {
-      const state = item.state || 'New';
-      const type = (
-        ['Epic', 'Feature', 'Task', 'Bug', 'Testcase'].includes(item.type || '')
-          ? item.type
-          : 'Task'
-      ) as KanbanCardItem['type'];
-      const cardId = `master-${item.id}`;
-      return {
-        id: cardId,
-        code: `#${item.id}`,
-        title: item.title || `Work Item #${item.id}`,
-        description:
-          item.description ||
-          `Tác vụ hệ thống được điều phối qua quy trình SLPC 4 cổng.`,
-        acceptanceCriteria: item.acceptance_criteria || '',
-        status: state,
-        type,
-        priority: mapHarnessPriority(item.priority),
-        assignee: normalizeProfile(item.assigned_to_profile),
-        dueDate: (item.updated_at || '2026-10-20').slice(0, 10),
-        progress: computeProgressFromState(state),
-        tags: [type, normalizeProfile(item.assigned_to_profile)],
-        subtasks: parseAcceptanceToSubtasks(
-          cardId,
-          item.acceptance_criteria,
-          state
-        ),
-        updatedAt: (item.updated_at || '2026-10-18').slice(0, 10),
-      };
-    });
+  // Sort by numeric ID descending so newest items appear first
+  cards.sort((a, b) => {
+    const numA = Number(a.id.replace(/^wi-/, '')) || 0;
+    const numB = Number(b.id.replace(/^wi-/, '')) || 0;
+    return numB - numA;
+  });
 
-    botBoards.unshift({
-      id: 'bot-master-slpc',
-      workspaceId,
-      kind: 'bot',
-      name: 'SLPC Master Backlog — Điều phối 10 Bot Profiles',
-      description:
-        'Bảng tổng hợp toàn bộ Epic, Feature và Task của 10 Agent Profiles trong hệ thống',
-      sectionType: '10 Bot Profiles',
-      tableStatus: 'In Process',
-      target: masterCards.length,
-      limit: 25,
-      reviewer: 'Supervisor',
-      columns: ['New', 'Accepted', 'Active', 'Blocked', 'Resolved', 'Closed'],
-      cards: masterCards,
-      createdAt: '2026-10-17',
-      updatedAt: '2026-10-18',
-    });
-  }
-
-  const personalBoards: KanbanBoardRecord[] = [
-    {
-      id: 'board-aevum-sprint',
-      workspaceId,
-      kind: 'personal',
-      name: 'Sprint Phát triển Tính năng Aevum Workspace',
-      description:
-        'Theo dõi tiến độ phát triển giao diện, tích hợp API Lịch, QR Mobile Handoff và Kanban đa dự án',
-      sectionType: 'Product Sprint',
-      tableStatus: 'In Process',
-      target: 12,
-      limit: 8,
-      reviewer: 'Lead Dev',
-      columns: ['Backlog', 'To Do', 'In Progress', 'In Review', 'Done'],
-      createdAt: '2026-10-16',
-      updatedAt: '2026-10-18',
-      cards: [
-        {
-          id: 'card-sp-1',
-          code: 'AEV-101',
-          title:
-            'Chuẩn hóa giao diện Dark Mode & hệ thống Icon chuẩn shadcn/ui',
-          description:
-            'Đồng bộ bảng màu cssVarV2, loại bỏ emoji rời rạc và áp dụng toàn bộ vector icon từ @blocksuite/icons/rc.',
-          acceptanceCriteria:
-            '1. Không dùng emoji trong giao diện.\n2. Viền 1px subtle border đồng nhất giữa các trang.\n3. Hỗ trợ custom scrollbar chuẩn CSS.',
-          status: 'Done',
-          type: 'Feature',
-          priority: 'High',
-          assignee: 'Peer Design',
-          dueDate: '2026-10-18',
-          progress: 100,
-          tags: ['UI/UX', 'shadcn'],
-          subtasks: [
-            {
-              id: 's1',
-              title: 'Thay thế toàn bộ emoji bằng @blocksuite/icons/rc',
-              done: true,
-            },
-            {
-              id: 's2',
-              title: 'Đồng bộ border và badge theo chuẩn shadcn/ui',
-              done: true,
-            },
-          ],
-          updatedAt: '2026-10-18',
-        },
-        {
-          id: 'card-sp-2',
-          code: 'AEV-102',
-          title: 'Xây dựng API List & API Detail cho hệ thống Bảng Kanban',
-          description:
-            'Tách bạch API lấy danh sách các bảng Kanban đã tạo và API xem chi tiết từng bảng khi người dùng click vào 1 hàng.',
-          acceptanceCriteria:
-            '1. GET /api/auth/open-app/kanban/boards trả về danh sách bảng đã tạo.\n2. GET /api/auth/open-app/kanban/boards/:id trả về chi tiết bảng, cột, thống kê và danh sách thẻ.\n3. Click vào bất kỳ hàng nào trong Table sẽ mở ngay Detail Kanban của hàng đó.',
-          status: 'In Progress',
-          type: 'Feature',
-          priority: 'Urgent',
-          assignee: 'Lead Dev',
-          dueDate: '2026-10-19',
-          progress: 80,
-          tags: ['Backend API', 'Kanban'],
-          subtasks: [
-            {
-              id: 's3',
-              title:
-                'Thiết kế endpoint GET/POST/PATCH/DELETE cho Kanban Boards',
-              done: true,
-            },
-            {
-              id: 's4',
-              title:
-                'Kết nối click 1 hàng trên Table mở màn hình Detail Kanban',
-              done: true,
-            },
-            {
-              id: 's5',
-              title:
-                'Bổ sung Modal xem & chỉnh sửa chi tiết từng Card và Checklist',
-              done: false,
-            },
-          ],
-          updatedAt: '2026-10-18',
-        },
-        {
-          id: 'card-sp-3',
-          code: 'AEV-103',
-          title: 'Tích hợp Config API đồng bộ Lịch cá nhân trên trang Journals',
-          description:
-            'Cho phép người dùng tự cấu hình URL và Bearer Token trong LocalStorage mà không lộ domain nội bộ khi commit.',
-          acceptanceCriteria:
-            '1. Lưu cấu hình trong LocalStorage.\n2. Proxy qua Backend chống lỗi CORS.\n3. Không hardcode domain trong mã nguồn.',
-          status: 'Done',
-          type: 'Task',
-          priority: 'High',
-          assignee: 'Peer Dev',
-          dueDate: '2026-10-18',
-          progress: 100,
-          tags: ['Journals', 'Security'],
-          subtasks: [
-            { id: 's6', title: 'Tạo modal cấu hình URL & Token', done: true },
-            {
-              id: 's7',
-              title: 'Xóa toàn bộ domain hardcode khỏi Git',
-              done: true,
-            },
-          ],
-          updatedAt: '2026-10-18',
-        },
-        {
-          id: 'card-sp-4',
-          code: 'AEV-104',
-          title:
-            'Kiểm thử E2E luồng kéo thả thẻ Kanban & đồng bộ thời gian thực',
-          description:
-            'Đảm bảo thao tác kéo thả thẻ qua lại giữa các cột lưu tức thì xuống Backend API.',
-          acceptanceCriteria:
-            '1. Kéo thả mượt giữa các cột.\n2. Tự động tính lại tỷ lệ hoàn thành của bảng.',
-          status: 'In Review',
-          type: 'Task',
-          priority: 'Medium',
-          assignee: 'QC',
-          dueDate: '2026-10-20',
-          progress: 65,
-          tags: ['QA', 'E2E'],
-          subtasks: [
-            { id: 's8', title: 'Kiểm thử tạo bảng mới & xóa bảng', done: true },
-            { id: 's9', title: 'Kiểm thử kéo thả card đổi cột', done: false },
-          ],
-          updatedAt: '2026-10-18',
-        },
-        {
-          id: 'card-sp-5',
-          code: 'AEV-105',
-          title: 'Tối ưu hóa tốc độ tải trang tài liệu lớn trên Workspace',
-          description:
-            'Áp dụng lazy rendering và tối ưu bộ nhớ khi mở tài liệu có hàng nghìn block.',
-          acceptanceCriteria: 'Thời gian mở tài liệu < 200ms.',
-          status: 'To Do',
-          type: 'Task',
-          priority: 'Medium',
-          assignee: 'Peer Dev',
-          dueDate: '2026-10-22',
-          progress: 15,
-          tags: ['Performance'],
-          subtasks: [
-            {
-              id: 's10',
-              title: 'Đo đạc Flamegraph khi render Doc',
-              done: false,
-            },
-          ],
-          updatedAt: '2026-10-18',
-        },
-      ],
-    },
-    {
-      id: 'board-architecture-roadmap',
-      workspaceId,
-      kind: 'personal',
-      name: 'Kiến trúc Hệ thống & Đồng bộ Dữ liệu Đám mây',
-      description:
-        'Quản lý các hạng mục hạ tầng Backend NestJS, PostgreSQL, Redis, CRDT Sync và lưu trữ S3',
-      sectionType: 'Architecture',
-      tableStatus: 'In Process',
-      target: 10,
-      limit: 6,
-      reviewer: 'Lead',
-      columns: ['To Do', 'In Progress', 'In Review', 'Done'],
-      createdAt: '2026-10-15',
-      updatedAt: '2026-10-18',
-      cards: [
-        {
-          id: 'card-ar-1',
-          code: 'ARC-201',
-          title: 'Xác thực người dùng bằng Argon2 Password & Session Exchange',
-          description:
-            'Hoàn thiện luồng đăng nhập trực tiếp bằng Email/Password và mã QR một lần cho thiết bị di động.',
-          status: 'Done',
-          type: 'Feature',
-          priority: 'High',
-          assignee: 'Lead Dev',
-          dueDate: '2026-10-17',
-          progress: 100,
-          tags: ['Auth', 'Security'],
-          subtasks: [
-            { id: 'a1', title: 'Tích hợp Argon2 password login', done: true },
-            { id: 'a2', title: 'Hỗ trợ QR Code Mobile Handoff', done: true },
-          ],
-          updatedAt: '2026-10-17',
-        },
-        {
-          id: 'card-ar-2',
-          code: 'ARC-202',
-          title: 'Cơ chế phân quyền Admin Config cho phân khu Bot Harness',
-          description:
-            'Kiểm soát quyền truy cập các bảng điều phối Bot theo từng email người dùng.',
-          status: 'In Progress',
-          type: 'Task',
-          priority: 'High',
-          assignee: 'Supervisor',
-          dueDate: '2026-10-19',
-          progress: 70,
-          tags: ['RBAC', 'Admin'],
-          subtasks: [
-            {
-              id: 'a3',
-              title: 'Cấu hình danh sách email được cấp quyền',
-              done: true,
-            },
-            {
-              id: 'a4',
-              title: 'Chế độ xem thử dưới góc nhìn User thường',
-              done: true,
-            },
-          ],
-          updatedAt: '2026-10-18',
-        },
-        {
-          id: 'card-ar-3',
-          code: 'ARC-203',
-          title: 'Sao lưu tự động Snapshot tài liệu lên Object Storage',
-          description:
-            'Định kỳ nén zstd và đồng bộ trạng thái tài liệu lên dịch vụ lưu trữ đám mây.',
-          status: 'To Do',
-          type: 'Feature',
-          priority: 'Medium',
-          assignee: 'Peer Dev',
-          dueDate: '2026-10-25',
-          progress: 0,
-          tags: ['Storage', 'Sync'],
-          subtasks: [
-            {
-              id: 'a5',
-              title: 'Thiết lập worker nén snapshot định kỳ',
-              done: false,
-            },
-          ],
-          updatedAt: '2026-10-18',
-        },
-      ],
-    },
-    {
-      id: 'board-personal-weekly',
-      workspaceId,
-      kind: 'personal',
-      name: 'Kế hoạch Công việc Cá nhân & Ghi chú Tuần',
-      description:
-        'Bảng theo dõi các mục tiêu cá nhân, lịch họp quan trọng và tài liệu cần biên soạn trong tuần',
-      sectionType: 'Personal',
-      tableStatus: 'Planned',
-      target: 8,
-      limit: 5,
-      reviewer: 'Peer',
-      columns: ['Cần làm', 'Đang thực hiện', 'Chờ phản hồi', 'Hoàn thành'],
-      createdAt: '2026-10-17',
-      updatedAt: '2026-10-18',
-      cards: [
-        {
-          id: 'card-pw-1',
-          code: 'PER-01',
-          title: 'Tổng hợp biên bản họp Sprint Review & kế hoạch tuần tới',
-          description:
-            'Ghi chú lại các quyết định quan trọng từ cuộc họp vào trang Journals và liên kết sang tài liệu.',
-          status: 'Đang thực hiện',
-          type: 'Task',
-          priority: 'High',
-          assignee: 'Peer',
-          dueDate: '2026-10-19',
-          progress: 50,
-          tags: ['Meeting', 'Journal'],
-          subtasks: [
-            { id: 'p1', title: 'Đồng bộ lịch họp trong tuần', done: true },
-            {
-              id: 'p2',
-              title: 'Soạn thảo tóm tắt mục tiêu Sprint mới',
-              done: false,
-            },
-          ],
-          updatedAt: '2026-10-18',
-        },
-        {
-          id: 'card-pw-2',
-          code: 'PER-02',
-          title: 'Rà soát PR & dọn dẹp các nhánh tính năng đã merge',
-          description:
-            'Kiểm tra lại toàn bộ commit trước khi push để đảm bảo không chứa thông tin cấu hình nhạy cảm.',
-          status: 'Hoàn thành',
-          type: 'Task',
-          priority: 'Medium',
-          assignee: 'Lead Dev',
-          dueDate: '2026-10-18',
-          progress: 100,
-          tags: ['Git', 'Review'],
-          subtasks: [
-            { id: 'p3', title: 'Kiểm tra git status & diff', done: true },
-          ],
-          updatedAt: '2026-10-18',
-        },
-      ],
-    },
-  ];
-
-  return [...personalBoards, ...botBoards];
+  cachedFlociCards = {
+    cards,
+    fetchedAt: Date.now(),
+  };
+  return cards;
 }
 
 interface StoreData {
   workspaces: Record<string, KanbanBoardRecord[]>;
+  flociBoardMeta?: Partial<KanbanBoardRecord>;
 }
 
 function readStore(): StoreData {
@@ -667,12 +415,61 @@ function writeStore(data: StoreData) {
   }
 }
 
+async function buildFlociHarnessBoardRecord(
+  workspaceId: string,
+  forceRefresh = false
+): Promise<KanbanBoardRecord | null> {
+  const cfg = getFlociConfig();
+  if (!cfg.enabled) return null;
+
+  try {
+    const cards = await fetchFlociHarnessCards(forceRefresh);
+    const store = readStore();
+    const meta = store.flociBoardMeta || {};
+    const now = new Date().toISOString().slice(0, 10);
+
+    return {
+      id: FLOCI_HARNESS_BOARD_ID,
+      workspaceId: workspaceId || 'default',
+      kind: 'bot',
+      name: meta.name || `SLPC Harness — Floci DynamoDB (${cfg.s3Bucket})`,
+      description:
+        meta.description ||
+        `Đồng bộ trực tiếp bảng ${FLOCI_HARNESS_TABLE} trên Floci Cloud (${cfg.s3Bucket}) — Chỉ hiển thị cho Admin.`,
+      sectionType: meta.sectionType || 'SLPC Harness',
+      tableStatus: meta.tableStatus || 'In Process',
+      target: meta.target ?? cards.length,
+      limit: meta.limit ?? 25,
+      reviewer: meta.reviewer || 'Supervisor',
+      columns:
+        Array.isArray(meta.columns) && meta.columns.length > 0
+          ? meta.columns
+          : FLOCI_HARNESS_DEFAULT_COLUMNS,
+      cards,
+      linkedDocId: meta.linkedDocId,
+      createdAt: '2026-10-08',
+      updatedAt: cards[0]?.updatedAt || now,
+    };
+  } catch (err) {
+    console.error('Failed to build Floci Harness board:', err);
+    return null;
+  }
+}
+
 function ensureWorkspaceBoards(workspaceId: string): KanbanBoardRecord[] {
   const key = workspaceId || 'default';
   const store = readStore();
-  if (!store.workspaces[key] || store.workspaces[key].length === 0) {
-    store.workspaces[key] = buildSeedBoardsForWorkspace(key);
+  if (!Array.isArray(store.workspaces[key])) {
+    store.workspaces[key] = [];
     writeStore(store);
+  } else {
+    const filtered = store.workspaces[key].filter(
+      b => !LEGACY_SEED_BOARD_IDS.has(b.id) && b.id !== FLOCI_HARNESS_BOARD_ID
+    );
+    if (filtered.length !== store.workspaces[key].length) {
+      store.workspaces[key] = filtered;
+      writeStore(store);
+    }
   }
   return store.workspaces[key];
 }
@@ -680,7 +477,7 @@ function ensureWorkspaceBoards(workspaceId: string): KanbanBoardRecord[] {
 function saveWorkspaceBoards(workspaceId: string, boards: KanbanBoardRecord[]) {
   const key = workspaceId || 'default';
   const store = readStore();
-  store.workspaces[key] = boards;
+  store.workspaces[key] = boards.filter(b => b.id !== FLOCI_HARNESS_BOARD_ID);
   writeStore(store);
 }
 
@@ -781,15 +578,34 @@ export function toBoardDetail(board: KanbanBoardRecord): KanbanBoardDetail {
   };
 }
 
-export function listKanbanBoards(workspaceId: string): KanbanBoardSummary[] {
+export async function listKanbanBoards(
+  workspaceId: string,
+  access?: KanbanAccessContext
+): Promise<KanbanBoardSummary[]> {
   const boards = ensureWorkspaceBoards(workspaceId);
-  return boards.map(toBoardSummary);
+  const summaries = boards.map(toBoardSummary);
+
+  if (access?.isAdmin) {
+    const flociBoard = await buildFlociHarnessBoardRecord(workspaceId);
+    if (flociBoard) {
+      return [toBoardSummary(flociBoard), ...summaries];
+    }
+  }
+
+  return summaries;
 }
 
-export function getKanbanBoardDetail(
+export async function getKanbanBoardDetail(
   workspaceId: string,
-  boardId: string
-): KanbanBoardDetail | null {
+  boardId: string,
+  access?: KanbanAccessContext
+): Promise<KanbanBoardDetail | null> {
+  if (boardId === FLOCI_HARNESS_BOARD_ID) {
+    if (!access?.isAdmin) return null;
+    const flociBoard = await buildFlociHarnessBoardRecord(workspaceId);
+    return flociBoard ? toBoardDetail(flociBoard) : null;
+  }
+
   const boards = ensureWorkspaceBoards(workspaceId);
   const found = boards.find(b => b.id === boardId);
   return found ? toBoardDetail(found) : null;
@@ -797,7 +613,8 @@ export function getKanbanBoardDetail(
 
 export function createKanbanBoard(
   workspaceId: string,
-  input: Record<string, unknown>
+  input: Record<string, unknown>,
+  access?: KanbanAccessContext
 ): KanbanBoardDetail {
   const boards = ensureWorkspaceBoards(workspaceId);
   const now = new Date().toISOString().slice(0, 10);
@@ -819,80 +636,25 @@ export function createKanbanBoard(
         : ['To Do', 'In Progress', 'In Review', 'Done'];
 
   const boardId = `board-${Date.now()}`;
-  const prefix =
-    name
-      .replace(/[^a-zA-Z0-9]/g, '')
-      .slice(0, 3)
-      .toUpperCase() || 'KAN';
-
   const defaultCards: KanbanCardItem[] = Array.isArray(input.cards)
     ? (input.cards as KanbanCardItem[])
-    : [
-        {
-          id: `${boardId}-c1`,
-          code: `${prefix}-01`,
-          title: `Khởi tạo cấu trúc & phạm vi cho "${name}"`,
-          description: `Xác định mục tiêu, danh sách đầu việc và tiêu chí nghiệm thu cho bảng "${name}".`,
-          acceptanceCriteria:
-            '1. Xác nhận danh sách cột trạng thái.\n2. Phân công người phụ trách từng hạng mục.',
-          status: columns[1] ?? columns[0],
-          type: 'Feature',
-          priority: 'High',
-          assignee: String(input.reviewer || 'Lead Dev'),
-          dueDate: now,
-          progress: 50,
-          tags: [sectionType],
-          subtasks: [
-            {
-              id: `${boardId}-s1`,
-              title: 'Xác định phạm vi và mục tiêu chính',
-              done: true,
-            },
-            {
-              id: `${boardId}-s2`,
-              title: 'Tạo các thẻ công việc chi tiết trong từng cột',
-              done: false,
-            },
-          ],
-          updatedAt: now,
-        },
-        {
-          id: `${boardId}-c2`,
-          code: `${prefix}-02`,
-          title: `Triển khai các hạng mục trọng tâm của "${name}"`,
-          description: `Thực hiện và theo dõi tiến độ các thẻ công việc trên bảng Kanban.`,
-          status: columns[0],
-          type: 'Task',
-          priority: 'Medium',
-          assignee: 'Peer Dev',
-          dueDate: now,
-          progress: 0,
-          tags: ['Implementation'],
-          subtasks: [
-            {
-              id: `${boardId}-s3`,
-              title: 'Hoàn thành hạng mục cốt lõi và cập nhật tiến độ',
-              done: false,
-            },
-          ],
-          updatedAt: now,
-        },
-      ];
+    : [];
+
+  const creatorName = String(
+    input.reviewer || access?.userName || 'Supervisor'
+  ).trim();
 
   const newBoard: KanbanBoardRecord = {
     id: boardId,
     workspaceId: workspaceId || 'default',
     kind,
     name,
-    description: String(
-      input.description ||
-        `Bảng Kanban quản lý các cột và thẻ công việc cho "${name}"`
-    ).trim(),
+    description: String(input.description || '').trim(),
     sectionType,
     tableStatus,
     target: Number(input.target) || 10,
     limit: Number(input.limit) || 8,
-    reviewer: String(input.reviewer || 'Lead Dev'),
+    reviewer: creatorName || 'Supervisor',
     columns,
     cards: defaultCards,
     createdAt: now,
@@ -904,11 +666,51 @@ export function createKanbanBoard(
   return toBoardDetail(newBoard);
 }
 
-export function updateKanbanBoard(
+export async function updateKanbanBoard(
   workspaceId: string,
   boardId: string,
-  patch: Record<string, unknown>
-): KanbanBoardDetail | null {
+  patch: Record<string, unknown>,
+  access?: KanbanAccessContext
+): Promise<KanbanBoardDetail | null> {
+  if (boardId === FLOCI_HARNESS_BOARD_ID) {
+    if (!access?.isAdmin) return null;
+    const store = readStore();
+    const prevMeta = store.flociBoardMeta || {};
+    store.flociBoardMeta = {
+      ...prevMeta,
+      name: patch.name !== undefined ? String(patch.name) : prevMeta.name,
+      description:
+        patch.description !== undefined
+          ? String(patch.description)
+          : prevMeta.description,
+      sectionType:
+        patch.sectionType !== undefined
+          ? String(patch.sectionType)
+          : prevMeta.sectionType,
+      tableStatus:
+        patch.tableStatus !== undefined
+          ? (patch.tableStatus as TableRowStatus)
+          : prevMeta.tableStatus,
+      target:
+        patch.target !== undefined ? Number(patch.target) : prevMeta.target,
+      limit: patch.limit !== undefined ? Number(patch.limit) : prevMeta.limit,
+      reviewer:
+        patch.reviewer !== undefined
+          ? String(patch.reviewer)
+          : prevMeta.reviewer,
+      columns: Array.isArray(patch.columns)
+        ? patch.columns.map(String)
+        : prevMeta.columns,
+      linkedDocId:
+        patch.linkedDocId !== undefined
+          ? String(patch.linkedDocId)
+          : prevMeta.linkedDocId,
+    };
+    writeStore(store);
+    const flociBoard = await buildFlociHarnessBoardRecord(workspaceId);
+    return flociBoard ? toBoardDetail(flociBoard) : null;
+  }
+
   const boards = ensureWorkspaceBoards(workspaceId);
   const idx = boards.findIndex(b => b.id === boardId);
   if (idx === -1) return null;
@@ -953,23 +755,138 @@ export function updateKanbanBoard(
   return toBoardDetail(updated);
 }
 
-export function deleteKanbanBoards(
+export async function deleteKanbanBoards(
   workspaceId: string,
-  boardIds: string[]
-): KanbanBoardSummary[] {
+  boardIds: string[],
+  access?: KanbanAccessContext
+): Promise<KanbanBoardSummary[]> {
   const idSet = new Set(boardIds);
   const boards = ensureWorkspaceBoards(workspaceId).filter(
     b => !idSet.has(b.id)
   );
   saveWorkspaceBoards(workspaceId, boards);
-  return boards.map(toBoardSummary);
+  return listKanbanBoards(workspaceId, access);
 }
 
-export function upsertKanbanCard(
+export async function upsertKanbanCard(
   workspaceId: string,
   boardId: string,
-  cardInput: Record<string, unknown>
-): KanbanBoardDetail | null {
+  cardInput: Record<string, unknown>,
+  access?: KanbanAccessContext
+): Promise<KanbanBoardDetail | null> {
+  if (boardId === FLOCI_HARNESS_BOARD_ID) {
+    if (!access?.isAdmin) return null;
+    const rawCardId = String(cardInput.id || '').trim();
+    const numericMatch = rawCardId.match(/(\d+)$/);
+    const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 19);
+
+    if (numericMatch) {
+      const numId = numericMatch[1];
+      const existingCards = await fetchFlociHarnessCards(false);
+      const prev = existingCards.find(c => c.id === `wi-${numId}`);
+
+      const nextStatus =
+        cardInput.status !== undefined
+          ? String(cardInput.status)
+          : prev?.status || 'New';
+      const nextTitle = cleanHtml(
+        cardInput.title !== undefined
+          ? String(cardInput.title)
+          : prev?.title || `Work Item #${numId}`
+      );
+      const nextDesc = cleanHtml(
+        cardInput.description !== undefined
+          ? String(cardInput.description)
+          : prev?.description || ''
+      );
+      const nextCriteria = cleanHtml(
+        cardInput.acceptanceCriteria !== undefined
+          ? String(cardInput.acceptanceCriteria)
+          : prev?.acceptanceCriteria || ''
+      );
+      const nextPriority =
+        cardInput.priority !== undefined
+          ? (cardInput.priority as KanbanCardItem['priority'])
+          : prev?.priority || 'Medium';
+      const nextAssignee = cleanHtml(
+        cardInput.assignee !== undefined
+          ? String(cardInput.assignee)
+          : prev?.assignee || 'Peer'
+      );
+
+      await callFlociDynamo('UpdateItem', {
+        TableName: FLOCI_HARNESS_TABLE,
+        Key: { id: { N: numId } },
+        UpdateExpression:
+          'SET #st = :st, #ti = :ti, #de = :de, #ac = :ac, #pr = :pr, #as = :as, #up = :up',
+        ExpressionAttributeNames: {
+          '#st': 'state',
+          '#ti': 'title',
+          '#de': 'description',
+          '#ac': 'acceptance_criteria',
+          '#pr': 'priority',
+          '#as': 'assigned_to',
+          '#up': 'updated_at',
+        },
+        ExpressionAttributeValues: {
+          ':st': { S: nextStatus },
+          ':ti': { S: nextTitle },
+          ':de': { S: nextDesc },
+          ':ac': { S: nextCriteria },
+          ':pr': { S: mapPriorityToHarness(nextPriority) },
+          ':as': { S: nextAssignee },
+          ':up': { S: nowStr },
+        },
+      });
+    } else {
+      const existingCards = await fetchFlociHarnessCards(false);
+      let maxId = 1000;
+      for (const c of existingCards) {
+        const m = c.id.match(/(\d+)$/);
+        if (m) {
+          const val = Number(m[1]);
+          if (val > maxId && val < 100000) maxId = val;
+        }
+      }
+      const nextId = String(maxId + 1);
+      const status = String(cardInput.status || 'New');
+      const type = String(cardInput.type || 'Task');
+      const priority = mapPriorityToHarness(
+        (cardInput.priority as KanbanCardItem['priority']) || 'Medium'
+      );
+      const title = cleanHtml(
+        String(cardInput.title || `Work Item #${nextId}`)
+      );
+      const description = cleanHtml(String(cardInput.description || ''));
+      const acceptanceCriteria = cleanHtml(
+        String(cardInput.acceptanceCriteria || '')
+      );
+      const assignee = cleanHtml(
+        String(cardInput.assignee || access?.userName || 'Supervisor')
+      );
+
+      await callFlociDynamo('PutItem', {
+        TableName: FLOCI_HARNESS_TABLE,
+        Item: {
+          id: { N: nextId },
+          type: { S: type },
+          title: { S: title },
+          description: { S: description },
+          acceptance_criteria: { S: acceptanceCriteria },
+          state: { S: status },
+          priority: { S: priority },
+          assigned_to: { S: assignee },
+          source: { S: 'local' },
+          created_at: { S: nowStr },
+          updated_at: { S: nowStr },
+        },
+      });
+    }
+
+    const updatedFloci = await buildFlociHarnessBoardRecord(workspaceId, true);
+    return updatedFloci ? toBoardDetail(updatedFloci) : null;
+  }
+
   const boards = ensureWorkspaceBoards(workspaceId);
   const idx = boards.findIndex(b => b.id === boardId);
   if (idx === -1) return null;
@@ -1059,7 +976,9 @@ export function upsertKanbanCard(
       status,
       type: (cardInput.type as KanbanCardItem['type']) || 'Task',
       priority: (cardInput.priority as KanbanCardItem['priority']) || 'Medium',
-      assignee: String(cardInput.assignee || board.reviewer || 'Peer'),
+      assignee: String(
+        cardInput.assignee || access?.userName || board.reviewer || 'Supervisor'
+      ),
       dueDate: String(cardInput.dueDate || now),
       progress: isCompletedColumn(status)
         ? 100
@@ -1092,11 +1011,25 @@ export function upsertKanbanCard(
   return toBoardDetail(updatedBoard);
 }
 
-export function deleteKanbanCard(
+export async function deleteKanbanCard(
   workspaceId: string,
   boardId: string,
-  cardId: string
-): KanbanBoardDetail | null {
+  cardId: string,
+  access?: KanbanAccessContext
+): Promise<KanbanBoardDetail | null> {
+  if (boardId === FLOCI_HARNESS_BOARD_ID) {
+    if (!access?.isAdmin) return null;
+    const numericMatch = String(cardId).match(/(\d+)$/);
+    if (numericMatch) {
+      await callFlociDynamo('DeleteItem', {
+        TableName: FLOCI_HARNESS_TABLE,
+        Key: { id: { N: numericMatch[1] } },
+      });
+    }
+    const updatedFloci = await buildFlociHarnessBoardRecord(workspaceId, true);
+    return updatedFloci ? toBoardDetail(updatedFloci) : null;
+  }
+
   const boards = ensureWorkspaceBoards(workspaceId);
   const idx = boards.findIndex(b => b.id === boardId);
   if (idx === -1) return null;

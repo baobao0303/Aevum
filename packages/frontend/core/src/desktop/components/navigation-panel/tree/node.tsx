@@ -165,7 +165,8 @@ export const NavigationPanelTreeNodeRenameModal = ({
       icon={explorerIcon?.icon}
       width={sidebarWidth - 16}
       contentOptions={{
-        sideOffset: 36,
+        sideOffset: -1,
+        className: styles.renamePopover,
       }}
       iconPlaceholder={fallbackIcon}
       inputTestId="rename-modal-input"

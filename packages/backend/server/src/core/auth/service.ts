@@ -395,6 +395,55 @@ export class AuthService implements OnApplicationBootstrap {
     });
   }
 
+  async listActiveUserNames(): Promise<string[]> {
+    try {
+      const allowedEmails = new Set([
+        'admin@aevum.io',
+        'baoltb@aevum.app',
+        'team@affine.pro',
+      ]);
+      const users = await this.models.user.list({ take: 50 });
+      const byEmail = new Map<string, string>();
+      for (const u of users) {
+        if (u.disabled) continue;
+        const email = String(u.email || '')
+          .trim()
+          .toLowerCase();
+        if (allowedEmails.has(email)) {
+          byEmail.set(email, String(u.name || '').trim());
+        }
+      }
+      return [
+        byEmail.get('admin@aevum.io') || 'Supervisor',
+        byEmail.get('baoltb@aevum.app') || 'Bảo Bảo',
+        byEmail.get('team@affine.pro') || 'Team User',
+      ];
+    } catch {
+      return ['Supervisor', 'Bảo Bảo', 'Team User'];
+    }
+  }
+
+  async isUserAdmin(userId?: string, email?: string): Promise<boolean> {
+    try {
+      if (userId) {
+        return await this.models.userFeature.has(userId, 'administrator');
+      }
+      const normalizedEmail = String(email || '')
+        .trim()
+        .toLowerCase();
+      if (!normalizedEmail) return false;
+      const found = await this.models.user.getUserByEmail(normalizedEmail);
+      if (!found) return normalizedEmail === 'admin@aevum.io';
+      return await this.models.userFeature.has(found.id, 'administrator');
+    } catch {
+      return (
+        String(email || '')
+          .trim()
+          .toLowerCase() === 'admin@aevum.io'
+      );
+    }
+  }
+
   private async securityCommand<T = boolean>(command: Record<string, unknown>) {
     try {
       return await this.rt.executeAuthSessionCommandV1<T>(command);

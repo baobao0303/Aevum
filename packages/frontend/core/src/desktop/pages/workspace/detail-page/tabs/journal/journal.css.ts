@@ -245,10 +245,14 @@ export const journalDateCell = style([
   },
 ]);
 export const journalDateCellDotContainer = style({
+  position: 'absolute',
+  bottom: 2,
+  left: 0,
+  right: 0,
   display: 'flex',
-  gap: 4,
+  gap: 3,
   justifyContent: 'center',
-  marginTop: 4,
+  pointerEvents: 'none',
 });
 export const journalDateCellDot = style({
   width: 4,
@@ -256,6 +260,10 @@ export const journalDateCellDot = style({
   borderRadius: '50%',
 });
 export const journalDateCellDotType = styleVariants({
+  schedule: {
+    backgroundColor: '#f59e0b',
+    boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.25)',
+  },
   journal: {
     backgroundColor: cssVarV2.calendar.blue,
   },

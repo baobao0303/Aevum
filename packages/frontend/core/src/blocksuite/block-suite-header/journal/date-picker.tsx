@@ -1,5 +1,6 @@
 import type { WeekDatePickerHandle } from '@affine/component';
 import { WeekDatePicker } from '@affine/component';
+import { useWaitingHrmScheduleDates } from '@affine/core/desktop/pages/workspace/journals/hrm-rent-schedule-panel';
 import {
   JOURNAL_DATE_FORMAT,
   JournalService,
@@ -24,6 +25,7 @@ export const JournalWeekDatePicker = ({ page }: JournalWeekDatePickerProps) => {
     (journalDate ?? dayjs()).format(JOURNAL_DATE_FORMAT)
   );
   const workbench = useService(WorkbenchService).workbench;
+  const waitingScheduleDates = useWaitingHrmScheduleDates();
 
   useEffect(() => {
     if (!journalDate) return;
@@ -49,6 +51,7 @@ export const JournalWeekDatePicker = ({ page }: JournalWeekDatePickerProps) => {
       handleRef={handleRef}
       style={weekStyle}
       value={date}
+      markedDates={waitingScheduleDates}
       onChange={openJournal}
     />
   );

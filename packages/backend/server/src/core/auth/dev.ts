@@ -47,7 +47,6 @@ export async function createDevUsers(
           password,
         });
       }
-      await models.userFeature.add(devUser.id, 'administrator', name);
       if (!env.selfhosted) {
         for (const plan of plans) {
           await entitlement.upsertAdminGrant({

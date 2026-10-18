@@ -73,6 +73,7 @@ import {
   deleteKanbanBoards,
   deleteKanbanCard,
   getKanbanBoardDetail,
+  type KanbanAccessContext,
   listKanbanBoards,
   updateKanbanBoard,
   upsertKanbanCard,
@@ -277,6 +278,7 @@ export class AuthController {
     return { lanIps: getLocalNetworkIps() };
   }
 
+  @Throttle('default', { limit: 1200 })
   @Public()
   @Post('/open-app/hrm-rent-schedule')
   async openAppHrmRentSchedule(@Body() body?: Record<string, unknown>) {
@@ -549,27 +551,88 @@ export class AuthController {
     }
   }
 
+  private async resolveKanbanAccess(
+    user?: CurrentUser,
+    roleParam?: unknown,
+    emailParam?: unknown
+  ): Promise<KanbanAccessContext> {
+    const roleStr = String(roleParam || '')
+      .trim()
+      .toLowerCase();
+    const emailStr = String(user?.email || emailParam || '')
+      .trim()
+      .toLowerCase();
+
+    const userName =
+      emailStr === 'admin@aevum.io'
+        ? 'Supervisor'
+        : emailStr === 'baoltb@aevum.app'
+          ? 'Bảo Bảo'
+          : emailStr === 'team@affine.pro'
+            ? 'Team User'
+            : String(user?.name || '').trim() || 'Supervisor';
+
+    if (roleStr === 'member' || roleStr === 'user' || roleStr === 'guest') {
+      return { isAdmin: false, userEmail: emailStr, userName };
+    }
+
+    const isAdmin = await this.auth.isUserAdmin(user?.id, emailStr);
+    return {
+      isAdmin,
+      userEmail: emailStr,
+      userName,
+    };
+  }
+
+  private async buildKanbanReviewers(): Promise<string[]> {
+    return await this.auth.listActiveUserNames();
+  }
+
+  @Throttle('default', { limit: 1200 })
   @Public()
   @Get('/open-app/kanban/boards')
-  async getKanbanBoardsList(@Query('workspaceId') workspaceId?: string) {
+  async getKanbanBoardsList(
+    @CurrentUser() user?: CurrentUser,
+    @Query('workspaceId') workspaceId?: string,
+    @Query('role') role?: string,
+    @Query('userEmail') userEmail?: string
+  ) {
     const wsId = String(workspaceId || 'default').trim();
-    const boards = listKanbanBoards(wsId);
+    const access = await this.resolveKanbanAccess(user, role, userEmail);
+    const [boards, reviewers] = await Promise.all([
+      listKanbanBoards(wsId, access),
+      this.buildKanbanReviewers(),
+    ]);
     return {
       ok: true,
       workspaceId: wsId,
+      isAdmin: Boolean(access.isAdmin),
+      userEmail: access.userEmail,
+      userName: access.userName,
+      harnessBackend: process.env.HARNESS_BACKEND || 'floci',
+      s3Bucket: process.env.FLOCI_S3_BUCKET || 'harness-data',
+      reviewers,
       boards,
       totalCount: boards.length,
     };
   }
 
+  @Throttle('default', { limit: 1200 })
   @Public()
   @Get('/open-app/kanban/boards/:boardId')
   async getKanbanBoardDetailById(
     @Param('boardId') boardId: string,
-    @Query('workspaceId') workspaceId?: string
+    @CurrentUser() user?: CurrentUser,
+    @Query('workspaceId') workspaceId?: string,
+    @Query('role') role?: string,
+    @Query('userEmail') userEmail?: string
   ) {
     const wsId = String(workspaceId || 'default').trim();
-    const board = getKanbanBoardDetail(wsId, boardId);
+    const access = await this.resolveKanbanAccess(user, role, userEmail);
+    const [board, reviewers] = await Promise.all([
+      getKanbanBoardDetail(wsId, boardId, access),
+      this.buildKanbanReviewers(),
+    ]);
     if (!board) {
       return {
         ok: false,
@@ -580,15 +643,27 @@ export class AuthController {
     return {
       ok: true,
       workspaceId: wsId,
+      isAdmin: Boolean(access.isAdmin),
+      userName: access.userName,
+      reviewers,
       board,
     };
   }
 
+  @Throttle('default', { limit: 1200 })
   @Public()
   @Post('/open-app/kanban/boards')
-  async mutateKanbanBoards(@Body() body?: Record<string, unknown>) {
+  async mutateKanbanBoards(
+    @CurrentUser() user?: CurrentUser,
+    @Body() body?: Record<string, unknown>
+  ) {
     const wsId = String(body?.workspaceId || 'default').trim();
     const action = String(body?.action || 'create').trim();
+    const access = await this.resolveKanbanAccess(
+      user,
+      body?.role,
+      body?.userEmail
+    );
 
     if (action === 'delete') {
       const ids = Array.isArray(body?.boardIds)
@@ -596,7 +671,7 @@ export class AuthController {
         : body?.boardId
           ? [String(body.boardId)]
           : [];
-      const boards = deleteKanbanBoards(wsId, ids);
+      const boards = await deleteKanbanBoards(wsId, ids, access);
       return {
         ok: true,
         workspaceId: wsId,
@@ -604,8 +679,8 @@ export class AuthController {
       };
     }
 
-    const board = createKanbanBoard(wsId, body ?? {});
-    const boards = listKanbanBoards(wsId);
+    const board = createKanbanBoard(wsId, body ?? {}, access);
+    const boards = await listKanbanBoards(wsId, access);
     return {
       ok: true,
       workspaceId: wsId,
@@ -614,22 +689,29 @@ export class AuthController {
     };
   }
 
+  @Throttle('default', { limit: 1200 })
   @Public()
   @Post('/open-app/kanban/boards/:boardId')
   async mutateKanbanBoardById(
     @Param('boardId') boardId: string,
+    @CurrentUser() user?: CurrentUser,
     @Body() body?: Record<string, unknown>
   ) {
     const wsId = String(body?.workspaceId || 'default').trim();
     const action = String(body?.action || 'update-board').trim();
+    const access = await this.resolveKanbanAccess(
+      user,
+      body?.role,
+      body?.userEmail
+    );
 
     if (action === 'upsert-card') {
       const cardData =
         body?.card && typeof body.card === 'object'
           ? (body.card as Record<string, unknown>)
           : (body ?? {});
-      const board = upsertKanbanCard(wsId, boardId, cardData);
-      const boards = listKanbanBoards(wsId);
+      const board = await upsertKanbanCard(wsId, boardId, cardData, access);
+      const boards = await listKanbanBoards(wsId, access);
       return {
         ok: Boolean(board),
         workspaceId: wsId,
@@ -640,8 +722,8 @@ export class AuthController {
 
     if (action === 'delete-card') {
       const cardId = String(body?.cardId || '').trim();
-      const board = deleteKanbanCard(wsId, boardId, cardId);
-      const boards = listKanbanBoards(wsId);
+      const board = await deleteKanbanCard(wsId, boardId, cardId, access);
+      const boards = await listKanbanBoards(wsId, access);
       return {
         ok: Boolean(board),
         workspaceId: wsId,
@@ -650,8 +732,8 @@ export class AuthController {
       };
     }
 
-    const board = updateKanbanBoard(wsId, boardId, body ?? {});
-    const boards = listKanbanBoards(wsId);
+    const board = await updateKanbanBoard(wsId, boardId, body ?? {}, access);
+    const boards = await listKanbanBoards(wsId, access);
     return {
       ok: Boolean(board),
       workspaceId: wsId,
