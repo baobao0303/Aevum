@@ -95,50 +95,92 @@ export interface PersonalTaskCard {
   notes?: string;
 }
 
+export type TableRowStatus = 'In Process' | 'Done' | 'Planned';
+
 export interface PersonalBoard {
   id: string;
   name: string;
   description?: string;
+  sectionType: string;
+  tableStatus: TableRowStatus;
+  target: number;
+  limit: number;
+  reviewer: string;
+  category?: 'personal' | 'bot';
   columns: string[];
   cards: PersonalTaskCard[];
   linkedDocId?: string;
   updatedAt?: string;
 }
 
-interface BotBoardDefinition {
+export interface BotBoardDefinition {
   id: string;
   name: string;
   description: string;
+  sectionType: string;
+  tableStatus: TableRowStatus;
+  target: number;
+  limit: number;
+  reviewer: string;
   defaultTypeFilter: string;
   defaultGroupBy: 'state' | 'profile';
 }
 
-const BOT_HARNESS_BOARDS: BotBoardDefinition[] = [
+const DEFAULT_BOT_HARNESS_BOARDS: BotBoardDefinition[] = [
   {
     id: 'bot-master-backlog',
-    name: 'SLPC Master Harness Board (Backlog & 10 Bot Profiles)',
+    name: 'SLPC Master Harness Board (10 Bot Profiles)',
     description:
       'Bảng điều phối tổng thể các Epic, Feature, Task của 10 Agent Profiles (Supervisor, Lead, Peer, QC...)',
+    sectionType: 'SLPC Harness',
+    tableStatus: 'In Process',
+    target: 41,
+    limit: 25,
+    reviewer: 'Supervisor',
     defaultTypeFilter: 'MAIN',
     defaultGroupBy: 'state',
   },
   {
     id: 'bot-profile-allocation',
-    name: 'Bot Profile Allocation Board (Phân bổ công việc theo 10 Bot)',
+    name: 'Bot Profile Allocation Matrix (10 Agents)',
     description:
       'Gom cột trực tiếp theo từng Agent Profile để theo dõi và bàn giao task giữa các Bot',
+    sectionType: '10 Bot Profiles',
+    tableStatus: 'In Process',
+    target: 30,
+    limit: 15,
+    reviewer: 'Lead',
     defaultTypeFilter: 'MAIN',
     defaultGroupBy: 'profile',
   },
   {
     id: 'bot-qc-testcases',
-    name: 'QC ISTQB Verification & Testcases Board',
+    name: 'QC ISTQB 5-Stage Verification & Testcases',
     description:
       'Bảng quản lý và nghiệm thu độc lập các Testcase ISTQB 5-Stage của Role QC',
+    sectionType: 'ISTQB 5-Stage',
+    tableStatus: 'Done',
+    target: 20,
+    limit: 20,
+    reviewer: 'QC',
     defaultTypeFilter: 'Testcase',
     defaultGroupBy: 'state',
   },
 ];
+
+const REVIEWER_OPTIONS = [
+  'Assign reviewer',
+  'Eddie Lake',
+  'Jamik Tashpulatov',
+  'Emily Whalen',
+  'Supervisor',
+  'Lead',
+  'Peer',
+  'QC',
+  'Lead BA',
+  'Lead design',
+  'Lead Dev',
+] as const;
 
 interface AdminKanbanConfig {
   enabledUsers: Record<string, boolean>;
@@ -190,75 +232,141 @@ function loadAdminConfig(currentEmail: string): AdminKanbanConfig {
   };
 }
 
-function getDefaultPersonalBoards(): PersonalBoard[] {
+function buildDefaultCardsForSection(sectionTitle: string): PersonalTaskCard[] {
   return [
     {
-      id: 'board-default-1',
-      name: 'Dự án Cá nhân (My Project Board)',
-      description: 'Bảng quản lý tiến độ công việc cá nhân trong Workspace',
-      updatedAt: '2026-10-18',
-      columns: ['To Do', 'In Progress', 'In Review', 'Done'],
-      cards: [
-        {
-          id: 'card-1',
-          title: 'Thiết kế giao diện màn hình đăng nhập & Workspace',
-          status: 'Done',
-          priority: 'High',
-          dueDate: '2026-10-18',
-          progress: 100,
-        },
-        {
-          id: 'card-2',
-          title: 'Tích hợp hệ thống Kanban & Table đa người dùng',
-          status: 'In Progress',
-          priority: 'Urgent',
-          dueDate: '2026-10-19',
-          progress: 75,
-        },
-        {
-          id: 'card-3',
-          title: 'Kiểm thử phân quyền Admin Config cho Bot Harness',
-          status: 'In Review',
-          priority: 'High',
-          dueDate: '2026-10-20',
-          progress: 90,
-        },
-        {
-          id: 'card-4',
-          title: 'Viết tài liệu hướng dẫn sử dụng Workspace mới',
-          status: 'To Do',
-          priority: 'Medium',
-          dueDate: '2026-10-22',
-          progress: 0,
-        },
-      ],
+      id: `card-${sectionTitle}-1`,
+      title: `Soạn thảo nội dung & cấu trúc cho "${sectionTitle}"`,
+      status: 'Done',
+      priority: 'High',
+      dueDate: '2026-10-18',
+      progress: 100,
     },
     {
-      id: 'board-default-2',
-      name: 'Kế hoạch Tuần & Ghi chú Nhanh (Weekly Sprint)',
-      description: 'Theo dõi các đầu việc ưu tiên trong tuần',
-      updatedAt: '2026-10-18',
-      columns: ['Backlog', 'Doing', 'Done'],
-      cards: [
-        {
-          id: 'card-w1',
-          title: 'Rà soát kiến trúc hệ thống và tối ưu hiệu năng',
-          status: 'Doing',
-          priority: 'High',
-          dueDate: '2026-10-19',
-          progress: 50,
-        },
-        {
-          id: 'card-w2',
-          title: 'Chuẩn bị bản demo tính năng mới',
-          status: 'Backlog',
-          priority: 'Medium',
-          dueDate: '2026-10-21',
-          progress: 0,
-        },
-      ],
+      id: `card-${sectionTitle}-2`,
+      title: `Rà soát tiêu chuẩn thiết kế & dữ liệu thực thi "${sectionTitle}"`,
+      status: 'In Progress',
+      priority: 'Urgent',
+      dueDate: '2026-10-19',
+      progress: 65,
+    },
+    {
+      id: `card-${sectionTitle}-3`,
+      title: `Kiểm thử nghiệm thu & phê duyệt "${sectionTitle}"`,
+      status: 'In Review',
+      priority: 'Medium',
+      dueDate: '2026-10-21',
+      progress: 40,
+    },
+    {
+      id: `card-${sectionTitle}-4`,
+      title: `Hoàn thiện tài liệu bàn giao "${sectionTitle}"`,
+      status: 'To Do',
+      priority: 'Low',
+      dueDate: '2026-10-24',
+      progress: 0,
     },
   ];
+}
+
+function getDefaultPersonalBoards(): PersonalBoard[] {
+  const defaultRows: Array<{
+    id: string;
+    name: string;
+    sectionType: string;
+    tableStatus: TableRowStatus;
+    target: number;
+    limit: number;
+    reviewer: string;
+  }> = [
+    {
+      id: 'section-cover-page',
+      name: 'Cover page',
+      sectionType: 'Cover page',
+      tableStatus: 'In Process',
+      target: 18,
+      limit: 5,
+      reviewer: 'Eddie Lake',
+    },
+    {
+      id: 'section-toc',
+      name: 'Table of contents',
+      sectionType: 'Table of contents',
+      tableStatus: 'Done',
+      target: 29,
+      limit: 24,
+      reviewer: 'Eddie Lake',
+    },
+    {
+      id: 'section-exec-summary',
+      name: 'Executive summary',
+      sectionType: 'Narrative',
+      tableStatus: 'Done',
+      target: 10,
+      limit: 13,
+      reviewer: 'Eddie Lake',
+    },
+    {
+      id: 'section-tech-approach',
+      name: 'Technical approach',
+      sectionType: 'Narrative',
+      tableStatus: 'Done',
+      target: 27,
+      limit: 23,
+      reviewer: 'Jamik Tashpulatov',
+    },
+    {
+      id: 'section-design',
+      name: 'Design',
+      sectionType: 'Narrative',
+      tableStatus: 'In Process',
+      target: 2,
+      limit: 16,
+      reviewer: 'Jamik Tashpulatov',
+    },
+    {
+      id: 'section-capabilities',
+      name: 'Capabilities',
+      sectionType: 'Narrative',
+      tableStatus: 'In Process',
+      target: 20,
+      limit: 8,
+      reviewer: 'Jamik Tashpulatov',
+    },
+    {
+      id: 'section-integration',
+      name: 'Integration with existing systems',
+      sectionType: 'Narrative',
+      tableStatus: 'In Process',
+      target: 19,
+      limit: 21,
+      reviewer: 'Jamik Tashpulatov',
+    },
+    {
+      id: 'section-innovation',
+      name: 'Innovation and Advantages',
+      sectionType: 'Narrative',
+      tableStatus: 'Done',
+      target: 25,
+      limit: 26,
+      reviewer: 'Assign reviewer',
+    },
+  ];
+
+  return defaultRows.map(r => ({
+    id: r.id,
+    name: r.name,
+    description: `Bảng Kanban quản lý chi tiết cho hạng mục "${r.name}" (${r.sectionType})`,
+    sectionType: r.sectionType,
+    tableStatus: r.tableStatus,
+    target: r.target,
+    limit: r.limit,
+    reviewer: r.reviewer,
+    category: 'personal',
+    updatedAt: '2026-10-18',
+    columns: ['To Do', 'In Progress', 'In Review', 'Done'],
+    cards: buildDefaultCardsForSection(r.name),
+  }));
 }
 
 type SelectedBoardTarget =
@@ -317,7 +425,7 @@ export const WorkspaceKanbanPage = () => {
   }, [adminConfig, currentUserEmail, isOwnerAdmin]);
 
   // ========================================================================
-  // NAVIGATION STATE: null = Directory List Page, non-null = Board Detail
+  // NAVIGATION STATE: null = Shadcn Data Table, non-null = Kanban Board
   // ========================================================================
   const [selectedBoardTarget, setSelectedBoardTarget] =
     useState<SelectedBoardTarget>(null);
@@ -326,12 +434,41 @@ export const WorkspaceKanbanPage = () => {
   >('all');
   const [listSearchQuery, setListSearchQuery] = useState('');
 
-  // New Personal Board Modal
+  // Table selection, action menu, and row drag-and-drop
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
+  const [openMenuRowId, setOpenMenuRowId] = useState<string | null>(null);
+  const [draggedTableRowId, setDraggedTableRowId] = useState<string | null>(
+    null
+  );
+
+  // Add / Edit Row Modal State (supports both Add and Edit for Bot & Personal rows)
   const [newBoardModalOpen, setNewBoardModalOpen] = useState(false);
+  const [editingRowTarget, setEditingRowTarget] = useState<{
+    kind: 'bot' | 'personal';
+    id: string;
+  } | null>(null);
   const [newBoardNameInput, setNewBoardNameInput] = useState('');
   const [newBoardDescInput, setNewBoardDescInput] = useState('');
+  const [newBoardSectionType, setNewBoardSectionType] = useState('Narrative');
+  const [newBoardStatus, setNewBoardStatus] =
+    useState<TableRowStatus>('In Process');
+  const [newBoardTargetNum, setNewBoardTargetNum] = useState<number>(20);
+  const [newBoardLimitNum, setNewBoardLimitNum] = useState<number>(15);
+  const [newBoardReviewer, setNewBoardReviewer] =
+    useState<string>('Assign reviewer');
+  const [newBoardCategory, setNewBoardCategory] = useState<'personal' | 'bot'>(
+    'personal'
+  );
 
-  // If user loses Bot access while viewing a Bot board, return to list page
+  // Close 3-dot row menu when clicking anywhere outside
+  useEffect(() => {
+    if (!openMenuRowId) return;
+    const close = () => setOpenMenuRowId(null);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [openMenuRowId]);
+
+  // If user loses Bot access while viewing a Bot board, return to Table page
   useEffect(() => {
     if (!canViewBotHarnessBoard && selectedBoardTarget?.kind === 'bot') {
       setSelectedBoardTarget(null);
@@ -376,23 +513,23 @@ export const WorkspaceKanbanPage = () => {
           }
         }
         const res = await fetch('/harness-backlog.json');
-        if (res.ok) {
-          const data = await res.json();
-          const normalized: HarnessWorkItem[] = (data.items || []).map(
-            (item: HarnessWorkItem) => ({
-              ...item,
-              assigned_to_profile: normalizeProfileName(
-                item.assigned_to_profile
-              ),
-              state: item.state || 'New',
-              priority: item.priority || 'P1',
-            })
-          );
-          setBotItems(normalized);
-          localStorage.setItem(harnessStorageKey, JSON.stringify(normalized));
-        }
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          items?: HarnessWorkItem[];
+          testcases?: HarnessWorkItem[];
+        };
+        const merged = [...(data.items ?? []), ...(data.testcases ?? [])].map(
+          item => ({
+            ...item,
+            assigned_to_profile: normalizeProfileName(item.assigned_to_profile),
+            state: item.state || 'New',
+            priority: item.priority || 'P1',
+          })
+        );
+        setBotItems(merged);
+        localStorage.setItem(harnessStorageKey, JSON.stringify(merged));
       } catch (err) {
-        console.error('Failed to load Harness backlog', err);
+        console.error('Failed to load harness backlog:', err);
       }
     },
     [harnessStorageKey]
@@ -439,7 +576,9 @@ export const WorkspaceKanbanPage = () => {
         const q = botSearchQuery.trim().toLowerCase();
         const matchTitle = item.title.toLowerCase().includes(q);
         const matchId = `#${item.id}`.includes(q) || String(item.id) === q;
-        const matchProfile = item.assigned_to_profile.toLowerCase().includes(q);
+        const matchProfile = (item.assigned_to_profile || '')
+          .toLowerCase()
+          .includes(q);
         return matchTitle || matchId || matchProfile;
       }
       return true;
@@ -508,9 +647,40 @@ export const WorkspaceKanbanPage = () => {
   ]);
 
   // ========================================================================
-  // ZONE 2 STATE: PERSONAL CUSTOM BOARDS (Isolated per workspaceId)
+  // PERSISTED BOT BOARD ROWS & PERSONAL BOARD ROWS FOR SHADCN TABLE
   // ========================================================================
-  const personalStorageKey = `aevum_personal_boards_${workspaceId}`;
+  const botBoardsStorageKey = `aevum_bot_boards_v2_${workspaceId}`;
+  const [botBoards, setBotBoards] = useState<BotBoardDefinition[]>(() => {
+    try {
+      const saved = localStorage.getItem(botBoardsStorageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as BotBoardDefinition[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return DEFAULT_BOT_HARNESS_BOARDS;
+  });
+
+  const updateBotBoards = useCallback(
+    (updater: (prev: BotBoardDefinition[]) => BotBoardDefinition[]) => {
+      setBotBoards(prev => {
+        const next = updater(prev);
+        try {
+          localStorage.setItem(botBoardsStorageKey, JSON.stringify(next));
+        } catch (e) {
+          console.error(e);
+        }
+        return next;
+      });
+    },
+    [botBoardsStorageKey]
+  );
+
+  const personalStorageKey = `aevum_personal_boards_v2_${workspaceId}`;
   const [personalBoards, setPersonalBoards] = useState<PersonalBoard[]>(() => {
     try {
       const saved = localStorage.getItem(personalStorageKey);
@@ -581,12 +751,13 @@ export const WorkspaceKanbanPage = () => {
   const currentBotBoardDef = useMemo(() => {
     if (selectedBoardTarget?.kind === 'bot') {
       return (
-        BOT_HARNESS_BOARDS.find(b => b.id === selectedBoardTarget.boardId) ??
-        BOT_HARNESS_BOARDS[0]
+        botBoards.find(b => b.id === selectedBoardTarget.boardId) ??
+        botBoards[0] ??
+        DEFAULT_BOT_HARNESS_BOARDS[0]
       );
     }
-    return BOT_HARNESS_BOARDS[0];
-  }, [selectedBoardTarget]);
+    return botBoards[0] ?? DEFAULT_BOT_HARNESS_BOARDS[0];
+  }, [botBoards, selectedBoardTarget]);
 
   const handleOpenBotBoard = useCallback((boardDef: BotBoardDefinition) => {
     setBotTypeFilter(boardDef.defaultTypeFilter);
@@ -600,49 +771,246 @@ export const WorkspaceKanbanPage = () => {
     setSelectedBoardTarget({ kind: 'personal', boardId });
   }, []);
 
+  // Open Modal for Creating a New Row
+  const handleOpenAddRowModal = useCallback(() => {
+    setEditingRowTarget(null);
+    setNewBoardNameInput('');
+    setNewBoardDescInput('');
+    setNewBoardSectionType('Narrative');
+    setNewBoardStatus('In Process');
+    setNewBoardTargetNum(18);
+    setNewBoardLimitNum(10);
+    setNewBoardReviewer('Assign reviewer');
+    setNewBoardCategory(listFilterCategory === 'bot' ? 'bot' : 'personal');
+    setNewBoardModalOpen(true);
+  }, [listFilterCategory]);
+
+  // Open Modal for Editing an Existing Row (Bot or Personal)
+  const handleOpenEditRowModal = useCallback(
+    (row: {
+      kind: 'bot' | 'personal';
+      id: string;
+      name: string;
+      description: string;
+      sectionType: string;
+      tableStatus: TableRowStatus;
+      target: number;
+      limit: number;
+      reviewer: string;
+    }) => {
+      setEditingRowTarget({ kind: row.kind, id: row.id });
+      setNewBoardNameInput(row.name);
+      setNewBoardDescInput(row.description);
+      setNewBoardSectionType(row.sectionType);
+      setNewBoardStatus(row.tableStatus);
+      setNewBoardTargetNum(row.target);
+      setNewBoardLimitNum(row.limit);
+      setNewBoardReviewer(row.reviewer);
+      setNewBoardCategory(row.kind);
+      setNewBoardModalOpen(true);
+      setOpenMenuRowId(null);
+    },
+    []
+  );
+
+  // Submit Add or Edit Row in the Shadcn Table
   const handleCreatePersonalBoardSubmit = useCallback(() => {
     const trimmed = newBoardNameInput.trim();
     if (!trimmed) return;
+
+    if (editingRowTarget) {
+      if (editingRowTarget.kind === 'bot') {
+        updateBotBoards(prev =>
+          prev.map(b =>
+            b.id === editingRowTarget.id
+              ? {
+                  ...b,
+                  name: trimmed,
+                  description: newBoardDescInput.trim() || b.description,
+                  sectionType: newBoardSectionType.trim() || 'SLPC Harness',
+                  tableStatus: newBoardStatus,
+                  target: Number(newBoardTargetNum) || 0,
+                  limit: Number(newBoardLimitNum) || 0,
+                  reviewer: newBoardReviewer,
+                }
+              : b
+          )
+        );
+      } else {
+        updatePersonalBoards(prev =>
+          prev.map(b =>
+            b.id === editingRowTarget.id
+              ? {
+                  ...b,
+                  name: trimmed,
+                  description: newBoardDescInput.trim() || b.description,
+                  sectionType: newBoardSectionType.trim() || 'Narrative',
+                  tableStatus: newBoardStatus,
+                  target: Number(newBoardTargetNum) || 0,
+                  limit: Number(newBoardLimitNum) || 0,
+                  reviewer: newBoardReviewer,
+                }
+              : b
+          )
+        );
+      }
+      setNewBoardModalOpen(false);
+      setEditingRowTarget(null);
+      notify.success({
+        title: 'Đã cập nhật dòng dữ liệu',
+        message: `Đã lưu thay đổi cho "${trimmed}".`,
+      });
+      return;
+    }
+
+    if (newBoardCategory === 'bot' && canViewBotHarnessBoard) {
+      const newBotRow: BotBoardDefinition = {
+        id: `bot-custom-${Date.now()}`,
+        name: trimmed,
+        description:
+          newBoardDescInput.trim() || 'Bảng điều phối công việc Bot / Harness',
+        sectionType: newBoardSectionType.trim() || 'SLPC Harness',
+        tableStatus: newBoardStatus,
+        target: Number(newBoardTargetNum) || 20,
+        limit: Number(newBoardLimitNum) || 10,
+        reviewer:
+          newBoardReviewer === 'Assign reviewer'
+            ? 'Supervisor'
+            : newBoardReviewer,
+        defaultTypeFilter: 'MAIN',
+        defaultGroupBy: 'state',
+      };
+      updateBotBoards(prev => [newBotRow, ...prev]);
+      setNewBoardModalOpen(false);
+      notify.success({
+        title: 'Đã thêm mục Bot / Harness mới',
+        message: `Đã thêm "${newBotRow.name}" vào bảng.`,
+      });
+      return;
+    }
+
     const newBoard: PersonalBoard = {
       id: `board-${Date.now()}`,
       name: trimmed,
       description:
         newBoardDescInput.trim() ||
-        'Bảng công việc cá nhân (Hỗ trợ Kanban & Table View)',
+        `Bảng Kanban quản lý công việc cho "${trimmed}"`,
+      sectionType: newBoardSectionType.trim() || 'Narrative',
+      tableStatus: newBoardStatus,
+      target: Number(newBoardTargetNum) || 18,
+      limit: Number(newBoardLimitNum) || 10,
+      reviewer: newBoardReviewer,
+      category: 'personal',
       updatedAt: new Date().toISOString().slice(0, 10),
       columns: ['To Do', 'In Progress', 'In Review', 'Done'],
-      cards: [
-        {
-          id: `card-${Date.now()}`,
-          title: 'Công việc đầu tiên trong bảng mới',
-          status: 'To Do',
-          priority: 'Medium',
-          dueDate: new Date().toISOString().slice(0, 10),
-          progress: 0,
-        },
-      ],
+      cards: buildDefaultCardsForSection(trimmed),
     };
     updatePersonalBoards(prev => [newBoard, ...prev]);
-    setNewBoardNameInput('');
-    setNewBoardDescInput('');
     setNewBoardModalOpen(false);
-    setSelectedBoardTarget({ kind: 'personal', boardId: newBoard.id });
     notify.success({
-      title: 'Đã tạo bảng Kanban mới',
-      message: `Đã mở bảng "${newBoard.name}".`,
+      title: 'Đã thêm mục mới vào Table',
+      message: `Click vào "${newBoard.name}" để mở Kanban Board.`,
     });
-  }, [newBoardDescInput, newBoardNameInput, updatePersonalBoards]);
+  }, [
+    canViewBotHarnessBoard,
+    editingRowTarget,
+    newBoardCategory,
+    newBoardDescInput,
+    newBoardLimitNum,
+    newBoardNameInput,
+    newBoardReviewer,
+    newBoardSectionType,
+    newBoardStatus,
+    newBoardTargetNum,
+    updateBotBoards,
+    updatePersonalBoards,
+  ]);
 
-  const handleDeletePersonalBoard = useCallback(
-    (boardId: string, e: React.MouseEvent) => {
-      e.stopPropagation();
-      updatePersonalBoards(prev => prev.filter(b => b.id !== boardId));
-      notify.success({
-        title: 'Đã xóa bảng cá nhân',
-      });
+  // Inline Update for any Row in the Shadcn Table
+  const handleInlineUpdateRow = useCallback(
+    (
+      kind: 'bot' | 'personal',
+      id: string,
+      patch: Partial<{
+        name: string;
+        sectionType: string;
+        tableStatus: TableRowStatus;
+        target: number;
+        limit: number;
+        reviewer: string;
+      }>
+    ) => {
+      if (kind === 'bot') {
+        updateBotBoards(prev =>
+          prev.map(b => (b.id === id ? { ...b, ...patch } : b))
+        );
+      } else {
+        updatePersonalBoards(prev =>
+          prev.map(b => (b.id === id ? { ...b, ...patch } : b))
+        );
+      }
     },
-    [updatePersonalBoards]
+    [updateBotBoards, updatePersonalBoards]
   );
+
+  // Duplicate Row in the Shadcn Table
+  const handleDuplicateRow = useCallback(
+    (kind: 'bot' | 'personal', id: string) => {
+      if (kind === 'bot') {
+        const found = botBoards.find(b => b.id === id);
+        if (!found) return;
+        const copy: BotBoardDefinition = {
+          ...found,
+          id: `bot-copy-${Date.now()}`,
+          name: `${found.name} (Copy)`,
+        };
+        updateBotBoards(prev => [copy, ...prev]);
+      } else {
+        const found = personalBoards.find(b => b.id === id);
+        if (!found) return;
+        const copy: PersonalBoard = {
+          ...found,
+          id: `board-copy-${Date.now()}`,
+          name: `${found.name} (Copy)`,
+        };
+        updatePersonalBoards(prev => [copy, ...prev]);
+      }
+      setOpenMenuRowId(null);
+      notify.success({ title: 'Đã nhân bản dòng dữ liệu' });
+    },
+    [botBoards, personalBoards, updateBotBoards, updatePersonalBoards]
+  );
+
+  // Delete single Row in the Shadcn Table
+  const handleDeleteTableRow = useCallback(
+    (kind: 'bot' | 'personal', id: string) => {
+      if (kind === 'bot') {
+        updateBotBoards(prev => prev.filter(b => b.id !== id));
+      } else {
+        updatePersonalBoards(prev => prev.filter(b => b.id !== id));
+      }
+      setSelectedRowIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      setOpenMenuRowId(null);
+      notify.success({ title: 'Đã xóa mục khỏi bảng' });
+    },
+    [updateBotBoards, updatePersonalBoards]
+  );
+
+  // Bulk Delete Selected Rows
+  const handleBulkDeleteSelected = useCallback(() => {
+    if (selectedRowIds.size === 0) return;
+    const count = selectedRowIds.size;
+    updateBotBoards(prev => prev.filter(b => !selectedRowIds.has(b.id)));
+    updatePersonalBoards(prev => prev.filter(b => !selectedRowIds.has(b.id)));
+    setSelectedRowIds(new Set());
+    notify.success({
+      title: `Đã xóa ${count} mục đã chọn`,
+    });
+  }, [selectedRowIds, updateBotBoards, updatePersonalBoards]);
 
   const handleAddPersonalColumn = useCallback(() => {
     if (!currentPersonalBoard) return;
@@ -750,35 +1118,148 @@ export const WorkspaceKanbanPage = () => {
     );
   }, [currentPersonalBoard, personalSearch]);
 
-  const filteredBotBoardsForList = useMemo(() => {
-    if (!canViewBotHarnessBoard) return [];
-    if (listFilterCategory === 'personal') return [];
+  // Unified Table Rows for Level 1 Shadcn Data Table
+  const unifiedTableRows = useMemo(() => {
     const q = listSearchQuery.trim().toLowerCase();
-    if (!q) return BOT_HARNESS_BOARDS;
-    return BOT_HARNESS_BOARDS.filter(
-      b =>
-        b.name.toLowerCase().includes(q) ||
-        b.description.toLowerCase().includes(q)
-    );
-  }, [canViewBotHarnessBoard, listFilterCategory, listSearchQuery]);
+    const rows: Array<{
+      kind: 'bot' | 'personal';
+      id: string;
+      name: string;
+      description: string;
+      sectionType: string;
+      tableStatus: TableRowStatus;
+      target: number;
+      limit: number;
+      reviewer: string;
+      botDef?: BotBoardDefinition;
+    }> = [];
 
-  const filteredPersonalBoardsForList = useMemo(() => {
-    if (listFilterCategory === 'bot') return [];
-    const q = listSearchQuery.trim().toLowerCase();
-    if (!q) return personalBoards;
-    return personalBoards.filter(
-      b =>
-        b.name.toLowerCase().includes(q) ||
-        (b.description ?? '').toLowerCase().includes(q)
-    );
-  }, [listFilterCategory, listSearchQuery, personalBoards]);
+    if (canViewBotHarnessBoard && listFilterCategory !== 'personal') {
+      for (const b of botBoards) {
+        if (
+          !q ||
+          b.name.toLowerCase().includes(q) ||
+          b.sectionType.toLowerCase().includes(q) ||
+          b.reviewer.toLowerCase().includes(q)
+        ) {
+          rows.push({
+            kind: 'bot',
+            id: b.id,
+            name: b.name,
+            description: b.description,
+            sectionType: b.sectionType || 'SLPC Harness',
+            tableStatus: b.tableStatus || 'In Process',
+            target: b.target ?? 41,
+            limit: b.limit ?? 20,
+            reviewer: b.reviewer || 'Supervisor',
+            botDef: b,
+          });
+        }
+      }
+    }
+
+    if (listFilterCategory !== 'bot') {
+      for (const p of personalBoards) {
+        const sType = p.sectionType || 'Narrative';
+        const rev = p.reviewer || 'Assign reviewer';
+        if (
+          !q ||
+          p.name.toLowerCase().includes(q) ||
+          sType.toLowerCase().includes(q) ||
+          rev.toLowerCase().includes(q)
+        ) {
+          rows.push({
+            kind: 'personal',
+            id: p.id,
+            name: p.name,
+            description: p.description ?? '',
+            sectionType: sType,
+            tableStatus: p.tableStatus || 'In Process',
+            target: p.target ?? p.cards.length,
+            limit: p.limit ?? 15,
+            reviewer: rev,
+          });
+        }
+      }
+    }
+
+    return rows;
+  }, [
+    botBoards,
+    canViewBotHarnessBoard,
+    listFilterCategory,
+    listSearchQuery,
+    personalBoards,
+  ]);
+
+  const allVisibleSelected =
+    unifiedTableRows.length > 0 &&
+    unifiedTableRows.every(r => selectedRowIds.has(r.id));
+
+  const handleToggleSelectAll = useCallback(() => {
+    if (allVisibleSelected) {
+      setSelectedRowIds(new Set());
+    } else {
+      setSelectedRowIds(new Set(unifiedTableRows.map(r => r.id)));
+    }
+  }, [allVisibleSelected, unifiedTableRows]);
+
+  const handleToggleSelectRow = useCallback((id: string) => {
+    setSelectedRowIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleCycleRowStatus = useCallback(
+    (kind: 'bot' | 'personal', id: string, current: TableRowStatus) => {
+      const order: TableRowStatus[] = ['In Process', 'Done', 'Planned'];
+      const nextStatus = order[(order.indexOf(current) + 1) % order.length];
+      handleInlineUpdateRow(kind, id, { tableStatus: nextStatus });
+    },
+    [handleInlineUpdateRow]
+  );
+
+  const handleDropTableRow = useCallback(
+    (targetRowId: string) => {
+      if (!draggedTableRowId || draggedTableRowId === targetRowId) {
+        setDraggedTableRowId(null);
+        return;
+      }
+      updatePersonalBoards(prev => {
+        const fromIdx = prev.findIndex(b => b.id === draggedTableRowId);
+        const toIdx = prev.findIndex(b => b.id === targetRowId);
+        if (fromIdx === -1 || toIdx === -1) return prev;
+        const copy = [...prev];
+        const [moved] = copy.splice(fromIdx, 1);
+        copy.splice(toIdx, 0, moved);
+        return copy;
+      });
+      updateBotBoards(prev => {
+        const fromIdx = prev.findIndex(b => b.id === draggedTableRowId);
+        const toIdx = prev.findIndex(b => b.id === targetRowId);
+        if (fromIdx === -1 || toIdx === -1) return prev;
+        const copy = [...prev];
+        const [moved] = copy.splice(fromIdx, 1);
+        copy.splice(toIdx, 0, moved);
+        return copy;
+      });
+      setDraggedTableRowId(null);
+    },
+    [draggedTableRowId, updateBotBoards, updatePersonalBoards]
+  );
 
   return (
     <>
       <ViewTitle
         title={
           selectedBoardTarget === null
-            ? 'Kanban Boards'
+            ? 'Kanban'
             : selectedBoardTarget.kind === 'bot'
               ? currentBotBoardDef.name
               : (currentPersonalBoard?.name ?? 'Kanban Board')
@@ -787,11 +1268,13 @@ export const WorkspaceKanbanPage = () => {
       <ViewIcon icon="allDocs" />
       <ViewHeader>
         <div className={styles.headerBar}>
-          {/* Left Header: Either Directory Title or Back-to-List Breadcrumb */}
+          {/* Left Header: Either Table Overview Title or Back-to-Table Breadcrumb */}
           {selectedBoardTarget === null ? (
             <div className={styles.breadcrumbBar}>
-              <DatabaseKanbanViewIcon width={18} height={18} />
-              <span>Danh sách Bảng Kanban (Kanban Boards)</span>
+              <DatabaseTableViewIcon width={18} height={18} />
+              <span>
+                Quản lý Hạng mục & Bảng Kanban (Click vào mục để mở Kanban)
+              </span>
             </div>
           ) : (
             <div className={styles.breadcrumbBar}>
@@ -802,18 +1285,23 @@ export const WorkspaceKanbanPage = () => {
                 onClick={() => setSelectedBoardTarget(null)}
               >
                 <ArrowLeftSmallIcon width={16} height={16} />
-                <span>Danh sách Kanban</span>
+                <span>Quay lại Bảng (Table)</span>
               </button>
               <span style={{ opacity: 0.4 }}>/</span>
               <span>
                 {selectedBoardTarget.kind === 'bot'
                   ? `🤖 ${currentBotBoardDef.name}`
-                  : `👤 ${currentPersonalBoard?.name ?? ''}`}
+                  : `📋 ${currentPersonalBoard?.name ?? ''}`}
+              </span>
+              <span className={styles.outlinePill}>
+                {selectedBoardTarget.kind === 'bot'
+                  ? currentBotBoardDef.sectionType
+                  : currentPersonalBoard?.sectionType}
               </span>
             </div>
           )}
 
-          {/* Right Header Controls: Admin Config Button & Create New Board */}
+          {/* Right Header Controls: Admin Config & Add Section */}
           <div className={styles.toolbarGroup}>
             {isOwnerAdmin && adminConfig.simulateStandardUser && (
               <button
@@ -830,7 +1318,7 @@ export const WorkspaceKanbanPage = () => {
                   })
                 }
               >
-                👁️ Đang xem thử như User thường (Bấm để bật lại Admin)
+                👁️ Đang xem như User thường (Bấm để bật lại Admin)
               </button>
             )}
             {isOwnerAdmin && (
@@ -841,17 +1329,18 @@ export const WorkspaceKanbanPage = () => {
                 onClick={() => setAdminModalOpen(true)}
               >
                 <SettingsIcon width={15} height={15} />
-                <span>Admin Config (Phân quyền Bot Kanban)</span>
+                <span>Admin Config</span>
               </button>
             )}
             <button
               type="button"
               data-primary="true"
+              data-testid="kanban-add-section-btn"
               className={styles.actionButton}
-              onClick={() => setNewBoardModalOpen(true)}
+              onClick={handleOpenAddRowModal}
             >
               <PlusIcon width={14} height={14} />
-              <span>Tạo Bảng Kanban Mới</span>
+              <span>Add Section / Thêm mới</span>
             </button>
           </div>
         </div>
@@ -860,7 +1349,8 @@ export const WorkspaceKanbanPage = () => {
       <ViewBody>
         <div className={styles.pageContainer}>
           {/* ============================================================== */}
-          {/* LEVEL 1: KANBAN BOARDS DIRECTORY LIST PAGE                     */}
+          {/* LEVEL 1: SHADCN DASHBOARD-01 DATA TABLE (Add / Edit / Delete)  */}
+          {/* Click any row's Header to open its Kanban Board!               */}
           {/* ============================================================== */}
           {selectedBoardTarget === null ? (
             <>
@@ -873,11 +1363,10 @@ export const WorkspaceKanbanPage = () => {
                       className={styles.zoneTabButton}
                       onClick={() => setListFilterCategory('all')}
                     >
-                      <span>Tất cả bảng</span>
+                      <span>Outline (Tất cả)</span>
                       <span className={styles.countBadge}>
-                        {(canViewBotHarnessBoard
-                          ? BOT_HARNESS_BOARDS.length
-                          : 0) + personalBoards.length}
+                        {(canViewBotHarnessBoard ? botBoards.length : 0) +
+                          personalBoards.length}
                       </span>
                     </button>
                     {canViewBotHarnessBoard && (
@@ -887,9 +1376,9 @@ export const WorkspaceKanbanPage = () => {
                         className={styles.zoneTabButton}
                         onClick={() => setListFilterCategory('bot')}
                       >
-                        <span>🤖 Bảng Bot / Harness</span>
+                        <span>🤖 Bot / Harness</span>
                         <span className={styles.countBadge}>
-                          {BOT_HARNESS_BOARDS.length}
+                          {botBoards.length}
                         </span>
                       </button>
                     )}
@@ -899,7 +1388,7 @@ export const WorkspaceKanbanPage = () => {
                       className={styles.zoneTabButton}
                       onClick={() => setListFilterCategory('personal')}
                     >
-                      <span>👤 Bảng Cá Nhân (My Boards)</span>
+                      <span>👤 Cá nhân (Sections)</span>
                       <span className={styles.countBadge}>
                         {personalBoards.length}
                       </span>
@@ -908,192 +1397,365 @@ export const WorkspaceKanbanPage = () => {
 
                   <input
                     type="text"
-                    placeholder="Tìm kiếm bảng Kanban..."
+                    placeholder="Tìm kiếm Header, Section Type, Reviewer..."
                     className={styles.controlInput}
                     style={{ minWidth: 240 }}
                     value={listSearchQuery}
                     onChange={e => setListSearchQuery(e.target.value)}
                   />
                 </div>
+
+                <div className={styles.toolbarGroup}>
+                  {selectedRowIds.size > 0 && (
+                    <button
+                      type="button"
+                      data-testid="kanban-bulk-delete-btn"
+                      className={styles.actionButton}
+                      style={{
+                        borderColor: 'rgba(239, 68, 68, 0.5)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.14)',
+                        color: '#f87171',
+                      }}
+                      onClick={handleBulkDeleteSelected}
+                    >
+                      <DeleteIcon width={14} height={14} />
+                      <span>Xóa ({selectedRowIds.size}) mục đã chọn</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className={styles.actionButton}
+                    onClick={handleOpenAddRowModal}
+                  >
+                    <PlusIcon width={14} height={14} />
+                    <span>Add Section</span>
+                  </button>
+                </div>
               </div>
 
               <div className={styles.contentArea}>
-                <div className={styles.boardListWrapper}>
-                  {/* SECTION 1: BOT / HARNESS BOARDS (Only when Admin Config permits) */}
-                  {canViewBotHarnessBoard &&
-                    filteredBotBoardsForList.length > 0 && (
-                      <div className={styles.boardSection}>
-                        <div className={styles.boardSectionTitle}>
-                          <span>
-                            🤖 Bảng Quản Lý Bot / Harness (10 Agent Profiles)
-                          </span>
-                          <span className={styles.countBadge}>
-                            {filteredBotBoardsForList.length}
-                          </span>
-                        </div>
-
-                        {filteredBotBoardsForList.map(bDef => {
-                          const itemCount =
-                            bDef.defaultTypeFilter === 'Testcase'
-                              ? botItems.filter(i => i.type === 'Testcase')
-                                  .length
-                              : botItems.filter(i => i.type !== 'Testcase')
-                                  .length;
-                          return (
-                            <div
-                              key={bDef.id}
-                              data-testid={`kanban-list-item-${bDef.id}`}
-                              className={styles.boardListRow}
-                              onClick={() => handleOpenBotBoard(bDef)}
-                            >
-                              <div className={styles.boardRowLeft}>
-                                <div className={styles.boardIconBox}>🤖</div>
-                                <div>
-                                  <div
-                                    style={{
-                                      fontSize: 14,
-                                      fontWeight: 600,
-                                      marginBottom: 3,
-                                    }}
-                                  >
-                                    {bDef.name}
-                                  </div>
-                                  <div
-                                    style={{
-                                      fontSize: 12,
-                                      opacity: 0.7,
-                                    }}
-                                  >
-                                    {bDef.description}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className={styles.boardRowRight}>
-                                <span
-                                  className={styles.pillBadge}
-                                  style={{
-                                    backgroundColor: 'rgba(59, 130, 246, 0.16)',
-                                    color: '#60a5fa',
-                                  }}
-                                >
-                                  Harness DB · 10 Profiles
-                                </span>
-                                <span
-                                  className={styles.pillBadge}
-                                  style={{
-                                    backgroundColor: 'rgba(16, 185, 129, 0.16)',
-                                    color: '#34d399',
-                                  }}
-                                >
-                                  {itemCount} Work Items
-                                </span>
-                                <span
-                                  className={styles.pillBadge}
-                                  style={{
-                                    backgroundColor:
-                                      'rgba(148, 163, 184, 0.16)',
-                                    color: '#cbd5e1',
-                                  }}
-                                >
-                                  Kanban & Table →
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                  {/* SECTION 2: PERSONAL CUSTOM BOARDS (Isolated per Workspace) */}
-                  {filteredPersonalBoardsForList.length > 0 && (
-                    <div className={styles.boardSection}>
-                      <div className={styles.boardSectionTitle}>
-                        <span>
-                          👤 Bảng Cá Nhân Tự Tạo (My Workspace Boards)
-                        </span>
-                        <span className={styles.countBadge}>
-                          {filteredPersonalBoardsForList.length}
-                        </span>
-                      </div>
-
-                      {filteredPersonalBoardsForList.map(board => (
-                        <div
-                          key={board.id}
-                          data-testid={`kanban-list-item-${board.id}`}
-                          className={styles.boardListRow}
-                          onClick={() => handleOpenPersonalBoard(board.id)}
+                <div className={styles.shadcnTableContainer}>
+                  <table className={styles.shadcnTable}>
+                    <thead>
+                      <tr className={styles.shadcnTheadTr}>
+                        <th className={styles.shadcnTh} aria-label="Drag" />
+                        <th className={styles.shadcnTh}>
+                          <input
+                            type="checkbox"
+                            aria-label="Select all rows"
+                            className={styles.shadcnCheckbox}
+                            checked={allVisibleSelected}
+                            onChange={handleToggleSelectAll}
+                          />
+                        </th>
+                        <th className={styles.shadcnTh}>Header</th>
+                        <th className={styles.shadcnTh}>Section Type</th>
+                        <th className={styles.shadcnTh}>Status</th>
+                        <th
+                          className={styles.shadcnTh}
+                          style={{ textAlign: 'right', width: '90px' }}
                         >
-                          <div className={styles.boardRowLeft}>
-                            <div className={styles.boardIconBox}>📋</div>
-                            <div>
-                              <div
-                                style={{
-                                  fontSize: 14,
-                                  fontWeight: 600,
-                                  marginBottom: 3,
-                                }}
-                              >
-                                {board.name}
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: 12,
-                                  opacity: 0.7,
-                                }}
-                              >
-                                {board.description ||
-                                  `Gồm ${board.columns.length} cột trạng thái (${board.columns.join(' · ')})`}
-                              </div>
-                            </div>
-                          </div>
+                          Target
+                        </th>
+                        <th
+                          className={styles.shadcnTh}
+                          style={{ textAlign: 'right', width: '90px' }}
+                        >
+                          Limit
+                        </th>
+                        <th className={styles.shadcnTh}>Reviewer</th>
+                        <th className={styles.shadcnTh} aria-label="Actions" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {unifiedTableRows.map(row => {
+                        const isSelected = selectedRowIds.has(row.id);
+                        const isDragging = draggedTableRowId === row.id;
+                        const isUnassigned =
+                          !row.reviewer || row.reviewer === 'Assign reviewer';
 
-                          <div className={styles.boardRowRight}>
-                            <span
-                              className={styles.pillBadge}
-                              style={{
-                                backgroundColor: 'rgba(168, 85, 247, 0.16)',
-                                color: '#c084fc',
-                              }}
-                            >
-                              {board.columns.length} cột
-                            </span>
-                            <span
-                              className={styles.pillBadge}
-                              style={{
-                                backgroundColor: 'rgba(16, 185, 129, 0.16)',
-                                color: '#34d399',
-                              }}
-                            >
-                              {board.cards.length} thẻ công việc
-                            </span>
-                            <span
-                              className={styles.pillBadge}
-                              style={{
-                                backgroundColor: 'rgba(148, 163, 184, 0.16)',
-                                color: '#cbd5e1',
-                              }}
-                            >
-                              Kanban & Table →
-                            </span>
-                            {personalBoards.length > 1 && (
+                        return (
+                          <tr
+                            key={row.id}
+                            data-testid={`kanban-table-row-${row.id}`}
+                            data-selected={isSelected}
+                            data-dragging={isDragging}
+                            className={styles.shadcnTr}
+                            draggable
+                            onDragStart={() => setDraggedTableRowId(row.id)}
+                            onDragOver={e => e.preventDefault()}
+                            onDrop={() => handleDropTableRow(row.id)}
+                          >
+                            {/* 1. Six-dot Grip Handle */}
+                            <td className={styles.shadcnTd}>
+                              <span
+                                className={styles.gripHandle}
+                                title="Kéo thả để sắp xếp thứ tự dòng"
+                              >
+                                ⋮⋮
+                              </span>
+                            </td>
+
+                            {/* 2. Row Checkbox */}
+                            <td className={styles.shadcnTd}>
+                              <input
+                                type="checkbox"
+                                aria-label={`Select ${row.name}`}
+                                className={styles.shadcnCheckbox}
+                                checked={isSelected}
+                                onChange={() => handleToggleSelectRow(row.id)}
+                              />
+                            </td>
+
+                            {/* 3. Header (Click to Open Kanban Board!) */}
+                            <td className={styles.shadcnTd}>
                               <button
                                 type="button"
-                                title="Xóa bảng này"
-                                className={styles.actionButton}
-                                style={{ padding: '0 8px' }}
-                                onClick={e =>
-                                  handleDeletePersonalBoard(board.id, e)
+                                data-testid={`open-kanban-${row.id}`}
+                                className={styles.headerCellLink}
+                                title="Click để mở Bảng Kanban của mục này"
+                                onClick={() => {
+                                  if (row.kind === 'bot' && row.botDef) {
+                                    handleOpenBotBoard(row.botDef);
+                                  } else {
+                                    handleOpenPersonalBoard(row.id);
+                                  }
+                                }}
+                              >
+                                {row.kind === 'bot' && (
+                                  <span title="Bảng Bot / Harness">🤖</span>
+                                )}
+                                <span>{row.name}</span>
+                              </button>
+                            </td>
+
+                            {/* 4. Section Type (Rounded Outline Pill) */}
+                            <td className={styles.shadcnTd}>
+                              <span className={styles.outlinePill}>
+                                {row.sectionType}
+                              </span>
+                            </td>
+
+                            {/* 5. Status (Clickable Pill with Icon: Done / In Process / Planned) */}
+                            <td className={styles.shadcnTd}>
+                              <button
+                                type="button"
+                                title="Bấm để đổi trạng thái (In Process / Done / Planned)"
+                                className={styles.statusPillBtn}
+                                onClick={() =>
+                                  handleCycleRowStatus(
+                                    row.kind,
+                                    row.id,
+                                    row.tableStatus
+                                  )
                                 }
                               >
-                                <DeleteIcon width={14} height={14} />
+                                {row.tableStatus === 'Done' ? (
+                                  <span
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      width: 14,
+                                      height: 14,
+                                      borderRadius: '50%',
+                                      backgroundColor: '#22c55e',
+                                      color: '#052e16',
+                                      fontSize: 9,
+                                      fontWeight: 800,
+                                    }}
+                                  >
+                                    ✓
+                                  </span>
+                                ) : row.tableStatus === 'In Process' ? (
+                                  <span
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: '#a1a1aa',
+                                      fontSize: 12,
+                                    }}
+                                  >
+                                    ✻
+                                  </span>
+                                ) : (
+                                  <span
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: '#60a5fa',
+                                      fontSize: 11,
+                                    }}
+                                  >
+                                    ○
+                                  </span>
+                                )}
+                                <span>{row.tableStatus}</span>
                               </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                            </td>
+
+                            {/* 6. Target (Inline Editable Number Input) */}
+                            <td
+                              className={styles.shadcnTd}
+                              style={{ textAlign: 'right' }}
+                            >
+                              <input
+                                type="number"
+                                aria-label={`${row.name} Target`}
+                                className={styles.inlineNumInput}
+                                value={row.target}
+                                onChange={e =>
+                                  handleInlineUpdateRow(row.kind, row.id, {
+                                    target: Number(e.target.value) || 0,
+                                  })
+                                }
+                              />
+                            </td>
+
+                            {/* 7. Limit (Inline Editable Number Input) */}
+                            <td
+                              className={styles.shadcnTd}
+                              style={{ textAlign: 'right' }}
+                            >
+                              <input
+                                type="number"
+                                aria-label={`${row.name} Limit`}
+                                className={styles.inlineNumInput}
+                                value={row.limit}
+                                onChange={e =>
+                                  handleInlineUpdateRow(row.kind, row.id, {
+                                    limit: Number(e.target.value) || 0,
+                                  })
+                                }
+                              />
+                            </td>
+
+                            {/* 8. Reviewer (Inline Select Dropdown matching Shadcn screenshot) */}
+                            <td className={styles.shadcnTd}>
+                              <select
+                                aria-label={`${row.name} Reviewer`}
+                                data-Assigned={!isUnassigned}
+                                className={styles.reviewerSelect}
+                                style={
+                                  isUnassigned
+                                    ? { opacity: 0.75 }
+                                    : { fontWeight: 400 }
+                                }
+                                value={row.reviewer}
+                                onChange={e =>
+                                  handleInlineUpdateRow(row.kind, row.id, {
+                                    reviewer: e.target.value,
+                                  })
+                                }
+                              >
+                                {REVIEWER_OPTIONS.map(opt => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+
+                            {/* 9. Three-dot Action Menu (Open Kanban / Edit / Duplicate / Delete) */}
+                            <td className={styles.shadcnTd}>
+                              <button
+                                type="button"
+                                data-testid={`row-menu-btn-${row.id}`}
+                                className={styles.rowMenuBtn}
+                                title="Thêm thao tác (Sửa / Mở Kanban / Xóa)"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setOpenMenuRowId(prev =>
+                                    prev === row.id ? null : row.id
+                                  );
+                                }}
+                              >
+                                ⋮
+                              </button>
+
+                              {openMenuRowId === row.id && (
+                                <div
+                                  className={styles.rowDropdownMenu}
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <button
+                                    type="button"
+                                    className={styles.rowDropdownItem}
+                                    onClick={() => {
+                                      setOpenMenuRowId(null);
+                                      if (row.kind === 'bot' && row.botDef) {
+                                        handleOpenBotBoard(row.botDef);
+                                      } else {
+                                        handleOpenPersonalBoard(row.id);
+                                      }
+                                    }}
+                                  >
+                                    <span>📋 Mở Kanban Board</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={styles.rowDropdownItem}
+                                    onClick={() => handleOpenEditRowModal(row)}
+                                  >
+                                    <span>✏️ Chỉnh sửa (Edit)</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={styles.rowDropdownItem}
+                                    onClick={() =>
+                                      handleDuplicateRow(row.kind, row.id)
+                                    }
+                                  >
+                                    <span>📑 Nhân bản (Make a copy)</span>
+                                  </button>
+                                  <div
+                                    style={{
+                                      height: 1,
+                                      backgroundColor:
+                                        'rgba(148, 163, 184, 0.15)',
+                                      margin: '3px 0',
+                                    }}
+                                  />
+                                  <button
+                                    type="button"
+                                    data-danger="true"
+                                    className={styles.rowDropdownItem}
+                                    onClick={() =>
+                                      handleDeleteTableRow(row.kind, row.id)
+                                    }
+                                  >
+                                    <span>🗑️ Xóa dòng (Delete)</span>
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Shadcn Data Table Footer */}
+                <div className={styles.tableFooterBar}>
+                  <div>
+                    {selectedRowIds.size} of {unifiedTableRows.length} row(s)
+                    selected.
+                  </div>
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: 16 }}
+                  >
+                    <span>
+                      Click trực tiếp vào cột <strong>Header</strong> để mở{' '}
+                      <strong>Kanban Board</strong> hoặc bấm <strong>⋮</strong>{' '}
+                      để Sửa / Xóa
+                    </span>
+                    <span style={{ fontWeight: 600 }}>
+                      Page 1 of 1 ({unifiedTableRows.length} mục)
+                    </span>
+                  </div>
                 </div>
               </div>
             </>
@@ -1297,21 +1959,66 @@ export const WorkspaceKanbanPage = () => {
                                     >
                                       #{item.id} · {item.type}
                                     </span>
-                                    <span
-                                      className={styles.pillBadge}
+                                    <div
                                       style={{
-                                        backgroundColor:
-                                          'rgba(245, 158, 11, 0.14)',
-                                        color: '#fbbf24',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 4,
                                       }}
                                     >
-                                      {item.priority || 'P1'}
-                                    </span>
+                                      <span
+                                        className={styles.pillBadge}
+                                        style={{
+                                          backgroundColor:
+                                            'rgba(245, 158, 11, 0.14)',
+                                          color: '#fbbf24',
+                                        }}
+                                      >
+                                        {item.priority || 'P1'}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        title="Xóa Task này"
+                                        onClick={() =>
+                                          updateBotItems(prev =>
+                                            prev.filter(it => it.id !== item.id)
+                                          )
+                                        }
+                                        style={{
+                                          background: 'transparent',
+                                          border: 'none',
+                                          color: 'inherit',
+                                          opacity: 0.55,
+                                          cursor: 'pointer',
+                                          padding: 2,
+                                        }}
+                                      >
+                                        <DeleteIcon width={13} height={13} />
+                                      </button>
+                                    </div>
                                   </div>
 
-                                  <div className={styles.cardTitle}>
-                                    {item.title}
-                                  </div>
+                                  <input
+                                    type="text"
+                                    value={item.title}
+                                    onChange={e => {
+                                      const val = e.target.value;
+                                      updateBotItems(prev =>
+                                        prev.map(it =>
+                                          it.id === item.id
+                                            ? { ...it, title: val }
+                                            : it
+                                        )
+                                      );
+                                    }}
+                                    className={styles.cardTitle}
+                                    style={{
+                                      background: 'transparent',
+                                      border: 'none',
+                                      outline: 'none',
+                                      width: '100%',
+                                    }}
+                                  />
 
                                   <div className={styles.cardFooter}>
                                     <select
@@ -1401,7 +2108,7 @@ export const WorkspaceKanbanPage = () => {
                             Bot Profile (Harness)
                           </th>
                           <th className={styles.tableTh}>Ưu tiên</th>
-                          <th className={styles.tableTh}>Cập nhật</th>
+                          <th className={styles.tableTh}>Xóa</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1525,15 +2232,18 @@ export const WorkspaceKanbanPage = () => {
                                   <option value="P2">P2</option>
                                 </select>
                               </td>
-                              <td
-                                className={styles.tableTd}
-                                style={{
-                                  fontSize: '12px',
-                                  opacity: 0.75,
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                {item.updated_at}
+                              <td className={styles.tableTd}>
+                                <button
+                                  type="button"
+                                  className={styles.actionButton}
+                                  onClick={() =>
+                                    updateBotItems(prev =>
+                                      prev.filter(it => it.id !== item.id)
+                                    )
+                                  }
+                                >
+                                  <DeleteIcon width={14} height={14} />
+                                </button>
                               </td>
                             </tr>
                           );
@@ -1585,6 +2295,30 @@ export const WorkspaceKanbanPage = () => {
                 </div>
 
                 <div className={styles.toolbarGroup}>
+                  {currentPersonalBoard && (
+                    <button
+                      type="button"
+                      className={styles.actionButton}
+                      onClick={() =>
+                        handleOpenEditRowModal({
+                          kind: 'personal',
+                          id: currentPersonalBoard.id,
+                          name: currentPersonalBoard.name,
+                          description: currentPersonalBoard.description ?? '',
+                          sectionType:
+                            currentPersonalBoard.sectionType || 'Narrative',
+                          tableStatus:
+                            currentPersonalBoard.tableStatus || 'In Process',
+                          target: currentPersonalBoard.target ?? 18,
+                          limit: currentPersonalBoard.limit ?? 10,
+                          reviewer:
+                            currentPersonalBoard.reviewer || 'Assign reviewer',
+                        })
+                      }
+                    >
+                      <span>✏️ Sửa thông tin mục này</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     className={styles.actionButton}
@@ -1896,7 +2630,7 @@ export const WorkspaceKanbanPage = () => {
       </ViewBody>
 
       {/* ==================================================================== */}
-      {/* MODAL 0: CREATE NEW PERSONAL KANBAN BOARD                            */}
+      {/* MODAL 0: ADD / EDIT SECTION & KANBAN ROW (Shadcn Table CRUD)         */}
       {/* ==================================================================== */}
       {newBoardModalOpen && (
         <div
@@ -1905,15 +2639,17 @@ export const WorkspaceKanbanPage = () => {
         >
           <div className={styles.modalCard} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
-              📋 Tạo Bảng Kanban & Table Cá Nhân Mới
+              {editingRowTarget
+                ? '✏️ Chỉnh sửa mục & Bảng Kanban (Edit Section)'
+                : '➕ Thêm Mục & Bảng Kanban Mới (Add Section)'}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <label style={{ fontSize: 12, fontWeight: 500 }}>
-                Tên bảng Kanban
+                Header (Tên mục / Bảng Kanban)
               </label>
               <input
                 type="text"
-                placeholder="VD: Sprint Tháng 10, Kế hoạch Sản phẩm..."
+                placeholder="VD: Cover page, Technical approach, Sprint 10..."
                 className={styles.controlInput}
                 style={{ height: 34 }}
                 value={newBoardNameInput}
@@ -1926,6 +2662,125 @@ export const WorkspaceKanbanPage = () => {
                 autoFocus
               />
 
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 10,
+                }}
+              >
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
+                >
+                  <label style={{ fontSize: 12, fontWeight: 500 }}>
+                    Section Type
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="VD: Narrative, Technical, SLPC Harness..."
+                    className={styles.controlInput}
+                    style={{ height: 34 }}
+                    value={newBoardSectionType}
+                    onChange={e => setNewBoardSectionType(e.target.value)}
+                  />
+                </div>
+
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
+                >
+                  <label style={{ fontSize: 12, fontWeight: 500 }}>
+                    Status (Trạng thái)
+                  </label>
+                  <select
+                    className={styles.controlInput}
+                    style={{ height: 34 }}
+                    value={newBoardStatus}
+                    onChange={e =>
+                      setNewBoardStatus(e.target.value as TableRowStatus)
+                    }
+                  >
+                    <option value="In Process">✻ In Process</option>
+                    <option value="Done">✓ Done</option>
+                    <option value="Planned">○ Planned</option>
+                  </select>
+                </div>
+
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
+                >
+                  <label style={{ fontSize: 12, fontWeight: 500 }}>
+                    Target
+                  </label>
+                  <input
+                    type="number"
+                    className={styles.controlInput}
+                    style={{ height: 34 }}
+                    value={newBoardTargetNum}
+                    onChange={e =>
+                      setNewBoardTargetNum(Number(e.target.value) || 0)
+                    }
+                  />
+                </div>
+
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
+                >
+                  <label style={{ fontSize: 12, fontWeight: 500 }}>Limit</label>
+                  <input
+                    type="number"
+                    className={styles.controlInput}
+                    style={{ height: 34 }}
+                    value={newBoardLimitNum}
+                    onChange={e =>
+                      setNewBoardLimitNum(Number(e.target.value) || 0)
+                    }
+                  />
+                </div>
+
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
+                >
+                  <label style={{ fontSize: 12, fontWeight: 500 }}>
+                    Reviewer
+                  </label>
+                  <select
+                    className={styles.controlInput}
+                    style={{ height: 34 }}
+                    value={newBoardReviewer}
+                    onChange={e => setNewBoardReviewer(e.target.value)}
+                  >
+                    {REVIEWER_OPTIONS.map(opt => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {!editingRowTarget && canViewBotHarnessBoard && (
+                  <div
+                    style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
+                  >
+                    <label style={{ fontSize: 12, fontWeight: 500 }}>
+                      Phân loại (Category)
+                    </label>
+                    <select
+                      className={styles.controlInput}
+                      style={{ height: 34 }}
+                      value={newBoardCategory}
+                      onChange={e =>
+                        setNewBoardCategory(
+                          e.target.value as 'personal' | 'bot'
+                        )
+                      }
+                    >
+                      <option value="personal">👤 Cá nhân (Section)</option>
+                      <option value="bot">🤖 Bot / Harness</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
               <label style={{ fontSize: 12, fontWeight: 500 }}>
                 Mô tả ngắn (Tuỳ chọn)
               </label>
@@ -1936,11 +2791,6 @@ export const WorkspaceKanbanPage = () => {
                 style={{ height: 34 }}
                 value={newBoardDescInput}
                 onChange={e => setNewBoardDescInput(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    handleCreatePersonalBoardSubmit();
-                  }
-                }}
               />
             </div>
 
@@ -1965,7 +2815,7 @@ export const WorkspaceKanbanPage = () => {
                 className={styles.actionButton}
                 onClick={handleCreatePersonalBoardSubmit}
               >
-                Tạo & Mở Bảng Kanban
+                {editingRowTarget ? 'Lưu thay đổi' : 'Thêm vào Bảng (Table)'}
               </button>
             </div>
           </div>
@@ -2000,7 +2850,7 @@ export const WorkspaceKanbanPage = () => {
                   }}
                 >
                   Chỉ những người dùng được bạn (Admin) bật công tắc dưới đây
-                  mới nhìn thấy danh sách bảng 🤖 Bot / Harness.
+                  mới nhìn thấy các mục 🤖 Bot / Harness trong Bảng.
                 </p>
               </div>
             </div>
@@ -2011,8 +2861,8 @@ export const WorkspaceKanbanPage = () => {
                   👁️ Xem thử dưới góc nhìn User chưa được bật Config
                 </div>
                 <div style={{ fontSize: 11, opacity: 0.7 }}>
-                  Khi bật, nhóm bảng 🤖 Bot / Harness sẽ ẩn khỏi danh sách để
-                  bạn kiểm tra giao diện của người dùng thường.
+                  Khi bật, các dòng 🤖 Bot / Harness sẽ ẩn khỏi Bảng để bạn kiểm
+                  tra giao diện của người dùng thường.
                 </div>
               </div>
               <input
@@ -2102,7 +2952,7 @@ export const WorkspaceKanbanPage = () => {
                       <div style={{ fontSize: 11, opacity: 0.7 }}>
                         {enabled
                           ? '✅ Đã bật: Được phép thấy 🤖 Bot / Harness Kanban'
-                          : '🔒 Đã tắt: Chỉ thấy 👤 Bảng Cá Nhân (My Boards)'}
+                          : '🔒 Đã tắt: Chỉ thấy 👤 Cá Nhân (Sections)'}
                       </div>
                     </div>
                     <input

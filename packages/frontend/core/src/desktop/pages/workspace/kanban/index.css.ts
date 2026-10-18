@@ -497,3 +497,322 @@ export const breadcrumbBar = style({
   fontSize: '14px',
   fontWeight: 600,
 });
+
+export const shadcnTableContainer = style({
+  width: '100%',
+  border: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+  borderRadius: '12px',
+  backgroundColor: cssVarV2('layer/background/primary'),
+  overflow: 'visible',
+  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.12)',
+});
+
+export const shadcnTable = style({
+  width: '100%',
+  borderCollapse: 'separate',
+  borderSpacing: 0,
+  fontSize: '13.5px',
+  textAlign: 'left',
+});
+
+export const shadcnTheadTr = style({
+  backgroundColor: cssVarV2('layer/background/secondary'),
+});
+
+export const shadcnTh = style({
+  height: '44px',
+  padding: '0 14px',
+  fontWeight: 600,
+  fontSize: '12.5px',
+  color: cssVarV2('text/secondary'),
+  borderBottom: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+  whiteSpace: 'nowrap',
+  userSelect: 'none',
+  selectors: {
+    '&:first-child': {
+      borderTopLeftRadius: '11px',
+      width: '36px',
+      paddingLeft: '12px',
+      paddingRight: '4px',
+    },
+    '&:nth-child(2)': {
+      width: '38px',
+      paddingLeft: '8px',
+      paddingRight: '8px',
+    },
+    '&:last-child': {
+      borderTopRightRadius: '11px',
+      width: '48px',
+      textAlign: 'right',
+      paddingRight: '14px',
+    },
+  },
+});
+
+export const shadcnTr = style({
+  transition: 'background-color 120ms ease',
+  backgroundColor: 'transparent',
+  selectors: {
+    '&:hover': {
+      backgroundColor: cssVarV2('layer/background/hoverOverlay'),
+    },
+    '&[data-selected="true"]': {
+      backgroundColor: 'rgba(59, 130, 246, 0.08)',
+    },
+    '&[data-dragging="true"]': {
+      opacity: 0.5,
+    },
+  },
+});
+
+export const shadcnTd = style({
+  height: '54px',
+  padding: '8px 14px',
+  borderBottom: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+  color: cssVarV2('text/primary'),
+  verticalAlign: 'middle',
+  selectors: {
+    [`${shadcnTr}:last-child &`]: {
+      borderBottom: 'none',
+    },
+    '&:first-child': {
+      width: '36px',
+      paddingLeft: '12px',
+      paddingRight: '4px',
+    },
+    '&:nth-child(2)': {
+      width: '38px',
+      paddingLeft: '8px',
+      paddingRight: '8px',
+    },
+    '&:last-child': {
+      width: '48px',
+      textAlign: 'right',
+      paddingRight: '14px',
+      position: 'relative',
+    },
+  },
+});
+
+export const gripHandle = style({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '24px',
+  height: '28px',
+  borderRadius: '4px',
+  color: cssVarV2('text/secondary'),
+  opacity: 0.55,
+  cursor: 'grab',
+  fontSize: '13px',
+  letterSpacing: '-1px',
+  userSelect: 'none',
+  selectors: {
+    '&:hover': {
+      opacity: 1,
+      backgroundColor: cssVarV2('layer/background/secondary'),
+    },
+    '&:active': {
+      cursor: 'grabbing',
+    },
+  },
+});
+
+export const shadcnCheckbox = style({
+  width: '15px',
+  height: '15px',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  accentColor: cssVar('primaryColor'),
+  verticalAlign: 'middle',
+});
+
+export const headerCellLink = style({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '8px',
+  fontWeight: 500,
+  fontSize: '13.5px',
+  color: cssVarV2('text/primary'),
+  background: 'none',
+  border: 'none',
+  padding: '4px 0',
+  cursor: 'pointer',
+  textAlign: 'left',
+  transition: 'color 120ms ease',
+  selectors: {
+    '&:hover': {
+      color: cssVar('primaryColor'),
+      textDecoration: 'underline',
+      textUnderlineOffset: '3px',
+    },
+  },
+});
+
+export const outlinePill = style({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+  padding: '3px 11px',
+  borderRadius: '9999px',
+  border: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+  backgroundColor: 'rgba(148, 163, 184, 0.06)',
+  color: cssVarV2('text/secondary'),
+  fontSize: '12px',
+  fontWeight: 500,
+  lineHeight: '18px',
+  whiteSpace: 'nowrap',
+});
+
+export const statusPillBtn = style({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '6px',
+  padding: '3px 11px',
+  borderRadius: '9999px',
+  border: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+  backgroundColor: 'rgba(148, 163, 184, 0.06)',
+  color: cssVarV2('text/primary'),
+  fontSize: '12px',
+  fontWeight: 500,
+  lineHeight: '18px',
+  whiteSpace: 'nowrap',
+  cursor: 'pointer',
+  transition: 'border-color 120ms ease, background-color 120ms ease',
+  selectors: {
+    '&:hover': {
+      borderColor: cssVar('primaryColor'),
+      backgroundColor: cssVarV2('layer/background/secondary'),
+    },
+  },
+});
+
+export const inlineNumInput = style({
+  width: '54px',
+  height: '30px',
+  padding: '0 8px',
+  borderRadius: '6px',
+  border: '1px solid transparent',
+  backgroundColor: 'transparent',
+  color: cssVarV2('text/primary'),
+  fontSize: '13px',
+  fontWeight: 500,
+  textAlign: 'right',
+  outline: 'none',
+  transition: 'border-color 120ms ease, background-color 120ms ease',
+  selectors: {
+    '&:hover': {
+      borderColor: cssVarV2('layer/insideBorder/border'),
+      backgroundColor: cssVarV2('layer/background/secondary'),
+    },
+    '&:focus': {
+      borderColor: cssVar('primaryColor'),
+      backgroundColor: cssVarV2('layer/background/secondary'),
+    },
+  },
+});
+
+export const reviewerSelect = style({
+  height: '32px',
+  minWidth: '148px',
+  padding: '0 10px',
+  borderRadius: '8px',
+  border: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+  backgroundColor: 'transparent',
+  color: cssVarV2('text/primary'),
+  fontSize: '13px',
+  fontWeight: 400,
+  cursor: 'pointer',
+  outline: 'none',
+  transition: 'border-color 120ms ease, background-color 120ms ease',
+  selectors: {
+    '&[data-Assigned="true"]': {
+      borderColor: 'transparent',
+      paddingLeft: '4px',
+    },
+    '&:hover': {
+      borderColor: cssVarV2('layer/insideBorder/border'),
+      backgroundColor: cssVarV2('layer/background/secondary'),
+    },
+    '&:focus': {
+      borderColor: cssVar('primaryColor'),
+    },
+  },
+});
+
+export const rowMenuBtn = style({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '28px',
+  height: '28px',
+  borderRadius: '6px',
+  border: 'none',
+  backgroundColor: 'transparent',
+  color: cssVarV2('text/secondary'),
+  fontSize: '16px',
+  fontWeight: 700,
+  cursor: 'pointer',
+  transition: 'background-color 120ms ease, color 120ms ease',
+  selectors: {
+    '&:hover': {
+      backgroundColor: cssVarV2('layer/background/secondary'),
+      color: cssVarV2('text/primary'),
+    },
+  },
+});
+
+export const rowDropdownMenu = style({
+  position: 'absolute',
+  right: '14px',
+  top: '44px',
+  zIndex: 120,
+  minWidth: '170px',
+  padding: '5px',
+  borderRadius: '8px',
+  backgroundColor: cssVarV2('layer/background/overlayPanel'),
+  border: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+  boxShadow: '0 10px 28px rgba(0, 0, 0, 0.35)',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '2px',
+  textAlign: 'left',
+});
+
+export const rowDropdownItem = style({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  width: '100%',
+  padding: '7px 10px',
+  borderRadius: '5px',
+  border: 'none',
+  backgroundColor: 'transparent',
+  color: cssVarV2('text/primary'),
+  fontSize: '12.5px',
+  fontWeight: 500,
+  cursor: 'pointer',
+  textAlign: 'left',
+  selectors: {
+    '&:hover': {
+      backgroundColor: cssVarV2('layer/background/hoverOverlay'),
+    },
+    '&[data-danger="true"]': {
+      color: '#f87171',
+    },
+    '&[data-danger="true"]:hover': {
+      backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    },
+  },
+});
+
+export const tableFooterBar = style({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: '12px 4px',
+  fontSize: '12.5px',
+  color: cssVarV2('text/secondary'),
+  flexWrap: 'wrap',
+  gap: '12px',
+});
