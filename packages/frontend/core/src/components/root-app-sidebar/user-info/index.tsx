@@ -3,6 +3,7 @@ import {
   Divider,
   IconButton,
   Menu,
+  MenuItem,
   type MenuProps,
 } from '@affine/component';
 import {
@@ -10,7 +11,13 @@ import {
   AuthService,
   ServerService,
 } from '@affine/core/modules/cloud';
-import { GlobalDialogService } from '@affine/core/modules/dialogs';
+import {
+  GlobalDialogService,
+  WorkspaceDialogService,
+} from '@affine/core/modules/dialogs';
+import { useI18n } from '@affine/i18n';
+import { track } from '@affine/track';
+import { AccountIcon, SettingsIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback } from 'react';
 
@@ -53,20 +60,48 @@ const AuthorizedUserInfo = ({ account }: { account: AuthAccountInfo }) => {
 
 const UnauthorizedUserInfo = () => {
   const globalDialogService = useService(GlobalDialogService);
+  const workspaceDialogService = useService(WorkspaceDialogService);
+  const t = useI18n();
 
   const openSignInModal = useCallback(() => {
     globalDialogService.open('sign-in', {});
   }, [globalDialogService]);
 
+  const onOpenWorkspaceSetting = useCallback(() => {
+    workspaceDialogService.open('setting', {
+      activeTab: 'appearance',
+    });
+    track.$.navigationPanel.$.openSettings();
+  }, [workspaceDialogService]);
+
   return (
-    <IconButton
-      onClick={openSignInModal}
-      data-testid="sidebar-user-avatar"
-      variant="plain"
-      size="20"
+    <Menu
+      contentOptions={menuContentOptions}
+      items={
+        <>
+          <MenuItem
+            prefixIcon={<SettingsIcon />}
+            data-testid="slider-bar-workspace-setting-button"
+            onClick={onOpenWorkspaceSetting}
+          >
+            <span data-testid="settings-modal-trigger">
+              {t['com.affine.settingSidebar.title']()}
+            </span>
+          </MenuItem>
+          <MenuItem
+            prefixIcon={<AccountIcon />}
+            data-testid="workspace-modal-sign-in-option"
+            onClick={openSignInModal}
+          >
+            {t['com.affine.workspace.cloud.account.login']()}
+          </MenuItem>
+        </>
+      }
     >
-      <UnknownUserIcon />
-    </IconButton>
+      <IconButton data-testid="sidebar-user-avatar" variant="plain" size="20">
+        <UnknownUserIcon />
+      </IconButton>
+    </Menu>
   );
 };
 

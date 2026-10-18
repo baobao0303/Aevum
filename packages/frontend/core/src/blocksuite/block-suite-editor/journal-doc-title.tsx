@@ -1,3 +1,4 @@
+import { HrmRentScheduleSection } from '@affine/core/desktop/pages/workspace/journals/hrm-rent-schedule-panel';
 import { JournalService } from '@affine/core/modules/journal';
 import { i18nTime, useI18n } from '@affine/i18n';
 import type { Store } from '@blocksuite/affine/store';
@@ -10,7 +11,16 @@ export const BlocksuiteEditorJournalDocTitle = ({ page }: { page: Store }) => {
   const journalService = useService(JournalService);
   const journalDateStr = useLiveData(journalService.journalDate$(page.id));
 
-  return <BlocksuiteEditorJournalDocTitleUI date={journalDateStr} />;
+  return (
+    <>
+      <BlocksuiteEditorJournalDocTitleUI date={journalDateStr} />
+      {journalDateStr ? (
+        <div className="doc-title-container" style={{ paddingTop: 0 }}>
+          <HrmRentScheduleSection dateString={journalDateStr} />
+        </div>
+      ) : null}
+    </>
+  );
 };
 
 export const BlocksuiteEditorJournalDocTitleUI = ({

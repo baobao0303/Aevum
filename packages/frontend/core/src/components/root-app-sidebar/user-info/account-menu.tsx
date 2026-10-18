@@ -3,7 +3,12 @@ import { ServerService, UserFeatureService } from '@affine/core/modules/cloud';
 import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
 import { useI18n } from '@affine/i18n';
 import { track } from '@affine/track';
-import { AccountIcon, AdminIcon, SignOutIcon } from '@blocksuite/icons/rc';
+import {
+  AccountIcon,
+  AdminIcon,
+  SettingsIcon,
+  SignOutIcon,
+} from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useEffect } from 'react';
 
@@ -15,6 +20,13 @@ export const AccountMenu = () => {
   const serverService = useService(ServerService);
   const userFeatureService = useService(UserFeatureService);
   const isAFFiNEAdmin = useLiveData(userFeatureService.userFeature.isAdmin$);
+
+  const onOpenWorkspaceSetting = useCallback(() => {
+    workspaceDialogService.open('setting', {
+      activeTab: 'appearance',
+    });
+    track.$.navigationPanel.$.openSettings();
+  }, [workspaceDialogService]);
 
   const onOpenAccountSetting = useCallback(() => {
     track.$.navigationPanel.profileAndBadge.openSettings({ to: 'account' });
@@ -35,6 +47,15 @@ export const AccountMenu = () => {
 
   return (
     <>
+      <MenuItem
+        prefixIcon={<SettingsIcon />}
+        data-testid="slider-bar-workspace-setting-button"
+        onClick={onOpenWorkspaceSetting}
+      >
+        <span data-testid="settings-modal-trigger">
+          {t['com.affine.settingSidebar.title']()}
+        </span>
+      </MenuItem>
       <MenuItem
         prefixIcon={<AccountIcon />}
         data-testid="workspace-modal-account-settings-option"
