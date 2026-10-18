@@ -20,6 +20,8 @@
   "scripts": {
     "aevum": "r aevum.ts",
     "ae": "r aevum.ts",
+    "affine": "r aevum.ts",
+    "af": "r aevum.ts",
     "dev": "yarn aevum dev -p @aevum/web",
     "dev:aevum": "yarn aevum dev -p @aevum/web",
     "dev:web": "yarn aevum dev -p web",

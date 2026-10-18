@@ -123,6 +123,8 @@ jobs:
     name: Build Frontend (Web, Admin, Mobile)
     needs: security-secret-scan
     runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: --max-old-space-size=8192
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -157,17 +159,17 @@ jobs:
           SENTRYCLI_SKIP_DOWNLOAD: '1'
 
       - name: Build @affine/web
-        run: yarn affine @affine/web build
+        run: yarn aevum @affine/web build
         env:
           BUILD_TYPE: stable
 
       - name: Build @affine/admin
-        run: yarn affine @affine/admin build
+        run: yarn aevum @affine/admin build
         env:
           BUILD_TYPE: stable
 
       - name: Build @affine/mobile
-        run: yarn affine @affine/mobile build
+        run: yarn aevum @affine/mobile build
         env:
           BUILD_TYPE: stable
 

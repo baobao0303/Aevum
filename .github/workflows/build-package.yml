@@ -112,26 +112,26 @@ jobs:
           ls -la packages/backend/server/dist
           test -f packages/backend/server/dist/main.js
 
-      - name: Prepare Backend Package Distribution
-        if: github.event_name != 'workflow_dispatch' || inputs.upload_artifacts == true
+      - name: Prepare Production Node Modules
         run: |
-          mkdir -p aevum-backend-pkg
-          cp -r packages/backend/server/dist aevum-backend-pkg/
-          cp packages/backend/server/package.json aevum-backend-pkg/
-          cp -r packages/backend/server/schema.prisma aevum-backend-pkg/
-          cp ./packages/backend/native/server-native.node aevum-backend-pkg/dist/ || true
+          yarn config set --json supportedArchitectures.cpu '["x64"]'
+          yarn config set --json supportedArchitectures.libc '["glibc"]'
+          yarn workspaces focus @aevum/server --production
+          yarn workspace @aevum/server prisma generate
+          mv ./node_modules ./packages/backend/server/node_modules
+          cp ./packages/backend/native/server-native.node ./packages/backend/server/dist/ || true
 
       - name: Upload Backend Package Artifact
         if: github.event_name != 'workflow_dispatch' || inputs.upload_artifacts == true
         uses: actions/upload-artifact@v4
         with:
           name: aevum-backend-package
-          path: aevum-backend-pkg
+          path: packages/backend/server
           retention-days: 7
 
   build-web:
     name: Build Web App Package (@aevum/web)
-    if: github.event_name != 'workflow_dispatch' || inputs.target == 'all' || inputs.target == 'web'
+    if: github.event_name != 'workflow_dispatch' || inputs.target == 'all' || inputs.target == 'web' || inputs.target == 'docker'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -154,12 +154,12 @@ jobs:
           path: |
             node_modules
             ${{ steps.yarn-cache-dir.outputs.dir }}
-          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+          key: yarn-fe-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
           restore-keys: |
-            yarn-${{ runner.os }}-
+            yarn-fe-${{ runner.os }}-
 
       - name: Install Web Dependencies
-        run: yarn workspaces focus @affine/web @aevum-tools/cli @affine/component @affine/core @affine/i18n @affine/nbstore @toeverything/infra
+        run: yarn install --immutable
 
       - name: Bundle Web Application
         run: yarn aevum bundle -p @affine/web
@@ -180,7 +180,9 @@ jobs:
 
   build-docker:
     name: Build & Verify Docker Package
-    needs: build-backend
+    needs:
+      - build-backend
+      - build-web
     if: github.event_name != 'workflow_dispatch' || inputs.target == 'all' || inputs.target == 'docker'
     runs-on: ubuntu-latest
     steps:
@@ -194,6 +196,18 @@ jobs:
         with:
           name: aevum-backend-package
           path: packages/backend/server
+
+      - name: Download Web App Package
+        uses: actions/download-artifact@v4
+        with:
+          name: aevum-web-package
+          path: packages/frontend/apps/web/dist
+
+      - name: Ensure Static Directories Exist for All-in-One Dockerfile
+        run: |
+          mkdir -p packages/frontend/apps/web/dist
+          mkdir -p packages/frontend/admin/dist
+          mkdir -p packages/frontend/apps/mobile/dist
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
