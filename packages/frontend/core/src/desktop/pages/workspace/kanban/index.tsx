@@ -5,9 +5,11 @@ import {
   ViewHeader,
   ViewIcon,
   ViewTitle,
+  WorkbenchService,
 } from '@affine/core/modules/workbench';
 import { WorkspaceService } from '@affine/core/modules/workspace';
 import {
+  AiThinkingIcon,
   ArrowDownSmallIcon,
   ArrowLeftSmallIcon,
   ArrowRightSmallIcon,
@@ -467,7 +469,7 @@ export const WorkspaceKanbanPage = () => {
     () => new Set()
   );
   const [boardPage, setBoardPage] = useState<number>(1);
-  const [boardPageSize, setBoardPageSize] = useState<number>(5);
+  const [boardPageSize, setBoardPageSize] = useState<number>(20);
 
   // Level 2: API Detail state
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
@@ -483,7 +485,7 @@ export const WorkspaceKanbanPage = () => {
   const [assigneeFilter, setAssigneeFilter] = useState<string>('ALL');
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [cardPage, setCardPage] = useState<number>(1);
-  const [cardPageSize, setCardPageSize] = useState<number>(5);
+  const [cardPageSize, setCardPageSize] = useState<number>(20);
 
   // Board Create / Edit Modal
   const [boardModalOpen, setBoardModalOpen] = useState(false);
@@ -522,6 +524,239 @@ export const WorkspaceKanbanPage = () => {
   const [cardFormProgress, setCardFormProgress] = useState(0);
   const [cardFormSubtasks, setCardFormSubtasks] = useState<KanbanSubtask[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+
+  // Skills Tab States
+  const workbench = useService(WorkbenchService).workbench;
+  const location = useLiveData(workbench.location$);
+  const isSkillsRoute =
+    location.pathname.startsWith('/skills') ||
+    location.pathname.includes('/skills') ||
+    (typeof window !== 'undefined' &&
+      window.location.pathname.includes('/skills'));
+  const [activeTab, setActiveTab] = useState<'kanban' | 'skills'>(
+    isSkillsRoute ? 'skills' : 'kanban'
+  );
+
+  useEffect(() => {
+    if (isSkillsRoute) {
+      setActiveTab('skills');
+      setActiveBoardId(null);
+    } else if (location.pathname.includes('/kanban')) {
+      setActiveTab('kanban');
+    }
+  }, [isSkillsRoute, location.pathname]);
+
+  interface SkillItem {
+    name: string;
+    description?: string;
+    source?: string;
+    source_type?: string;
+    path?: string;
+    synced?: boolean;
+    content?: string;
+  }
+
+  const [skills, setSkills] = useState<SkillItem[]>([]);
+  const [loadingSkills, setLoadingSkills] = useState(false);
+  const [skillSearch, setSkillSearch] = useState('');
+  const [skillSourceFilter, setSkillSourceFilter] = useState('all');
+  const [syncingSkills, setSyncingSkills] = useState(false);
+  const [skillViewMode, setSkillViewMode] = useState<'table' | 'grid'>('table');
+  const [skillPage, setSkillPage] = useState(1);
+  const [skillPageSize, setSkillPageSize] = useState(20);
+  const [selectedSkillNames, setSelectedSkillNames] = useState<Set<string>>(
+    new Set()
+  );
+
+  const toggleSelectSkill = (name: string) => {
+    setSelectedSkillNames(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
+
+  const toggleSelectAllSkills = (currentItems: SkillItem[]) => {
+    if (
+      selectedSkillNames.size === currentItems.length &&
+      currentItems.length > 0
+    ) {
+      setSelectedSkillNames(new Set());
+    } else {
+      setSelectedSkillNames(new Set(currentItems.map(s => s.name)));
+    }
+  };
+
+  // Skill Detail & Create Modals
+  const [previewSkillModalOpen, setPreviewSkillModalOpen] = useState(false);
+  const [previewSkillItem, setPreviewSkillItem] = useState<SkillItem | null>(
+    null
+  );
+  const [createSkillModalOpen, setCreateSkillModalOpen] = useState(false);
+  const [newSkillName, setNewSkillName] = useState('');
+  const [newSkillDesc, setNewSkillDesc] = useState('');
+  const [newSkillContent, setNewSkillContent] = useState('');
+  const [isSubmittingSkill, setIsSubmittingSkill] = useState(false);
+
+  const fetchSkillsList = useCallback(async () => {
+    setLoadingSkills(true);
+    try {
+      const res = await fetch('/api/auth/open-app/skills');
+      const data = await res.json();
+      if (Array.isArray(data?.skills)) {
+        setSkills(data.skills);
+      }
+    } catch (err) {
+      console.error('Failed to fetch skills:', err);
+    } finally {
+      setLoadingSkills(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'skills') {
+      fetchSkillsList().catch(console.error);
+    }
+  }, [activeTab, fetchSkillsList]);
+
+  const handleSyncAllSkills = async () => {
+    setSyncingSkills(true);
+    try {
+      const res = await fetch('/api/auth/open-app/skills/sync', {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.ok) {
+        notify.success({
+          title: 'Đồng bộ thành công',
+          message: data.message || 'Đã đồng bộ xong tất cả các Room!',
+        });
+        await fetchSkillsList();
+      } else {
+        notify.error({
+          title: 'Lỗi đồng bộ',
+          message: data.error || 'Có lỗi xảy ra',
+        });
+      }
+    } catch (err: any) {
+      notify.error({ title: 'Lỗi', message: err.message });
+    } finally {
+      setSyncingSkills(false);
+    }
+  };
+
+  const handleCreateNewSkill = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSkillName.trim()) return;
+    setIsSubmittingSkill(true);
+    try {
+      const res = await fetch('/api/auth/open-app/skills/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newSkillName.trim(),
+          description: newSkillDesc.trim(),
+          content: newSkillContent.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        notify.success({
+          title: 'Thành công',
+          message: `Đã tạo skill /${newSkillName} và đồng bộ!`,
+        });
+        setCreateSkillModalOpen(false);
+        setNewSkillName('');
+        setNewSkillDesc('');
+        setNewSkillContent('');
+        await fetchSkillsList();
+      } else {
+        notify.error({
+          title: 'Lỗi tạo skill',
+          message: data.error || 'Không thể tạo',
+        });
+      }
+    } catch (err: any) {
+      notify.error({ title: 'Lỗi', message: err.message });
+    } finally {
+      setIsSubmittingSkill(false);
+    }
+  };
+
+  const handleDeleteSkill = async (name: string) => {
+    if (!confirm(`Bạn có chắc muốn xóa skill /${name}?`)) return;
+    try {
+      const res = await fetch(
+        `/api/auth/open-app/skills/${encodeURIComponent(name)}`,
+        { method: 'DELETE' }
+      );
+      const data = await res.json();
+      if (data.ok) {
+        notify.success({ title: 'Đã xóa', message: `Đã xóa skill /${name}` });
+        await fetchSkillsList();
+      } else {
+        notify.error({ title: 'Lỗi', message: data.error || 'Không thể xóa' });
+      }
+    } catch (err: any) {
+      notify.error({ title: 'Lỗi', message: err.message });
+    }
+  };
+
+  const handleUploadSkillArchive = async (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async evt => {
+      const b64 =
+        ((evt.target?.result as string) || '').split(',')[1] ||
+        (evt.target?.result as string);
+      try {
+        const res = await fetch('/api/auth/open-app/skills/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: file.name, data: b64 }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          notify.success({
+            title: 'Thành công',
+            message: `Đã nạp file ${file.name} và đồng bộ các Room!`,
+          });
+          await fetchSkillsList();
+        } else {
+          notify.error({
+            title: 'Lỗi nạp file',
+            message: data.error || 'Không thể upload',
+          });
+        }
+      } catch (err: any) {
+        notify.error({ title: 'Lỗi', message: err.message });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const filteredSkills = useMemo(() => {
+    return skills.filter(s => {
+      const q = skillSearch.toLowerCase().trim();
+      const matchQuery =
+        !q ||
+        s.name.toLowerCase().includes(q) ||
+        Boolean(s.description && s.description.toLowerCase().includes(q));
+      const matchSrc =
+        skillSourceFilter === 'all' || s.source_type === skillSourceFilter;
+      return matchQuery && matchSrc;
+    });
+  }, [skills, skillSearch, skillSourceFilter]);
+
+  const totalSkillPages = Math.max(
+    1,
+    Math.ceil(filteredSkills.length / skillPageSize)
+  );
+  const safeSkillPage = Math.min(skillPage, totalSkillPages);
+  const paginatedSkills = useMemo(() => {
+    const start = (safeSkillPage - 1) * skillPageSize;
+    return filteredSkills.slice(start, start + skillPageSize);
+  }, [filteredSkills, safeSkillPage, skillPageSize]);
 
   // 1. Fetch API List: GET /api/auth/open-app/kanban/boards (with background detail preload)
   const fetchBoardsList = useCallback(async () => {
@@ -1269,7 +1504,7 @@ export const WorkspaceKanbanPage = () => {
       <ViewHeader>
         <div className={styles.headerBar}>
           <div className={styles.breadcrumbBar}>
-            {activeBoardId ? (
+            {activeBoardId && activeTab === 'kanban' ? (
               <>
                 <button
                   type="button"
@@ -1311,17 +1546,129 @@ export const WorkspaceKanbanPage = () => {
               </>
             ) : (
               <div
-                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
               >
-                <DatabaseKanbanViewIcon width={16} height={16} />
-                <span>Bảng Kanban</span>
-                <span className={styles.countBadge}>{boards.length}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('kanban');
+                    try {
+                      workbench.open('/kanban');
+                    } catch {}
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    fontWeight: activeTab === 'kanban' ? 600 : 400,
+                    color:
+                      activeTab === 'kanban'
+                        ? cssVarV2('text/primary')
+                        : cssVarV2('text/secondary'),
+                    backgroundColor:
+                      activeTab === 'kanban'
+                        ? cssVarV2('layer/background/hoverOverlay')
+                        : 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                  }}
+                >
+                  <DatabaseKanbanViewIcon width={15} height={15} />
+                  <span>Bảng Kanban</span>
+                  <span className={styles.countBadge}>{boards.length}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('skills');
+                    setActiveBoardId(null);
+                    try {
+                      workbench.open('/skills');
+                    } catch {}
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    fontWeight: activeTab === 'skills' ? 600 : 400,
+                    color:
+                      activeTab === 'skills'
+                        ? '#38bdf8'
+                        : cssVarV2('text/secondary'),
+                    backgroundColor:
+                      activeTab === 'skills'
+                        ? 'rgba(56, 189, 248, 0.12)'
+                        : 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                  }}
+                >
+                  <AiThinkingIcon width={15} height={15} />
+                  <span>Quản lý Skills</span>
+                  <span
+                    className={styles.countBadge}
+                    style={{
+                      backgroundColor:
+                        activeTab === 'skills' ? '#0284c7' : undefined,
+                      color: activeTab === 'skills' ? '#ffffff' : undefined,
+                    }}
+                  >
+                    {skills.length}
+                  </span>
+                </button>
               </div>
             )}
           </div>
 
           <div className={styles.toolbarGroup}>
-            {activeBoardId && boardDetail ? (
+            {activeTab === 'skills' ? (
+              <>
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  onClick={() => void handleSyncAllSkills()}
+                  disabled={syncingSkills}
+                  style={{
+                    height: '28px',
+                    color: '#10b981',
+                    borderColor: 'rgba(16, 185, 129, 0.4)',
+                  }}
+                  title="Đồng bộ tất cả skills tới các Room và CLI"
+                >
+                  <ResetIcon
+                    width={14}
+                    height={14}
+                    className={syncingSkills ? 'animate-spin' : ''}
+                  />
+                  <span>
+                    {syncingSkills ? 'Đang đồng bộ...' : 'Đồng bộ tất cả Room'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  data-primary="true"
+                  onClick={() => {
+                    setNewSkillName('');
+                    setNewSkillDesc('');
+                    setNewSkillContent('');
+                    setCreateSkillModalOpen(true);
+                  }}
+                  style={{ height: '28px' }}
+                >
+                  <PlusIcon width={14} height={14} />
+                  <span>Tạo Skill mới</span>
+                </button>
+              </>
+            ) : activeBoardId && boardDetail ? (
               <>
                 <button
                   type="button"
@@ -1400,9 +1747,799 @@ export const WorkspaceKanbanPage = () => {
       <ViewBody>
         <div className={styles.pageContainer}>
           {/* ========================================================= */}
-          {/* LEVEL 1: TABLE OF CREATED KANBAN BOARDS (API LIST)        */}
+          {/* LEVEL 1: SKILLS MANAGEMENT OR KANBAN BOARDS (API LIST)    */}
           {/* ========================================================= */}
-          {!activeBoardId ? (
+          {activeTab === 'skills' ? (
+            <div className={styles.contentArea}>
+              <div
+                style={{
+                  width: '100%',
+                  flex: 1,
+                  minHeight: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                }}
+              >
+                {/* Shadcn UI: Compact Top Upload Card */}
+                <div
+                  onDragOver={e => {
+                    e.preventDefault();
+                  }}
+                  onDrop={e => {
+                    e.preventDefault();
+                    if (
+                      e.dataTransfer.files &&
+                      e.dataTransfer.files.length > 0
+                    ) {
+                      handleUploadSkillArchive(e.dataTransfer.files[0]).catch(
+                        console.error
+                      );
+                    }
+                  }}
+                  style={{
+                    border: `1px dashed ${cssVarV2('layer/insideBorder/border')}`,
+                    borderRadius: '8px',
+                    padding: '10px 16px',
+                    backgroundColor: cssVarV2('layer/background/secondary'),
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    position: 'relative',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <input
+                    type="file"
+                    accept=".zip,.tar.gz,.md"
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      opacity: 0,
+                      cursor: 'pointer',
+                    }}
+                    onChange={e => {
+                      if (e.target.files && e.target.files.length > 0) {
+                        handleUploadSkillArchive(e.target.files[0]).catch(
+                          console.error
+                        );
+                      }
+                    }}
+                  />
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '6px',
+                        backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                        color: '#38bdf8',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <PlusIcon width={14} height={14} />
+                    </div>
+                    <div>
+                      <div
+                        style={{
+                          fontSize: '12.5px',
+                          fontWeight: 600,
+                          color: cssVarV2('text/primary'),
+                        }}
+                      >
+                        Kéo thả file .zip hoặc nhấp để tải lên Skill mới
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          color: cssVarV2('text/secondary'),
+                        }}
+                      >
+                        Tự động giải nén, nạp vào Master Registry và liên kết
+                        tới tất cả các Room/Workspaces
+                      </div>
+                    </div>
+                  </div>
+                  <span
+                    className={styles.outlinePill}
+                    style={{
+                      pointerEvents: 'none',
+                      color: '#38bdf8',
+                      borderColor: 'rgba(56, 189, 248, 0.3)',
+                    }}
+                  >
+                    Chọn file .zip
+                  </span>
+                </div>
+
+                {/* Shadcn UI: Filter & Search Toolbar */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '10px',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      flex: 1,
+                      maxWidth: '480px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        width: '100%',
+                      }}
+                    >
+                      <SearchIcon
+                        width={14}
+                        height={14}
+                        style={{
+                          position: 'absolute',
+                          left: '8px',
+                          color: cssVarV2('text/secondary'),
+                        }}
+                      />
+                      <input
+                        type="text"
+                        value={skillSearch}
+                        onChange={e => {
+                          setSkillSearch(e.target.value);
+                          setSkillPage(1);
+                        }}
+                        placeholder="Tìm kiếm skill theo tên, mô tả..."
+                        className={styles.controlInput}
+                        style={{ width: '100%', paddingLeft: '28px' }}
+                      />
+                    </div>
+
+                    <select
+                      value={skillSourceFilter}
+                      onChange={e => {
+                        setSkillSourceFilter(e.target.value);
+                        setSkillPage(1);
+                      }}
+                      className={styles.controlInput}
+                      style={{
+                        height: '28px',
+                        padding: '0 8px',
+                        minWidth: '130px',
+                      }}
+                    >
+                      <option value="all">
+                        Tất cả nguồn ({skills.length})
+                      </option>
+                      <option value="master">Master Registry (skills/)</option>
+                      <option value="claude">
+                        Global Claude (~/.claude/skills)
+                      </option>
+                      <option value="paseo">
+                        Paseo Platform (~/.paseo/skills)
+                      </option>
+                      <option value="project">Dự án (.agents/skills)</option>
+                      <option value="codex">Codex (~/.codex/skills)</option>
+                      <option value="gemini">
+                        Gemini & Plugins (~/.gemini)
+                      </option>
+                      <option value="builtin">Antigravity Built-in</option>
+                    </select>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    {/* Shadcn View Switcher: Table vs Grid */}
+                    <div className={styles.viewSwitchGroup}>
+                      <button
+                        type="button"
+                        className={styles.viewSwitchBtn}
+                        data-active={skillViewMode === 'table'}
+                        onClick={() => setSkillViewMode('table')}
+                        title="Xem dạng Bảng (Table View)"
+                      >
+                        <DatabaseTableViewIcon width={13} height={13} />
+                        <span>Bảng</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.viewSwitchBtn}
+                        data-active={skillViewMode === 'grid'}
+                        onClick={() => setSkillViewMode('grid')}
+                        title="Xem dạng Lưới thẻ (Grid View)"
+                      >
+                        <DatabaseKanbanViewIcon width={13} height={13} />
+                        <span>Lưới thẻ</span>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      className={styles.actionButton}
+                      onClick={() => void fetchSkillsList()}
+                      title="Làm mới danh sách"
+                    >
+                      <ResetIcon width={14} height={14} />
+                      <span>Làm mới</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* View Mode 1: SHADCN TABLE VIEW (Exact sync with Kanban Boards Table) */}
+                {skillViewMode === 'table' ? (
+                  <div className={styles.shadcnTableContainer}>
+                    <div className={styles.shadcnTableScroll}>
+                      <table className={styles.shadcnTable}>
+                        <thead>
+                          <tr className={styles.shadcnTheadTr}>
+                            <th
+                              className={styles.shadcnTh}
+                              style={{ width: '38px', textAlign: 'center' }}
+                            >
+                              <input
+                                type="checkbox"
+                                className={styles.shadcnCheckbox}
+                                checked={
+                                  paginatedSkills.length > 0 &&
+                                  paginatedSkills.every(s =>
+                                    selectedSkillNames.has(s.name)
+                                  )
+                                }
+                                onChange={() =>
+                                  toggleSelectAllSkills(paginatedSkills)
+                                }
+                              />
+                            </th>
+                            <th
+                              className={styles.shadcnTh}
+                              style={{ minWidth: '220px' }}
+                            >
+                              Tên kỹ năng (Slash command)
+                            </th>
+                            <th
+                              className={styles.shadcnTh}
+                              style={{ width: '160px' }}
+                            >
+                              Nguồn
+                            </th>
+                            <th
+                              className={styles.shadcnTh}
+                              style={{ width: '120px' }}
+                            >
+                              Trạng thái
+                            </th>
+                            <th
+                              className={styles.shadcnTh}
+                              style={{ minWidth: '280px' }}
+                            >
+                              Mô tả chi tiết
+                            </th>
+                            <th
+                              className={styles.shadcnTh}
+                              style={{ width: '140px', textAlign: 'right' }}
+                            >
+                              Thao tác
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {loadingSkills ? (
+                            <tr>
+                              <td
+                                colSpan={6}
+                                className={styles.shadcnTd}
+                                style={{
+                                  height: '280px',
+                                  borderBottom: 'none',
+                                  textAlign: 'center',
+                                  color: cssVarV2('text/secondary'),
+                                }}
+                              >
+                                Đang tải danh sách kỹ năng...
+                              </td>
+                            </tr>
+                          ) : paginatedSkills.length === 0 ? (
+                            <tr>
+                              <td
+                                colSpan={6}
+                                className={styles.shadcnTd}
+                                style={{
+                                  height: '280px',
+                                  borderBottom: 'none',
+                                  textAlign: 'center',
+                                  color: cssVarV2('text/secondary'),
+                                }}
+                              >
+                                Không tìm thấy kỹ năng nào phù hợp. Bấm{' '}
+                                <strong>Tạo Skill mới</strong> hoặc kéo thả file{' '}
+                                <strong>.zip</strong> để thêm.
+                              </td>
+                            </tr>
+                          ) : (
+                            paginatedSkills.map(s => {
+                              const isSelected = selectedSkillNames.has(s.name);
+                              return (
+                                <tr
+                                  key={s.name}
+                                  className={styles.shadcnTr}
+                                  data-selected={isSelected}
+                                >
+                                  {/* Checkbox */}
+                                  <td
+                                    className={styles.shadcnTd}
+                                    style={{ textAlign: 'center' }}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      className={styles.shadcnCheckbox}
+                                      checked={isSelected}
+                                      onChange={() => toggleSelectSkill(s.name)}
+                                    />
+                                  </td>
+
+                                  {/* Skill Name */}
+                                  <td className={styles.shadcnTd}>
+                                    <div
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        fontFamily: 'monospace',
+                                        fontWeight: 600,
+                                        fontSize: '13px',
+                                        color: '#38bdf8',
+                                      }}
+                                    >
+                                      <AiThinkingIcon width={14} height={14} />
+                                      <span>/{s.name}</span>
+                                    </div>
+                                  </td>
+
+                                  {/* Source Pill */}
+                                  <td className={styles.shadcnTd}>
+                                    <span className={styles.outlinePill}>
+                                      {s.source || 'Master Registry'}
+                                    </span>
+                                  </td>
+
+                                  {/* Status Pill */}
+                                  <td className={styles.shadcnTd}>
+                                    <span
+                                      className={styles.outlinePill}
+                                      style={{
+                                        backgroundColor: s.synced
+                                          ? 'rgba(16, 185, 129, 0.12)'
+                                          : 'rgba(245, 158, 11, 0.12)',
+                                        color: s.synced ? '#10b981' : '#f59e0b',
+                                        borderColor: s.synced
+                                          ? 'rgba(16, 185, 129, 0.25)'
+                                          : 'rgba(245, 158, 11, 0.25)',
+                                      }}
+                                    >
+                                      <span
+                                        style={{
+                                          width: '6px',
+                                          height: '6px',
+                                          borderRadius: '999px',
+                                          backgroundColor: s.synced
+                                            ? '#10b981'
+                                            : '#f59e0b',
+                                        }}
+                                      />
+                                      <span>
+                                        {s.synced ? 'Synced' : 'Local'}
+                                      </span>
+                                    </span>
+                                  </td>
+
+                                  {/* Description */}
+                                  <td className={styles.shadcnTd}>
+                                    <span
+                                      style={{
+                                        fontSize: '12px',
+                                        color: cssVarV2('text/secondary'),
+                                        lineHeight: '18px',
+                                        display: '-webkit-box',
+                                        WebkitLineClamp: 2,
+                                        WebkitBoxOrient: 'vertical',
+                                        overflow: 'hidden',
+                                      }}
+                                      title={s.description || ''}
+                                    >
+                                      {s.description ||
+                                        'Chưa có mô tả chi tiết.'}
+                                    </span>
+                                  </td>
+
+                                  {/* Actions */}
+                                  <td
+                                    className={styles.shadcnTd}
+                                    style={{ textAlign: 'right' }}
+                                  >
+                                    <div
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'flex-end',
+                                        gap: '6px',
+                                      }}
+                                    >
+                                      <button
+                                        type="button"
+                                        className={styles.actionButton}
+                                        style={{
+                                          height: '24px',
+                                          padding: '0 8px',
+                                          fontSize: '11.5px',
+                                        }}
+                                        onClick={() => {
+                                          setPreviewSkillItem(s);
+                                          setPreviewSkillModalOpen(true);
+                                        }}
+                                      >
+                                        Xem
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className={styles.actionButton}
+                                        style={{
+                                          height: '24px',
+                                          padding: '0 8px',
+                                          fontSize: '11.5px',
+                                        }}
+                                        onClick={() => {
+                                          navigator.clipboard
+                                            .writeText(`/${s.name}`)
+                                            .catch(() => {});
+                                          notify.success({
+                                            title: 'Đã sao chép',
+                                            message: `/${s.name}`,
+                                          });
+                                        }}
+                                      >
+                                        Copy
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className={styles.actionButton}
+                                        style={{
+                                          height: '24px',
+                                          padding: '0 6px',
+                                          color: '#ef4444',
+                                          borderColor: 'rgba(239, 68, 68, 0.3)',
+                                        }}
+                                        onClick={() =>
+                                          void handleDeleteSkill(s.name)
+                                        }
+                                        title="Xóa skill"
+                                      >
+                                        <DeleteIcon width={12} height={12} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  /* View Mode 2: SHADCN CARDS GRID VIEW */
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns:
+                        'repeat(auto-fill, minmax(290px, 1fr))',
+                      gap: '10px',
+                      overflowY: 'auto',
+                      maxHeight: 'calc(100vh - 250px)',
+                      padding: '4px',
+                    }}
+                  >
+                    {paginatedSkills.map(s => (
+                      <div
+                        key={s.name}
+                        style={{
+                          backgroundColor: cssVarV2(
+                            'layer/background/secondary'
+                          ),
+                          border: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+                          borderRadius: '8px',
+                          padding: '12px 14px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          gap: '8px',
+                          boxSizing: 'border-box',
+                        }}
+                      >
+                        <div>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '8px',
+                              marginBottom: '6px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                fontWeight: 600,
+                                fontSize: '13px',
+                                color: '#38bdf8',
+                                fontFamily: 'monospace',
+                              }}
+                            >
+                              <span>/{s.name}</span>
+                            </div>
+                            <span
+                              className={styles.outlinePill}
+                              style={{
+                                backgroundColor: s.synced
+                                  ? 'rgba(16, 185, 129, 0.12)'
+                                  : 'rgba(245, 158, 11, 0.12)',
+                                color: s.synced ? '#10b981' : '#f59e0b',
+                                borderColor: s.synced
+                                  ? 'rgba(16, 185, 129, 0.25)'
+                                  : 'rgba(245, 158, 11, 0.25)',
+                              }}
+                            >
+                              <span
+                                style={{
+                                  width: '5px',
+                                  height: '5px',
+                                  borderRadius: '999px',
+                                  backgroundColor: s.synced
+                                    ? '#10b981'
+                                    : '#f59e0b',
+                                }}
+                              />
+                              <span>{s.synced ? 'Synced' : 'Local'}</span>
+                            </span>
+                          </div>
+                          <div
+                            style={{
+                              fontSize: '11.5px',
+                              color: cssVarV2('text/secondary'),
+                              lineHeight: 1.45,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 3,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                            }}
+                            title={s.description || ''}
+                          >
+                            {s.description || 'Chưa có mô tả chi tiết.'}
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            paddingTop: '8px',
+                            borderTop: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+                            fontSize: '11px',
+                          }}
+                        >
+                          <span className={styles.outlinePill}>
+                            {s.source || 'Master'}
+                          </span>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                            }}
+                          >
+                            <button
+                              type="button"
+                              className={styles.actionButton}
+                              style={{
+                                height: '24px',
+                                padding: '0 8px',
+                                fontSize: '11px',
+                              }}
+                              onClick={() => {
+                                setPreviewSkillItem(s);
+                                setPreviewSkillModalOpen(true);
+                              }}
+                            >
+                              Xem
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.actionButton}
+                              style={{
+                                height: '24px',
+                                padding: '0 8px',
+                                fontSize: '11px',
+                              }}
+                              onClick={() => {
+                                navigator.clipboard
+                                  .writeText(`/${s.name}`)
+                                  .catch(() => {});
+                                notify.success({
+                                  title: 'Đã sao chép',
+                                  message: `/${s.name}`,
+                                });
+                              }}
+                            >
+                              Copy
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.actionButton}
+                              style={{
+                                height: '24px',
+                                padding: '0 6px',
+                                color: '#ef4444',
+                                borderColor: 'rgba(239, 68, 68, 0.3)',
+                              }}
+                              onClick={() => void handleDeleteSkill(s.name)}
+                              title="Xóa skill"
+                            >
+                              <DeleteIcon width={12} height={12} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Shadcn UI: Pagination Bar (Exact sync with Kanban Table Footer) */}
+                <div className={styles.paginationBar}>
+                  <div>
+                    Đã chọn {selectedSkillNames.size} / {filteredSkills.length}{' '}
+                    kỹ năng · Hiển thị{' '}
+                    {paginatedSkills.length > 0
+                      ? (safeSkillPage - 1) * skillPageSize + 1
+                      : 0}
+                    –
+                    {Math.min(
+                      safeSkillPage * skillPageSize,
+                      filteredSkills.length
+                    )}{' '}
+                    trên tổng {filteredSkills.length} kỹ năng
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '12px',
+                        color: cssVarV2('text/secondary'),
+                      }}
+                    >
+                      <span>Số dòng / trang</span>
+                      <select
+                        value={String(skillPageSize)}
+                        onChange={e => {
+                          setSkillPageSize(Number(e.target.value));
+                          setSkillPage(1);
+                        }}
+                        className={styles.controlInput}
+                        style={{ height: '28px', padding: '0 8px' }}
+                      >
+                        <option value="10">10 dòng</option>
+                        <option value="20">20 dòng</option>
+                        <option value="50">50 dòng</option>
+                        <option value="100">100 dòng</option>
+                      </select>
+                    </div>
+
+                    <span
+                      style={{
+                        fontWeight: 500,
+                        color: cssVarV2('text/primary'),
+                        minWidth: '78px',
+                        textAlign: 'center',
+                        fontSize: '12px',
+                      }}
+                    >
+                      Trang {safeSkillPage} / {totalSkillPages}
+                    </span>
+
+                    <div className={styles.pageBtnGroup}>
+                      <button
+                        type="button"
+                        className={styles.pageBtn}
+                        disabled={safeSkillPage <= 1}
+                        onClick={() => setSkillPage(1)}
+                        title="Trang đầu"
+                      >
+                        «
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.pageBtn}
+                        disabled={safeSkillPage <= 1}
+                        onClick={() => setSkillPage(p => Math.max(1, p - 1))}
+                        title="Trang trước"
+                      >
+                        <ArrowLeftSmallIcon width={14} height={14} />
+                      </button>
+
+                      {Array.from({ length: totalSkillPages }, (_, i) => i + 1)
+                        .filter(
+                          p =>
+                            p === 1 ||
+                            p === totalSkillPages ||
+                            Math.abs(p - safeSkillPage) <= 1
+                        )
+                        .map(p => (
+                          <button
+                            key={p}
+                            type="button"
+                            className={styles.pageBtn}
+                            data-active={p === safeSkillPage}
+                            onClick={() => setSkillPage(p)}
+                          >
+                            {p}
+                          </button>
+                        ))}
+
+                      <button
+                        type="button"
+                        className={styles.pageBtn}
+                        disabled={safeSkillPage >= totalSkillPages}
+                        onClick={() =>
+                          setSkillPage(p => Math.min(totalSkillPages, p + 1))
+                        }
+                        title="Trang sau"
+                      >
+                        <ArrowRightSmallIcon width={14} height={14} />
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.pageBtn}
+                        disabled={safeSkillPage >= totalSkillPages}
+                        onClick={() => setSkillPage(totalSkillPages)}
+                        title="Trang cuối"
+                      >
+                        »
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : !activeBoardId ? (
             <div className={styles.contentArea}>
               <div
                 style={{
@@ -1708,7 +2845,15 @@ export const WorkspaceKanbanPage = () => {
                                   onClick={e => e.stopPropagation()}
                                 >
                                   {row.id === FLOCI_HARNESS_BOARD_ID ? (
-                                    <span style={{ fontSize: '16px', color: cssVarV2('text/secondary'), paddingRight: '8px' }}>∞</span>
+                                    <span
+                                      style={{
+                                        fontSize: '16px',
+                                        color: cssVarV2('text/secondary'),
+                                        paddingRight: '8px',
+                                      }}
+                                    >
+                                      ∞
+                                    </span>
                                   ) : (
                                     <input
                                       type="number"
@@ -2123,7 +3268,12 @@ export const WorkspaceKanbanPage = () => {
                           color: cssVarV2('text/primary'),
                         }}
                       >
-                        {boardDetail.target} / {!boardDetail.limit || boardDetail.limit <= 0 || boardDetail.id === FLOCI_HARNESS_BOARD_ID ? '∞' : boardDetail.limit}
+                        {boardDetail.target} /{' '}
+                        {!boardDetail.limit ||
+                        boardDetail.limit <= 0 ||
+                        boardDetail.id === FLOCI_HARNESS_BOARD_ID
+                          ? '∞'
+                          : boardDetail.limit}
                       </div>
                     </div>
                   </div>
@@ -3644,6 +4794,308 @@ export const WorkspaceKanbanPage = () => {
                 Lưu thẻ công việc
               </button>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ========================================================= */}
+      {/* MODAL 4: PREVIEW SKILL MODAL                              */}
+      {/* ========================================================= */}
+      {previewSkillModalOpen && previewSkillItem ? (
+        <div
+          className={styles.modalBackdrop}
+          onClick={() => setPreviewSkillModalOpen(false)}
+        >
+          <div
+            className={styles.modalCard}
+            style={{
+              width: '680px',
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingBottom: '12px',
+                borderBottom: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+              }}
+            >
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <span
+                  style={{
+                    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                    color: '#38bdf8',
+                    fontFamily: 'monospace',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                  }}
+                >
+                  /{previewSkillItem.name}
+                </span>
+                <span
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: cssVarV2('text/primary'),
+                  }}
+                >
+                  {previewSkillItem.description || 'Chi tiết kỹ năng'}
+                </span>
+              </div>
+              <button
+                type="button"
+                className={styles.actionButton}
+                onClick={() => setPreviewSkillModalOpen(false)}
+              >
+                Đóng
+              </button>
+            </div>
+
+            <div
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '14px 0',
+                fontSize: '12px',
+                fontFamily: 'monospace',
+                whiteSpace: 'pre-wrap',
+                lineHeight: '1.6',
+                color: cssVarV2('text/secondary'),
+              }}
+            >
+              {previewSkillItem.content || 'Không có nội dung SKILL.md'}
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingTop: '12px',
+                borderTop: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+              }}
+            >
+              <span
+                style={{ fontSize: '11px', color: cssVarV2('text/disable') }}
+              >
+                Nguồn: {previewSkillItem.source || 'Master Registry'}
+              </span>
+              <button
+                type="button"
+                className={styles.actionButton}
+                data-primary="true"
+                onClick={() => {
+                  navigator.clipboard
+                    .writeText(`/${previewSkillItem.name}`)
+                    .catch(() => {});
+                  notify.success({
+                    title: 'Đã sao chép',
+                    message: `/${previewSkillItem.name}`,
+                  });
+                }}
+              >
+                <CopyIcon width={13} height={13} />
+                <span>Sao chép lệnh /{previewSkillItem.name}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ========================================================= */}
+      {/* MODAL 5: CREATE SKILL MODAL                               */}
+      {/* ========================================================= */}
+      {createSkillModalOpen ? (
+        <div
+          className={styles.modalBackdrop}
+          onClick={() => setCreateSkillModalOpen(false)}
+        >
+          <div
+            className={styles.modalCard}
+            style={{ width: '560px' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <form
+              onSubmit={e => {
+                handleCreateNewSkill(e).catch(console.error);
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingBottom: '12px',
+                  borderBottom: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    color: cssVarV2('text/primary'),
+                  }}
+                >
+                  Tạo Kỹ Năng (Skill) Mới
+                </span>
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  onClick={() => setCreateSkillModalOpen(false)}
+                >
+                  Hủy
+                </button>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  padding: '16px 0',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: cssVarV2('text/secondary'),
+                    }}
+                  >
+                    Tên Skill (kebab-case) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    pattern="^[a-z0-9\\-_]+$"
+                    placeholder="ví dụ: my-custom-skill"
+                    className={`${styles.controlInput} ${styles.modalInput ?? ''}`}
+                    style={{
+                      height: '34px',
+                      fontSize: '13px',
+                      padding: '0 10px',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                    }}
+                    value={newSkillName}
+                    onChange={e => setNewSkillName(e.target.value)}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: cssVarV2('text/secondary'),
+                    }}
+                  >
+                    Mô tả ngắn gọn *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Mô tả khi nào Agent nên gọi skill này..."
+                    className={`${styles.controlInput} ${styles.modalInput ?? ''}`}
+                    style={{
+                      height: '34px',
+                      fontSize: '13px',
+                      padding: '0 10px',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                    }}
+                    value={newSkillDesc}
+                    onChange={e => setNewSkillDesc(e.target.value)}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '5px',
+                  }}
+                >
+                  <label
+                    style={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: cssVarV2('text/secondary'),
+                    }}
+                  >
+                    Nội dung SKILL.md *
+                  </label>
+                  <textarea
+                    required
+                    rows={8}
+                    placeholder={
+                      '# Hướng dẫn kỹ năng\n\n1. Bước 1: ...\n2. Bước 2: ...'
+                    }
+                    className={`${styles.controlInput} ${styles.modalInput ?? ''}`}
+                    style={{
+                      height: 'auto',
+                      minHeight: '140px',
+                      fontSize: '12px',
+                      fontFamily: 'monospace',
+                      padding: '8px 10px',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      resize: 'vertical',
+                    }}
+                    value={newSkillContent}
+                    onChange={e => setNewSkillContent(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '8px',
+                  paddingTop: '12px',
+                  borderTop: `1px solid ${cssVarV2('layer/insideBorder/border')}`,
+                }}
+              >
+                <button
+                  type="button"
+                  className={styles.actionButton}
+                  onClick={() => setCreateSkillModalOpen(false)}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className={styles.actionButton}
+                  data-primary="true"
+                  disabled={isSubmittingSkill}
+                >
+                  {isSubmittingSkill ? 'Đang lưu...' : 'Tạo & Lưu vào Registry'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       ) : null}

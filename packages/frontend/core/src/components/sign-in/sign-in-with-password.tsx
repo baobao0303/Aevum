@@ -103,8 +103,15 @@ export const SignInWithPasswordStep = ({
         error.is('WRONG_SIGN_IN_CREDENTIALS') ||
         error.is('PASSWORD_REQUIRED')
       ) {
+        const errorMsg =
+          t[`error.${error.name}`]?.(error.data) ??
+          'Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.';
         setPasswordError(true);
-        setPasswordErrorHint('Invalid email or password. Please try again.');
+        setPasswordErrorHint(errorMsg);
+        notify.error({
+          title: t['com.affine.auth.toast.title.failed'](),
+          message: errorMsg,
+        });
       } else {
         setPasswordError(false);
         notify.error({

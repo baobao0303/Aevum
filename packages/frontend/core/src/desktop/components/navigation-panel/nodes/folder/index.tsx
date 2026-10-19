@@ -252,9 +252,25 @@ const NavigationPanelFolderNodeFolder = ({
 
   const handleRename = useCallback(
     (newName: string) => {
-      node.rename(newName);
+      const trimmed = newName.trim();
+      if (!trimmed) {
+        // Chặn không cho để trống: nếu là folder mới tạo thì hủy tạo ngay lập tức
+        if (defaultRenaming || name === 'New Folder' || !name?.trim()) {
+          node.delete();
+          notify.error({
+            title: 'Tên thư mục không được để trống!',
+            message: 'Đã hủy tạo thư mục vì chưa nhập tên.',
+          });
+          return;
+        }
+        notify.error({
+          title: 'Tên thư mục không được để trống!',
+        });
+        return;
+      }
+      node.rename(trimmed);
     },
-    [node]
+    [defaultRenaming, name, node]
   );
 
   const handleDropOnFolder = useCallback(
@@ -794,7 +810,11 @@ const NavigationPanelFolderNodeFolder = ({
   return (
     <NavigationPanelTreeNode
       icon={NavigationPanelFolderIcon}
-      name={name}
+      name={
+        name?.trim()
+          ? name
+          : t['com.affine.rootAppSidebar.organize.new-folders']()
+      }
       dndData={dndData}
       onDrop={handleDropOnFolder}
       defaultRenaming={defaultRenaming}

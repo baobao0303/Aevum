@@ -1,8 +1,10 @@
-import { Checkbox, useDraggable } from '@affine/component';
+import { Checkbox, IconRenderer, useDraggable } from '@affine/component';
+import { ExplorerIconService } from '@affine/core/modules/explorer-icon/services/explorer-icon';
 import { WorkbenchLink } from '@affine/core/modules/workbench';
 import type { AffineDNDData } from '@affine/core/types/dnd';
 import { stopPropagation } from '@affine/core/utils';
 import { useI18n } from '@affine/i18n';
+import { useLiveData, useService } from '@toeverything/infra';
 import type { ForwardedRef, PropsWithChildren } from 'react';
 import { forwardRef, useCallback, useMemo } from 'react';
 
@@ -32,8 +34,16 @@ const TagListTitleCell = ({ title }: Pick<TagListItemProps, 'title'>) => {
   );
 };
 
-const ListIconCell = ({ color }: Pick<TagListItemProps, 'color'>) => {
-  return (
+const ListIconCell = ({
+  color,
+  tagId,
+}: Pick<TagListItemProps, 'color' | 'tagId'>) => {
+  const explorerIconService = useService(ExplorerIconService);
+  const explorerIcon = useLiveData(
+    tagId ? explorerIconService.icon$('tag', tagId) : null
+  );
+
+  const fallback = (
     <div className={styles.tagIndicatorWrapper}>
       <div
         className={styles.tagIndicator}
@@ -41,6 +51,22 @@ const ListIconCell = ({ color }: Pick<TagListItemProps, 'color'>) => {
           backgroundColor: color,
         }}
       />
+    </div>
+  );
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 16,
+        height: 16,
+        fontSize: 14,
+        flexShrink: 0,
+      }}
+    >
+      <IconRenderer data={explorerIcon?.icon} fallback={fallback} />
     </div>
   );
 };
@@ -115,7 +141,7 @@ export const TagListItem = (props: TagListItemProps) => {
                 selectable={props.selectable}
                 selected={props.selected}
               />
-              <ListIconCell color={props.color} />
+              <ListIconCell color={props.color} tagId={props.tagId} />
             </div>
             <TagListTitleCell title={props.title} />
           </ColWrapper>
@@ -143,7 +169,7 @@ export const TagListItem = (props: TagListItemProps) => {
               selectable={props.selectable}
               selected={props.selected}
             />
-            <ListIconCell color={props.color} />
+            <ListIconCell color={props.color} tagId={props.tagId} />
           </div>
           <TagListTitleCell title={props.title} />
         </div>

@@ -147,7 +147,14 @@ export const SignInStep = ({
         error.is('PASSWORD_REQUIRED') ||
         error.is('WRONG_SIGN_IN_METHOD')
       ) {
-        setPasswordErrorHint('Invalid email or password. Please try again.');
+        const errorMsg =
+          t[`error.${error.name}`]?.(error.data) ??
+          'Email hoặc mật khẩu không chính xác. Vui lòng kiểm tra lại.';
+        setPasswordErrorHint(errorMsg);
+        notify.error({
+          title: t['com.affine.auth.toast.title.failed'](),
+          message: errorMsg,
+        });
         passwordInputRef.current?.focus();
       } else {
         setPasswordErrorHint('');

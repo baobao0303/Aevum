@@ -48,7 +48,9 @@ import {
 import { InviteMembersButton } from './invite-members-button';
 import { AppSidebarJournalButton } from './journal-button';
 import { AppSidebarKanbanButton } from './kanban-button';
+import { AppSidebarQuizletButton } from './quizlet-button';
 import { SidebarAudioPlayer } from './sidebar-audio-player';
+import { AppSidebarSkillsButton } from './skills-button';
 import { TemplateDocEntrance } from './template-doc-entrance';
 import { TrashButton } from './trash-button';
 import { UpdaterButton } from './updater-button';
@@ -203,6 +205,8 @@ export const RootAppSidebar = memo((): ReactElement => {
         <AllDocsButton />
         <AppSidebarJournalButton />
         <AppSidebarKanbanButton />
+        <AppSidebarSkillsButton />
+        <AppSidebarQuizletButton />
         <AIChatButton />
       </SidebarContainer>
       <SidebarScrollableContainer>

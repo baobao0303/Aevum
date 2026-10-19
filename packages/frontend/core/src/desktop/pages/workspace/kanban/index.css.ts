@@ -637,6 +637,8 @@ export const outlinePill = style({
   boxSizing: 'border-box',
 });
 
+export const statusPill = outlinePill;
+
 // Unified 28px Status Button
 export const statusPillBtn = style({
   display: 'inline-flex',

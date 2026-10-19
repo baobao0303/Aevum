@@ -1,5 +1,4 @@
 import { IconButton } from '@affine/component';
-import { RenameModal } from '@affine/component/rename-modal';
 import { NavigationPanelService } from '@affine/core/modules/navigation-panel';
 import { TagService } from '@affine/core/modules/tag';
 import { useI18n } from '@affine/i18n';
@@ -21,27 +20,26 @@ export const NavigationPanelTags = () => {
   });
   const path = useMemo(() => ['tags'], []);
   const collapsed = useLiveData(navigationPanelService.collapsed$(path));
-  const [creating, setCreating] = useState(false);
+  const [newTagId, setNewTagId] = useState<string | null>(null);
   const tags = useLiveData(tagService.tagList.tags$);
 
   const t = useI18n();
 
-  const handleCreateNewTag = useCallback(
-    (name: string) => {
-      tagService.tagList.createTag(name, tagService.randomTagColor());
-      track.$.navigationPanel.organize.createOrganizeItem({ type: 'tag' });
-      navigationPanelService.setCollapsed(path, false);
-    },
-    [navigationPanelService, path, tagService]
-  );
+  const handleCreateTag = useCallback(() => {
+    const defaultName =
+      t['com.affine.rootAppSidebar.tags.new-tag']() || 'New tag';
+    const newTag = tagService.tagList.createTag(
+      defaultName,
+      tagService.randomTagColor()
+    );
+    track.$.navigationPanel.organize.createOrganizeItem({ type: 'tag' });
+    setNewTagId(newTag.id);
+    navigationPanelService.setCollapsed(path, false);
+  }, [navigationPanelService, path, t, tagService]);
 
   useEffect(() => {
-    if (collapsed) setCreating(false);
+    if (collapsed) setNewTagId(null);
   }, [collapsed]);
-
-  const handleOpenCreateModal = useCallback(() => {
-    setCreating(true);
-  }, []);
 
   return (
     <CollapsibleSection
@@ -53,7 +51,7 @@ export const NavigationPanelTags = () => {
         <div className={styles.iconContainer}>
           <IconButton
             data-testid="navigation-panel-bar-add-tag-button"
-            onClick={handleOpenCreateModal}
+            onClick={handleCreateTag}
             size="16"
             tooltip={t[
               'com.affine.rootAppSidebar.explorer.tag-section-add-tooltip'
@@ -61,14 +59,6 @@ export const NavigationPanelTags = () => {
           >
             <AddTagIcon />
           </IconButton>
-          {creating && (
-            <RenameModal
-              open
-              onOpenChange={setCreating}
-              onRename={handleCreateNewTag}
-              currentName={t['com.affine.rootAppSidebar.tags.new-tag']()}
-            />
-          )}
         </div>
       }
     >
@@ -77,6 +67,7 @@ export const NavigationPanelTags = () => {
           <NavigationPanelTagNode
             key={tag.id}
             tagId={tag.id}
+            defaultRenaming={tag.id === newTagId}
             reorderable={false}
             location={{
               at: 'navigation-panel:tags:list',

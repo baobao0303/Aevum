@@ -1,11 +1,13 @@
 import {
   Divider,
+  IconRenderer,
   Menu,
   MenuItem,
   type MenuProps,
   RowInput,
   Scrollable,
 } from '@affine/component';
+import { ExplorerIconService } from '@affine/core/modules/explorer-icon/services/explorer-icon';
 import { type Tag, TagService } from '@affine/core/modules/tag';
 import { WorkbenchLink } from '@affine/core/modules/workbench';
 import { useI18n } from '@affine/i18n';
@@ -74,8 +76,19 @@ const TagSelectorTrigger = forwardRef<
   HTMLDivElement,
   HTMLProps<HTMLDivElement> & { currentTag: Tag }
 >(function TagSelectorTrigger({ currentTag, className, ...props }, ref) {
+  const explorerIconService = useService(ExplorerIconService);
+  const explorerIcon = useLiveData(
+    explorerIconService.icon$('tag', currentTag.id)
+  );
   const tagColor = useLiveData(currentTag.color$);
   const tagName = useLiveData(currentTag.value$);
+
+  const fallback = (
+    <div
+      className={styles.tagSelectorTriggerIcon}
+      style={{ color: tagColor }}
+    />
+  );
 
   return (
     <div
@@ -84,9 +97,17 @@ const TagSelectorTrigger = forwardRef<
       {...props}
     >
       <div
-        className={styles.tagSelectorTriggerIcon}
-        style={{ color: tagColor }}
-      />
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 16,
+          height: 16,
+          flexShrink: 0,
+        }}
+      >
+        <IconRenderer data={explorerIcon?.icon} fallback={fallback} />
+      </div>
       <div className={styles.tagSelectorTriggerName}>{tagName}</div>
       <div className={styles.tagSelectorTriggerDropdown}>
         <ArrowDownSmallIcon />
@@ -152,6 +173,8 @@ const TagLink = ({
   checked: boolean;
   onClick: () => void;
 }) => {
+  const explorerIconService = useService(ExplorerIconService);
+  const explorerIcon = useLiveData(explorerIconService.icon$('tag', tag.id));
   const tagColor = useLiveData(tag.color$);
   const tagTitle = useLiveData(tag.value$);
   const aRef = useRef<HTMLAnchorElement>(null);
@@ -159,6 +182,10 @@ const TagLink = ({
   const onSelect = useCallback(() => {
     aRef.current?.click();
   }, []);
+
+  const fallback = (
+    <div className={styles.tagSelectorItemIcon} style={{ color: tagColor }} />
+  );
 
   return (
     <MenuItem onSelect={onSelect} className={styles.tagSelectorMenuItem}>
@@ -172,9 +199,18 @@ const TagLink = ({
         onClick={onClick}
       >
         <div
-          className={styles.tagSelectorItemIcon}
-          style={{ color: tagColor }}
-        />
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 16,
+            height: 16,
+            marginRight: 8,
+            flexShrink: 0,
+          }}
+        >
+          <IconRenderer data={explorerIcon?.icon} fallback={fallback} />
+        </div>
         <div className={styles.tagSelectorItemText}>{tagTitle}</div>
         {checked ? (
           <DoneIcon className={styles.tagSelectorItemCheckedIcon} />

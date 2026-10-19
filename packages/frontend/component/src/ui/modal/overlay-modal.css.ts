@@ -17,10 +17,10 @@ export const content = style({
 });
 
 export const footer = style({
-  padding: '20px 24px',
+  padding: '16px 24px',
   display: 'flex',
   justifyContent: 'flex-end',
-  gap: '20px',
+  gap: '10px',
 });
 
 export const gotItBtn = style({

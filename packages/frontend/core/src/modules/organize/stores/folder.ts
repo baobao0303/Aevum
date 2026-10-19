@@ -71,8 +71,12 @@ export class FolderStore extends Store {
     if (node.type !== 'folder') {
       throw new Error('Cannot rename non-folder node');
     }
+    const trimmed = (name ?? '').trim();
+    if (!trimmed) {
+      return;
+    }
     this.dbService.db.folders.update(nodeId, {
-      data: name,
+      data: trimmed,
     });
   }
 

@@ -1,8 +1,10 @@
 import {
   type DropTargetDropEvent,
   type DropTargetOptions,
+  notify,
   toast,
 } from '@affine/component';
+import { FeatureFlagService } from '@affine/core/modules/feature-flag';
 import { GlobalContextService } from '@affine/core/modules/global-context';
 import { NavigationPanelService } from '@affine/core/modules/navigation-panel';
 import type { Tag } from '@affine/core/modules/tag';
@@ -29,19 +31,25 @@ export const NavigationPanelTagNode = ({
   onDrop,
   location,
   reorderable,
+  defaultRenaming,
   operations: additionalOperations,
   dropEffect,
   canDrop,
   parentPath,
 }: {
   tagId: string;
+  defaultRenaming?: boolean;
 } & GenericNavigationPanelNode) => {
   const t = useI18n();
-  const { tagService, globalContextService } = useServices({
+  const { tagService, globalContextService, featureFlagService } = useServices({
     TagService,
     GlobalContextService,
+    FeatureFlagService,
   });
   const navigationPanelService = useService(NavigationPanelService);
+  const enableEmojiIcon = useLiveData(
+    featureFlagService.flags.enable_emoji_folder_icon.$
+  );
   const active =
     useLiveData(globalContextService.globalContext.tagId.$) === tagId;
   const path = useMemo(
@@ -93,14 +101,47 @@ export const NavigationPanelTagNode = ({
 
   const handleRename = useCallback(
     (newName: string) => {
-      if (tagRecord && tagRecord.value$.value !== newName) {
-        tagRecord.rename(newName);
+      const trimmed = newName.trim();
+      if (!trimmed) {
+        if (defaultRenaming || tagName === 'New tag' || !tagName?.trim()) {
+          tagService.tagList.deleteTag(tagId);
+          notify.error({
+            title: 'Tên tag không được để trống!',
+            message: 'Đã hủy tạo tag vì chưa nhập tên.',
+          });
+          return;
+        }
+        notify.error({
+          title: 'Tên tag không được để trống!',
+        });
+        return;
+      }
+
+      // Check if duplicate tag name exists
+      const existingTag = tagService.tagList.tags$.value.find(
+        t =>
+          t.id !== tagId &&
+          t.value$.value?.trim().toLowerCase() === trimmed.toLowerCase()
+      );
+      if (existingTag) {
+        notify.error({
+          title: 'Tag đã tồn tại!',
+          message: `Đã có tag "${trimmed}".`,
+        });
+        if (defaultRenaming || tagName === 'New tag') {
+          tagService.tagList.deleteTag(tagId);
+        }
+        return;
+      }
+
+      if (tagRecord && tagRecord.value$.value !== trimmed) {
+        tagRecord.rename(trimmed);
         track.$.navigationPanel.organize.renameOrganizeItem({
           type: 'tag',
         });
       }
     },
-    [tagRecord]
+    [defaultRenaming, tagId, tagName, tagRecord, tagService]
   );
 
   const handleDropOnTag = useCallback(
@@ -188,7 +229,9 @@ export const NavigationPanelTagNode = ({
       name={tagName || t['Untitled']()}
       dndData={dndData}
       onDrop={handleDropOnTag}
+      defaultRenaming={defaultRenaming}
       renameable
+      extractEmojiAsIcon={enableEmojiIcon}
       collapsed={collapsed}
       setCollapsed={setCollapsed}
       to={`/tag/${tagId}`}

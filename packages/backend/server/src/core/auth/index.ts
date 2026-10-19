@@ -3,6 +3,7 @@ import './config';
 import { Module } from '@nestjs/common';
 
 import { BackendRuntimeModule } from '../backend-runtime';
+import { DocStorageModule } from '../doc';
 import { EntitlementModule } from '../entitlement';
 import { FeatureModule } from '../features';
 import { MailModule } from '../mail';
@@ -25,6 +26,7 @@ import { AuthSigningKeyResolver } from './signing-key-resolver';
 @Module({
   imports: [
     BackendRuntimeModule,
+    DocStorageModule,
     FeatureModule,
     EntitlementModule,
     UserModule,

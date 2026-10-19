@@ -60,12 +60,22 @@ export class TagStore extends Store {
   }
 
   createNewTag(value: string, color: string) {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      throw new Error('Tag name cannot be empty');
+    }
+    const existing = this.tagOptions$.value.find(
+      t => t.value.trim().toLowerCase() === trimmed.toLowerCase()
+    );
+    if (existing) {
+      return existing.id;
+    }
     const newId = nanoid();
     this.updateTagOptions([
       ...this.tagOptions$.value,
       {
         id: newId,
-        value,
+        value: trimmed,
         color,
         createDate: Date.now(),
         updateDate: Date.now(),
@@ -81,10 +91,23 @@ export class TagStore extends Store {
   };
 
   updateTagOptions = (options: Tag[]) => {
+    const seen = new Set<string>();
+    const deduplicated: Tag[] = [];
+    for (const opt of options) {
+      const key = opt.value?.trim().toLowerCase();
+      if (!key) continue;
+      if (!seen.has(key)) {
+        seen.add(key);
+        deduplicated.push({
+          ...opt,
+          value: opt.value.trim(),
+        });
+      }
+    }
     this.updateProperties({
       ...this.properties,
       tags: {
-        options,
+        options: deduplicated,
       },
     });
   };

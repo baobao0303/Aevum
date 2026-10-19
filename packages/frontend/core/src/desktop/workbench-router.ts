@@ -38,6 +38,14 @@ export const workbenchRoutes = [
     lazy: () => import('./pages/workspace/kanban'),
   },
   {
+    path: '/skills',
+    lazy: () => import('./pages/workspace/kanban'),
+  },
+  {
+    path: '/quizlet',
+    lazy: () => import('./pages/workspace/quizlet'),
+  },
+  {
     path: '/settings',
     lazy: () => import('./pages/workspace/settings'),
   },

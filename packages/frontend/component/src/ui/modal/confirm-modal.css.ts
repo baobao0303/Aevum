@@ -18,12 +18,12 @@ export const desktopStyles = {
     display: 'flex',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    paddingTop: '40px',
+    paddingTop: '28px',
     marginTop: 'auto',
-    gap: '20px',
+    gap: '10px',
     selectors: {
       '&.modalFooterWithChildren': {
-        paddingTop: '20px',
+        paddingTop: '16px',
       },
       '&.reverse': {
         flexDirection: 'row-reverse',

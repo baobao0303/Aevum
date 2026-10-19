@@ -20,6 +20,7 @@ import type { ExplorerType } from '@affine/core/modules/explorer-icon/store/expl
 import type { DocPermissionActions } from '@affine/core/modules/permissions';
 import { WorkbenchLink } from '@affine/core/modules/workbench';
 import type { AffineDNDData } from '@affine/core/types/dnd';
+import { extractEmojiIcon } from '@affine/core/utils';
 import { useI18n } from '@affine/i18n';
 import {
   ArrowDownSmallIcon,
@@ -200,6 +201,7 @@ export const NavigationPanelTreeNode = ({
   linkComponent: LinkComponent = WorkbenchLink,
   dndData,
   explorerIconConfig,
+  extractEmojiAsIcon,
   onDrop,
   dropEffect,
   ...otherProps
@@ -213,6 +215,20 @@ export const NavigationPanelTreeNode = ({
   const clickForCollapse = !onClick && !to && !disabled;
   const [childCount, setChildCount] = useState(0);
   const [renaming, setRenaming] = useState(defaultRenaming);
+
+  const { emoji, name } = useMemo(() => {
+    if (!extractEmojiAsIcon || !rawName) {
+      return {
+        emoji: null,
+        name: rawName,
+      };
+    }
+    const { emoji, rest } = extractEmojiIcon(rawName);
+    return {
+      emoji,
+      name: rest,
+    };
+  }, [extractEmojiAsIcon, rawName]);
   const [lastInGroup, setLastInGroup] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const explorerIcon = useLiveData(
@@ -433,13 +449,15 @@ export const NavigationPanelTreeNode = ({
     [clickForCollapse, collapsed, collapsible, onClick, setCollapsed]
   );
 
-  const fallbackIcon = Icon && (
+  const fallbackIcon = emoji ? (
+    <span>{emoji}</span>
+  ) : Icon ? (
     <Icon
       draggedOver={draggedOver && !isSelfDraggedOver}
       treeInstruction={treeInstruction}
       collapsed={collapsed}
     />
-  );
+  ) : null;
 
   const content = (
     <div
@@ -461,13 +479,30 @@ export const NavigationPanelTreeNode = ({
             data-collapsed={collapsed !== false}
           />
         </div>
-        <div className={styles.iconContainer}>
+        <div
+          className={styles.iconContainer}
+          onClick={e => {
+            if (renameable && explorerIconConfig) {
+              e.stopPropagation();
+              e.preventDefault();
+              setRenaming(true);
+            }
+          }}
+          style={
+            renameable && explorerIconConfig ? { cursor: 'pointer' } : undefined
+          }
+          title={
+            renameable && explorerIconConfig
+              ? 'Click to change icon or name'
+              : undefined
+          }
+        >
           <IconRenderer data={explorerIcon?.icon} fallback={fallbackIcon} />
         </div>
       </div>
 
       <div className={styles.itemMain}>
-        <div className={styles.itemContent}>{rawName}</div>
+        <div className={styles.itemContent}>{name}</div>
         {postfix}
         <div
           className={styles.postfix}

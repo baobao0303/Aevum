@@ -55,6 +55,7 @@ import {
   UseNamedGuard,
 } from '../../base';
 import { BackendRuntimeProvider } from '../backend-runtime';
+import { DocWriter } from '../doc';
 import { validators } from '../utils/validators';
 import { AuthSessionService } from './auth-session';
 import { Public } from './guard';
@@ -109,7 +110,8 @@ export class AuthController {
     private readonly openApp: OpenAppAuthService,
     private readonly runtime: BackendRuntimeProvider,
     private readonly sessionExchange: SessionExchangeService,
-    private readonly authSessions: AuthSessionService
+    private readonly authSessions: AuthSessionService,
+    private readonly docWriter: DocWriter
   ) {
     if (env.dev) {
       // set DNS servers in dev mode
@@ -119,6 +121,34 @@ export class AuthController {
       // set a public DNS server here to avoid this issue.
       setServers(['1.1.1.1', '8.8.8.8']);
     }
+  }
+
+  @Throttle('default', { limit: 1200 })
+  @Public()
+  @Post('/open-app/docs/create')
+  async createDocByApi(
+    @Body() body: {
+      workspaceId?: string;
+      title: string;
+      markdown: string;
+      editorId?: string;
+    }
+  ) {
+    const wsId = String(
+      body?.workspaceId || 'ba77833c-785e-463b-88ea-086e0ced9309'
+    ).trim();
+    const editor = String(
+      body?.editorId || '6d00dc7a-8077-4c57-b056-e0aa82ef45cf'
+    ).trim();
+    const title = String(body?.title || 'Untitled').trim();
+    const markdown = String(body?.markdown || '').trim();
+    const result = await this.docWriter.createDoc(
+      wsId,
+      title,
+      markdown,
+      editor
+    );
+    return { ok: true, docId: result.docId, title, workspaceId: wsId };
   }
 
   @Public()
@@ -740,6 +770,123 @@ export class AuthController {
       board,
       boards,
     };
+  }
+
+  @Throttle('default', { limit: 1200 })
+  @Public()
+  @Get('/open-app/skills')
+  async getSkillsList() {
+    try {
+      const { execFile } = await import('node:child_process');
+      const { promisify } = await import('node:util');
+      const execFileAsync = promisify(execFile);
+      const skillMgr = '/home/baoltb/Desktop/Room_Agent/tools/skill_manager.py';
+      const { stdout } = await execFileAsync(
+        'python3',
+        [skillMgr, 'list', '--json'],
+        { maxBuffer: 10 * 1024 * 1024 }
+      );
+      const skills = JSON.parse(stdout);
+      return { ok: true, skills, total: skills.length };
+    } catch (err: any) {
+      return { ok: false, error: err.message, skills: [] };
+    }
+  }
+
+  @Throttle('default', { limit: 1200 })
+  @Public()
+  @Post('/open-app/skills/sync')
+  async syncSkillsEndpoint() {
+    try {
+      const { execFile } = await import('node:child_process');
+      const { promisify } = await import('node:util');
+      const execFileAsync = promisify(execFile);
+      const skillMgr = '/home/baoltb/Desktop/Room_Agent/tools/skill_manager.py';
+      const { stdout } = await execFileAsync('python3', [skillMgr, 'sync'], {
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      return { ok: true, message: stdout.trim() };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  @Throttle('default', { limit: 1200 })
+  @Public()
+  @Post('/open-app/skills/create')
+  async createSkillEndpoint(@Body() body: Record<string, any>) {
+    try {
+      const { execFile } = await import('node:child_process');
+      const { promisify } = await import('node:util');
+      const execFileAsync = promisify(execFile);
+      const skillMgr = '/home/baoltb/Desktop/Room_Agent/tools/skill_manager.py';
+      const name = String(body.name || '').trim();
+      const desc = String(body.description || '').trim();
+      const content = String(body.content || '').trim();
+      const { stdout } = await execFileAsync('python3', [
+        skillMgr,
+        'add',
+        '--name',
+        name,
+        '--desc',
+        desc,
+        '--content',
+        content,
+      ]);
+      return { ok: true, message: stdout.trim(), name };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  @Throttle('default', { limit: 1200 })
+  @Public()
+  @Post('/open-app/skills/upload')
+  async uploadSkillEndpoint(@Body() body: Record<string, any>) {
+    try {
+      const { writeFileSync, unlinkSync } = await import('node:fs');
+      const { join } = await import('node:path');
+      const { tmpdir } = await import('node:os');
+      const { execFile } = await import('node:child_process');
+      const { promisify } = await import('node:util');
+      const execFileAsync = promisify(execFile);
+      const filename = String(body.filename || 'skill.zip');
+      const b64Data = String(body.data || '');
+      const tempPath = join(tmpdir(), `upload-${Date.now()}-${filename}`);
+      writeFileSync(tempPath, Buffer.from(b64Data, 'base64'));
+      const skillMgr = '/home/baoltb/Desktop/Room_Agent/tools/skill_manager.py';
+      const { stdout } = await execFileAsync('python3', [
+        skillMgr,
+        'upload',
+        tempPath,
+      ]);
+      try {
+        unlinkSync(tempPath);
+      } catch {}
+      return { ok: true, message: stdout.trim() };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
+  }
+
+  @Throttle('default', { limit: 1200 })
+  @Public()
+  @Delete('/open-app/skills/:name')
+  async deleteSkillEndpoint(@Param('name') name: string) {
+    try {
+      const { execFile } = await import('node:child_process');
+      const { promisify } = await import('node:util');
+      const execFileAsync = promisify(execFile);
+      const skillMgr = '/home/baoltb/Desktop/Room_Agent/tools/skill_manager.py';
+      const { stdout } = await execFileAsync('python3', [
+        skillMgr,
+        'remove',
+        name,
+      ]);
+      return { ok: true, message: stdout.trim() };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
   }
 
   @Public()
