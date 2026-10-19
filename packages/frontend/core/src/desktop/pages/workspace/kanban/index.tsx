@@ -300,7 +300,7 @@ function buildDefaultFlociSummary(workspaceId: string): KanbanBoardSummary {
     sectionType: 'SLPC Harness',
     tableStatus: 'In Process',
     target: 0,
-    limit: 25,
+    limit: 0,
     reviewer: 'Supervisor',
     columns: FLOCI_DEFAULT_COLUMNS,
     cardCount: 0,
@@ -1707,22 +1707,26 @@ export const WorkspaceKanbanPage = () => {
                                   style={{ textAlign: 'right' }}
                                   onClick={e => e.stopPropagation()}
                                 >
-                                  <input
-                                    type="number"
-                                    className={styles.inlineNumInput}
-                                    defaultValue={row.limit}
-                                    onBlur={e => {
-                                      const val = Number(e.target.value);
-                                      if (
-                                        !Number.isNaN(val) &&
-                                        val !== row.limit
-                                      ) {
-                                        handlePatchBoardMeta(row.id, {
-                                          limit: val,
-                                        }).catch(console.error);
-                                      }
-                                    }}
-                                  />
+                                  {row.id === FLOCI_HARNESS_BOARD_ID ? (
+                                    <span style={{ fontSize: '16px', color: cssVarV2('text/secondary'), paddingRight: '8px' }}>∞</span>
+                                  ) : (
+                                    <input
+                                      type="number"
+                                      className={styles.inlineNumInput}
+                                      defaultValue={row.limit}
+                                      onBlur={e => {
+                                        const val = Number(e.target.value);
+                                        if (
+                                          !Number.isNaN(val) &&
+                                          val !== row.limit
+                                        ) {
+                                          handlePatchBoardMeta(row.id, {
+                                            limit: val,
+                                          }).catch(console.error);
+                                        }
+                                      }}
+                                    />
+                                  )}
                                 </td>
 
                                 {/* Reviewer (Radix Portal Dropdown — 28px) */}
@@ -2119,7 +2123,7 @@ export const WorkspaceKanbanPage = () => {
                           color: cssVarV2('text/primary'),
                         }}
                       >
-                        {boardDetail.target} / {boardDetail.limit}
+                        {boardDetail.target} / {!boardDetail.limit || boardDetail.limit <= 0 || boardDetail.id === FLOCI_HARNESS_BOARD_ID ? '∞' : boardDetail.limit}
                       </div>
                     </div>
                   </div>

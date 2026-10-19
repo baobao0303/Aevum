@@ -439,7 +439,7 @@ async function buildFlociHarnessBoardRecord(
       sectionType: meta.sectionType || 'SLPC Harness',
       tableStatus: meta.tableStatus || 'In Process',
       target: meta.target ?? cards.length,
-      limit: meta.limit ?? 25,
+      limit: meta.limit ?? 0,
       reviewer: meta.reviewer || 'Supervisor',
       columns:
         Array.isArray(meta.columns) && meta.columns.length > 0
